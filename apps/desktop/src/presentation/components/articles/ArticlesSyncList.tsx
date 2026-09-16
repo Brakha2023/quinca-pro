@@ -11,7 +11,7 @@ import {
   type LigneImportArticle,
   type NouvelArticle,
 } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
-import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
+import { useFilialeCourante } from '../../auth/useFilialeCourante';
 
 const ARTICLE_VIDE: NouvelArticle = {
   code: '',
@@ -45,9 +45,13 @@ function lireFichierExcel(data: ArrayBuffer): LigneImportArticle[] {
 }
 
 function calculerMarge(article: ArticleRow): number {
-  if (article.prix_achat <= 0) return 0;
-  return Math.round(((article.prix_vente - article.prix_achat) / article.prix_achat) * 100);
+  const achat = article.prix_achat ?? 0;
+  const vente = article.prix_vente ?? 0;
+  if (achat <= 0) return 0;
+  return Math.round(((vente - achat) / achat) * 100);
 }
+
+const fcfa = (n: number | null) => (n ?? 0).toLocaleString('fr-FR');
 
 /**
  * Liste des articles de la filiale courante, lue en temps réel depuis la base locale.
@@ -56,8 +60,7 @@ function calculerMarge(article: ArticleRow): number {
 export default function ArticlesSyncList() {
   const db = usePowerSync();
   const repository = useMemo(() => new ArticlesRepository(db), [db]);
-  const { utilisateur } = useCurrentUtilisateur();
-  const filialeId = utilisateur?.filiale_id ?? null;
+  const { filialeId, estVueConsolidee } = useFilialeCourante();
 
   const { data: articles, isLoading } = useQuery<ArticleRow>(ARTICLES_QUERY, [filialeId]);
   const { data: familles } = useQuery<FamilleRow>(FAMILLES_QUERY, [filialeId]);
@@ -74,7 +77,7 @@ export default function ArticlesSyncList() {
   const articlesFiltres = useMemo(() => {
     const q = recherche.trim().toLowerCase();
     return articles.filter((a) => {
-      const matchRecherche = !q || a.designation.toLowerCase().includes(q) || a.code.toLowerCase().includes(q);
+      const matchRecherche = !q || (a.designation ?? '').toLowerCase().includes(q) || (a.code ?? '').toLowerCase().includes(q);
       const matchFamille = !familleFiltre || a.famille_id === familleFiltre;
       return matchRecherche && matchFamille;
     });
@@ -113,8 +116,17 @@ export default function ArticlesSyncList() {
   if (!filialeId) {
     return (
       <div className="text-center py-12 text-neutral-400">
-        <p>Profil utilisateur en cours de synchronisation…</p>
-        <p className="text-sm mt-1">La filiale doit être connue pour afficher les articles.</p>
+        {estVueConsolidee ? (
+          <>
+            <p>Sélectionnez une filiale dans le menu latéral.</p>
+            <p className="text-sm mt-1">Le catalogue est géré filiale par filiale.</p>
+          </>
+        ) : (
+          <>
+            <p>Profil utilisateur en cours de synchronisation…</p>
+            <p className="text-sm mt-1">La filiale doit être connue pour afficher les articles.</p>
+          </>
+        )}
       </div>
     );
   }
@@ -211,8 +223,8 @@ export default function ArticlesSyncList() {
                       {(article.famille_id && famillesParId.get(article.famille_id)?.nom) || '-'}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600">{article.prix_achat.toLocaleString('fr-FR')}</td>
-                  <td className="px-3 py-2 text-sm text-right font-mono font-medium text-neutral-900">{article.prix_vente.toLocaleString('fr-FR')}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600">{fcfa(article.prix_achat)}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono font-medium text-neutral-900">{fcfa(article.prix_vente)}</td>
                   <td className="px-3 py-2 text-sm text-right">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${marge >= 20 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                       {marge}%

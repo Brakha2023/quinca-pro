@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint src",
-    "check-types": "tsc -b --noEmit"
+    "check-types": "tsc -p tsconfig.json && tsc -p tsconfig.node.json"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.10",
@@ -17,6 +17,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@powersync/react": "^2.0.0",
     "@powersync/web": "^2.3.1",
+    "@quinca/shared-types": "workspace:*",
     "@supabase/supabase-js": "^2.116.0",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-opener": "^2",

@@ -1,159 +1,73 @@
-# Turborepo starter
+# QuincaPro
 
-This Turborepo starter is maintained by the Turborepo core team.
+Gestion commerciale multi-filiales pour quincaillerie (POS, stock, tiers, trésorerie), **local-first** :
+chaque poste travaille sur une base SQLite locale et se synchronise avec le serveur quand le réseau est là.
 
-## Using this example
+## Architecture
 
-Run the following command:
-
-```sh
-npx create-turbo@latest
+```
+apps/desktop            Application Tauri 2 + React 19 (Vite, Tailwind)
+  src/core              Domaine pur : entités, règles métier — aucune dépendance React/PowerSync
+  src/infrastructure    Adaptateurs : env, Supabase, PowerSync (schéma, connector, repositories)
+  src/presentation      React : auth, layout, pages, composants, stores d'UI
+packages/shared-types   Description unique des tables (types de lignes + schéma SQLite) et énumérations
+supabase/               Migrations Postgres, seed, sync rules PowerSync
 ```
 
-## What's inside?
+Flux de données :
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```
+UI (useQuery) ──lit──▶ SQLite locale (PowerSync) ◀──télécharge── PowerSync Service ◀── Postgres (Supabase)
+UI (repository) ─écrit─▶ SQLite locale ─file CRUD─▶ SupabaseConnector.uploadData ─▶ Postgres (RLS + JWT)
 ```
 
-Without global `turbo`, use your package manager:
+- Les lectures ne touchent **jamais** le réseau.
+- Les écritures sont appliquées localement puis rejouées vers Supabase par
+  [`SupabaseConnector`](apps/desktop/src/infrastructure/powersync/SupabaseConnector.ts).
+- Le périmètre synchronisé par utilisateur est défini par [`supabase/sync-rules.yaml`](supabase/sync-rules.yaml) :
+  sa filiale pour un gérant/caissier/magasinier, toutes les filiales pour le directeur.
+- La sécurité côté serveur repose sur les politiques RLS de la migration (le client n'utilise que la clé `anon` + JWT).
+
+## Prérequis
+
+- Node ≥ 24, pnpm 11 (`corepack enable`)
+- Rust stable + prérequis Tauri 2 : https://tauri.app/start/prerequisites/
+- Un projet Supabase et une instance PowerSync
+
+## Mise en place du backend
+
+1. **Supabase** : exécuter `supabase/migrations/*.sql` puis `supabase/seed.sql` (SQL Editor ou `supabase db push`).
+2. **PowerSync** : créer l'instance, la connecter à Supabase (le dashboard fournit le SQL pour créer le rôle
+   de réplication ; la publication `powersync` est déjà créée par la migration), configurer l'auth Supabase
+   (JWT secret ou JWKS), puis déployer `supabase/sync-rules.yaml`.
+3. **Utilisateurs** : créer les comptes dans Supabase Auth avec les métadonnées
+   `{ "nom": "…", "prenom": "…", "profil": "DIRECTEUR|GERANT|CAISSIER|MAGASINIER", "filiale_id": "<uuid ou vide pour DIRECTEUR>" }`.
+   Le profil `utilisateurs` est créé automatiquement par trigger.
+4. Copier `apps/desktop/.env.example` en `apps/desktop/.env` et renseigner les URLs/clés.
+
+## Développement
 
 ```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+pnpm install
+pnpm desktop           # lance Tauri + Vite (fenêtre native)
+pnpm --filter @quinca/desktop dev   # Vite seul, dans le navigateur (http://localhost:1420)
+
+pnpm check-types       # tsc sur tout le monorepo
+pnpm lint              # eslint
+pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop tauri build` pour l'installeur
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Conventions
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+- Toute nouvelle fonctionnalité lit/écrit via PowerSync (`useQuery`, repositories) — jamais via des mocks.
+- Les identifiants sont des UUID générés côté client ; les numéros de pièces (tickets, règlements)
+  embarquent le code caisse pour rester uniques hors ligne.
+- Les types de lignes viennent de `@quinca/shared-types` (`Row<'articles'>`) ; les énumérations aussi.
+  Toute évolution de schéma = migration SQL **et** mise à jour de `packages/shared-types/src/tables.ts`.
+- Pas de logique métier dans les pages : elle vit dans `core/` (testable sans React).
 
-```sh
-turbo build --filter=docs
-```
+## Feuille de route
 
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Voir l'historique des commits « phase 0 » pour l'état des fondations. Prochaines phases :
+domaine par domaine sur PowerSync (articles → stock → clients → POS → fournisseurs → trésorerie → livraisons),
+puis packaging desktop (impression, mises à jour, signature), puis pilotage/consolidation.

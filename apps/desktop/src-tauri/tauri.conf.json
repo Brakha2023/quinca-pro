@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "quinca-pro",
+  "productName": "QuincaPro",
   "version": "0.1.0",
   "identifier": "com.ciadev.quinca-pro",
   "build": {
@@ -12,9 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "quinca-pro",
-        "width": 800,
-        "height": 600
+        "title": "QuincaPro",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1180,
+        "minHeight": 720,
+        "center": true,
+        "resizable": true,
+        "maximized": true
       }
     ],
     "security": {

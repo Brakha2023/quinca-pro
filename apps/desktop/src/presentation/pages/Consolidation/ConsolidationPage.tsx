@@ -1,4 +1,4 @@
-import { useFilialesStore } from '../../stores/filiales.store';
+import { useFilialeCourante } from '../../auth/useFilialeCourante';
 
 interface FilialeData {
   code: string;
@@ -41,9 +41,10 @@ const DONNEES_FILIALES: FilialeData[] = [
 ];
 
 export default function ConsolidationPage() {
-  const { filialeSelectionnee } = useFilialesStore();
+  const { filiale, estVueConsolidee } = useFilialeCourante();
+  const nomFiliale = filiale?.nom ?? 'Filiale';
 
-  const isConsolide = filialeSelectionnee.type === 'MAISON_MERE';
+  const isConsolide = estVueConsolidee;
 
   const totalCAJour = DONNEES_FILIALES.reduce((sum, f) => sum + f.ca_jour, 0);
   const totalCAMois = DONNEES_FILIALES.reduce((sum, f) => sum + f.ca_mois, 0);
@@ -55,10 +56,10 @@ export default function ConsolidationPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">
-          {isConsolide ? 'Vue Consolidée - Groupe' : filialeSelectionnee.nom}
+          {isConsolide ? 'Vue Consolidée - Groupe' : nomFiliale}
         </h1>
         <p className="text-sm text-neutral-500 mt-1">
-          {isConsolide ? 'Performance de toutes les filiales' : `Performance de ${filialeSelectionnee.nom}`}
+          {isConsolide ? 'Performance de toutes les filiales' : `Performance de ${nomFiliale}`}
         </p>
       </div>
 

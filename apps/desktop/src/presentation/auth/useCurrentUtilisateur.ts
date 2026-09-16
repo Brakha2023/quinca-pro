@@ -1,4 +1,5 @@
 import { useQuery } from '@powersync/react';
+import type { Profil } from '@quinca/shared-types';
 import { useAuth } from './useAuth';
 
 export interface UtilisateurCourant {
@@ -6,7 +7,7 @@ export interface UtilisateurCourant {
   email: string;
   nom: string;
   prenom: string | null;
-  profil: 'DIRECTEUR' | 'GERANT' | 'CAISSIER' | 'MAGASINIER';
+  profil: Profil;
   filiale_id: string | null;
 }
 

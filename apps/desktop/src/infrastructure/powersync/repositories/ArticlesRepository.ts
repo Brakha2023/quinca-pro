@@ -1,25 +1,9 @@
 import type { CommonPowerSyncDatabase, Transaction } from '@powersync/web';
+import type { ArticleRow, FamilleArticleRow } from '@quinca/shared-types';
 import { v4 as uuidv4 } from 'uuid';
 
-export interface ArticleRow {
-  id: string;
-  code: string;
-  designation: string;
-  famille_id: string | null;
-  prix_achat: number;
-  prix_vente: number;
-  tva: number;
-  stock_min: number;
-  stock_max: number;
-  unite: string;
-  filiale_id: string;
-}
-
-export interface FamilleRow {
-  id: string;
-  code: string;
-  nom: string;
-}
+export type { ArticleRow };
+export type FamilleRow = Pick<FamilleArticleRow, 'id' | 'code' | 'nom'>;
 
 export interface NouvelArticle {
   code: string;
@@ -41,7 +25,7 @@ export interface LigneImportArticle {
   famille_nom: string;
 }
 
-export const ARTICLES_QUERY = 'SELECT * FROM articles WHERE filiale_id = ? ORDER BY designation';
+export const ARTICLES_QUERY = 'SELECT * FROM articles WHERE filiale_id = ? AND est_actif = 1 ORDER BY designation';
 export const FAMILLES_QUERY =
   'SELECT id, code, nom FROM familles_articles WHERE filiale_id = ? AND est_active = 1 ORDER BY nom';
 
@@ -54,9 +38,10 @@ export class ArticlesRepository {
 
   async create(filialeId: string, article: NouvelArticle): Promise<string> {
     const id = uuidv4();
+    const now = new Date().toISOString();
     await this.db.execute(
-      `INSERT INTO articles (id, code, designation, famille_id, prix_achat, prix_vente, tva, stock_min, stock_max, unite, filiale_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO articles (id, code, designation, famille_id, prix_achat, prix_vente, tva, stock_min, stock_max, unite, filiale_id, est_actif, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
       [
         id,
         article.code,
@@ -69,6 +54,8 @@ export class ArticlesRepository {
         article.stock_max,
         article.unite,
         filialeId,
+        now,
+        now,
       ],
     );
     return id;
@@ -81,6 +68,7 @@ export class ArticlesRepository {
   async importMany(filialeId: string, lignes: LigneImportArticle[]): Promise<number> {
     return this.db.writeTransaction(async (tx) => {
       const famillesParNom = await this.chargerFamillesParNom(tx, filialeId);
+      const now = new Date().toISOString();
       let count = 0;
 
       for (const ligne of lignes) {
@@ -90,16 +78,16 @@ export class ArticlesRepository {
         if (!familleId) {
           familleId = uuidv4();
           await tx.execute(
-            `INSERT INTO familles_articles (id, code, nom, filiale_id, est_active) VALUES (?, ?, ?, ?, 1)`,
-            [familleId, nomFamille.slice(0, 10), nomFamille, filialeId],
+            `INSERT INTO familles_articles (id, code, nom, filiale_id, est_active, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)`,
+            [familleId, nomFamille.slice(0, 10), nomFamille, filialeId, now, now],
           );
           famillesParNom.set(nomFamille, familleId);
         }
 
         await tx.execute(
-          `INSERT INTO articles (id, code, designation, famille_id, prix_achat, prix_vente, tva, stock_min, stock_max, unite, filiale_id)
-           VALUES (?, ?, ?, ?, ?, ?, 18, 10, 100, 'PIECE', ?)`,
-          [uuidv4(), ligne.code, ligne.designation, familleId, ligne.prix_achat, ligne.prix_vente, filialeId],
+          `INSERT INTO articles (id, code, designation, famille_id, prix_achat, prix_vente, tva, stock_min, stock_max, unite, filiale_id, est_actif, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, 18, 10, 100, 'PIECE', ?, 1, ?, ?)`,
+          [uuidv4(), ligne.code, ligne.designation, familleId, ligne.prix_achat, ligne.prix_vente, filialeId, now, now],
         );
         count++;
       }
@@ -110,6 +98,6 @@ export class ArticlesRepository {
 
   private async chargerFamillesParNom(tx: Transaction, filialeId: string): Promise<Map<string, string>> {
     const familles = await tx.getAll<FamilleRow>(FAMILLES_QUERY, [filialeId]);
-    return new Map(familles.map((f) => [f.nom.toUpperCase(), f.id]));
+    return new Map(familles.map((f) => [(f.nom ?? '').toUpperCase(), f.id]));
   }
 }
