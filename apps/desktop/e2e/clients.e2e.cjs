@@ -11,6 +11,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     const { ClientsRepository } = await import('/src/infrastructure/powersync/repositories/ClientsRepository.ts');
     const { clientFormSchema, reglementFormSchema } = await import('/src/core/clients/index.ts');
     await db.execute("INSERT OR REPLACE INTO caisses (id, code, nom, filiale_id, solde_actuel, est_active) VALUES ('caisse-1', 'C01', 'Caisse principale', ?, 10000, 1)", [F]);
+    await db.execute("INSERT OR REPLACE INTO depots (id, code, nom, filiale_id, est_actif) VALUES ('depot-1', 'DEP-01', 'Dépôt principal', ?, 1)", [F]);
     const repo = new ClientsRepository(db);
     const ctx = { filialeId: F, utilisateurId: U };
     const id = await repo.create(F, clientFormSchema.parse({ raison_sociale: 'SARL KONÉ', mobile: '0707070707', solde_initial: 50000, plafond_credit: 200000 }));
@@ -62,7 +63,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.keyboard.press('Escape');
 
   await page.goto(`${BASE_URL}/#/pos`);
-  await page.locator('button', { hasText: 'Client Comptoir' }).click();
+  await page.getByRole('dialog', { name: 'Réglages du poste de vente' }).waitFor();
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await page.locator('button', { hasText: 'Client comptoir' }).click();
   await page.locator('input[placeholder^="Rechercher un client"]').fill('kon');
   await page.locator('button', { hasText: 'SARL KONÉ' }).click();
   await page.locator('text=SARL KONÉ').first().waitFor();

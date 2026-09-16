@@ -1,151 +1,56 @@
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
+import GraphiqueCa from '../../features/pilotage/GraphiqueCa';
+import { useCaParJour, useIndicateursFiliales, useTopArticles } from '../../features/pilotage/hooks';
+import { formaterFcfa } from '../../hooks/useFormatage';
 
-interface FilialeData {
-  code: string;
-  nom: string;
-  ca_jour: number;
-  ca_mois: number;
-  nombre_ventes: number;
-  marge: number;
-  creances: number;
-}
-
-const DONNEES_FILIALES: FilialeData[] = [
-  {
-    code: 'ABJ',
-    nom: 'Filiale Abidjan',
-    ca_jour: 1250000,
-    ca_mois: 28500000,
-    nombre_ventes: 156,
-    marge: 32,
-    creances: 850000,
-  },
-  {
-    code: 'BKE',
-    nom: 'Filiale Bouaké',
-    ca_jour: 875000,
-    ca_mois: 19200000,
-    nombre_ventes: 98,
-    marge: 28,
-    creances: 420000,
-  },
-  {
-    code: 'SPY',
-    nom: 'Filiale San-Pedro',
-    ca_jour: 620000,
-    ca_mois: 14800000,
-    nombre_ventes: 72,
-    marge: 30,
-    creances: 280000,
-  },
-];
-
+/** Vue groupe (directeur) : indicateurs par filiale et totaux consolidés, calculés localement. */
 export default function ConsolidationPage() {
-  const { filiale, estVueConsolidee } = useFilialeCourante();
-  const nomFiliale = filiale?.nom ?? 'Filiale';
+  const { estDirecteur, filialeId, filiale, setFilialeId } = useFilialeCourante();
+  const { indicateurs, isLoading } = useIndicateursFiliales();
+  const points = useCaParJour(null);
+  const top = useTopArticles(null, undefined, 8);
+  const somme = (k: keyof (typeof indicateurs)[number]) => indicateurs.reduce((s, i) => s + (Number(i[k]) || 0), 0);
 
-  const isConsolide = estVueConsolidee;
-
-  const totalCAJour = DONNEES_FILIALES.reduce((sum, f) => sum + f.ca_jour, 0);
-  const totalCAMois = DONNEES_FILIALES.reduce((sum, f) => sum + f.ca_mois, 0);
-  const totalVentes = DONNEES_FILIALES.reduce((sum, f) => sum + f.nombre_ventes, 0);
-  const totalCreances = DONNEES_FILIALES.reduce((sum, f) => sum + f.creances, 0);
+  if (!estDirecteur) {
+    return <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400"><p className="text-lg">La consolidation est réservée à la direction.</p><p className="text-sm mt-1">Votre filiale : {filiale?.nom}</p></div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">
-          {isConsolide ? 'Vue Consolidée - Groupe' : nomFiliale}
-        </h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          {isConsolide ? 'Performance de toutes les filiales' : `Performance de ${nomFiliale}`}
-        </p>
+      <div><h1 className="text-2xl font-bold text-neutral-900">Vue consolidée — Groupe</h1><p className="text-sm text-neutral-500 mt-1">Toutes les filiales · données synchronisées localement</p></div>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {[
+          ['CA du jour', formaterFcfa(somme('ca_jour')), 'text-primary-700'], ['CA du mois', formaterFcfa(somme('ca_mois')), 'text-neutral-900'],
+          ['Créances clients', formaterFcfa(somme('creances')), 'text-red-600'], ['Dettes fournisseurs', formaterFcfa(somme('dettes')), 'text-orange-700'],
+          ['Trésorerie (caisses)', formaterFcfa(somme('tresorerie')), 'text-green-700'],
+        ].map(([l, v, t]) => <div key={l} className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">{l}</p><p className={`text-2xl font-bold font-mono mt-2 ${t}`}>{v}</p></div>)}
       </div>
-
-      {/* KPIs Globaux */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">CA du jour</p>
-          <p className="text-2xl font-bold text-neutral-900 font-mono mt-2">
-            {totalCAJour.toLocaleString('fr-FR')} F
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">CA du mois</p>
-          <p className="text-2xl font-bold text-primary-700 font-mono mt-2">
-            {totalCAMois.toLocaleString('fr-FR')} F
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">Nombre de ventes</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-2">{totalVentes}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">Créances totales</p>
-          <p className="text-2xl font-bold text-red-600 font-mono mt-2">
-            {totalCreances.toLocaleString('fr-FR')} F
-          </p>
-        </div>
-      </div>
-
-      {/* Tableau comparatif des filiales */}
-      {isConsolide && (
-        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-neutral-200">
-            <h3 className="text-lg font-semibold text-neutral-900">Performance par filiale</h3>
-          </div>
-          <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase">Filiale</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase">CA Jour</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase">CA Mois</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-neutral-600 uppercase">Ventes</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase">Marge %</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-neutral-600 uppercase">Créances</th>
+      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-neutral-200"><h3 className="text-lg font-semibold text-neutral-900">Performance par filiale</h3></div>
+        <table className="w-full">
+          <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-6 py-3 text-left">Filiale</th><th className="px-6 py-3 text-right">CA jour</th><th className="px-6 py-3 text-right">CA mois</th><th className="px-6 py-3 text-center">Ventes mois</th><th className="px-6 py-3 text-right">Créances</th><th className="px-6 py-3 text-right">Dettes</th><th className="px-6 py-3 text-right">Stock</th><th className="px-6 py-3 text-center">Alertes</th><th className="px-6 py-3 text-right">Caisses</th></tr></thead>
+          <tbody className="divide-y divide-neutral-100">
+            {indicateurs.map((i) => (
+              <tr key={i.filiale_id} className={`hover:bg-neutral-50 cursor-pointer ${filialeId === i.filiale_id ? 'bg-primary-50' : ''}`} onClick={() => setFilialeId(i.filiale_id)} title="Ouvrir cette filiale">
+                <td className="px-6 py-4"><p className="font-medium text-neutral-900">{i.filiale_nom}</p><p className="text-xs text-neutral-500">{i.filiale_code}</p></td>
+                <td className="px-6 py-4 text-right font-mono">{formaterFcfa(i.ca_jour)}</td>
+                <td className="px-6 py-4 text-right font-mono font-bold text-primary-700">{formaterFcfa(i.ca_mois)}</td>
+                <td className="px-6 py-4 text-center">{i.ventes_mois}</td>
+                <td className="px-6 py-4 text-right font-mono text-red-600">{formaterFcfa(i.creances)}</td>
+                <td className="px-6 py-4 text-right font-mono text-orange-700">{formaterFcfa(i.dettes)}</td>
+                <td className="px-6 py-4 text-right font-mono">{formaterFcfa(i.valeur_stock)}</td>
+                <td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${i.alertes_stock ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>{i.alertes_stock}</span></td>
+                <td className="px-6 py-4 text-right font-mono text-green-700">{formaterFcfa(i.tresorerie)}</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {DONNEES_FILIALES.map((filiale) => (
-                <tr key={filiale.code} className="hover:bg-neutral-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-medium text-neutral-900">{filiale.nom}</p>
-                      <p className="text-xs text-neutral-500">{filiale.code}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono font-medium text-neutral-900">
-                    {filiale.ca_jour.toLocaleString('fr-FR')} F
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono font-bold text-primary-700">
-                    {filiale.ca_mois.toLocaleString('fr-FR')} F
-                  </td>
-                  <td className="px-6 py-4 text-center text-neutral-600">{filiale.nombre_ventes}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      filiale.marge >= 30 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                    }`}>
-                      {filiale.marge}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono font-medium text-red-600">
-                    {filiale.creances.toLocaleString('fr-FR')} F
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Graphique placeholder */}
-      <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-        <h3 className="text-lg font-semibold text-neutral-800 mb-4">
-          {isConsolide ? 'Comparaison CA mensuel par filiale' : 'Évolution des ventes - 7 derniers jours'}
-        </h3>
-        <div className="h-64 bg-neutral-50 rounded-lg border border-dashed border-neutral-300 flex items-center justify-center text-neutral-400">
-          {isConsolide ? 'Graphique comparatif (Abidjan, Bouaké, San-Pedro)' : 'Graphique d\'évolution'}
+            ))}
+          </tbody>
+        </table>
+        {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-neutral-200 shadow-sm"><h3 className="text-lg font-semibold text-neutral-800 mb-4">CA groupe — 7 derniers jours</h3><GraphiqueCa points={points} /></div>
+        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm"><h3 className="text-lg font-semibold text-neutral-800 mb-4">Top articles du mois (groupe)</h3>
+          {top.length === 0 ? <p className="text-sm text-neutral-400">Aucune vente ce mois-ci.</p> : <ol className="space-y-2">{top.map((t, n) => <li key={t.code} className="flex items-center gap-3 text-sm"><span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">{n + 1}</span><span className="flex-1 truncate">{t.designation}</span><span className="font-mono font-semibold">{formaterFcfa(t.ca)}</span></li>)}</ol>}
         </div>
       </div>
     </div>

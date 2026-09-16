@@ -1,291 +1,114 @@
-import { useState } from 'react';
-import { PlusIcon, TruckIcon, CheckCircleIcon, ClockIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
+import { MagnifyingGlassIcon, PencilSquareIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { STATUTS_LIVRAISON, type StatutLivraison } from '@quinca/shared-types';
+import { livraisonDemandeSchema, type LivraisonDemande } from '../../../core/ventes';
+import { LivraisonsRepository, TRANSITIONS_LIVRAISON, livraisonsQuery, type LivraisonVueRow } from '../../../infrastructure/powersync/repositories/LivraisonsRepository';
+import { useFilialeCourante } from '../../auth/useFilialeCourante';
+import { controleInlineClass, inputClass } from '../../components/ui/FormField';
+import Modal from '../../components/ui/Modal';
+import { useRepository } from '../../hooks/useRepository';
+import { formaterFcfa, formaterDate } from '../../hooks/useFormatage';
+import { useNotifier } from '../../notifications/useNotifier';
 
-type StatutLivraison = 'A_PREPARER' | 'EN_COURS' | 'LIVREE' | 'ANNULEE';
+const LIBELLES: Record<StatutLivraison, string> = { A_PREPARER: 'À préparer', EN_COURS: 'En cours', LIVREE: 'Livrée', ANNULEE: 'Annulée' };
+const STYLES: Record<StatutLivraison, string> = { A_PREPARER: 'bg-orange-100 text-orange-700', EN_COURS: 'bg-blue-100 text-blue-700', LIVREE: 'bg-green-100 text-green-700', ANNULEE: 'bg-red-100 text-red-700' };
 
-interface Livraison {
-  id: string;
-  numero: string;
-  date: string;
-  client: string;
-  adresse: string;
-  chauffeur: string;
-  montant: number;
-  articles: number;
-  statut: StatutLivraison;
+function EditionModal({ livraison, onClose }: { livraison: LivraisonVueRow; onClose: () => void }) {
+  const repository = useRepository(LivraisonsRepository);
+  const notifier = useNotifier();
+  const [form, setForm] = useState<LivraisonDemande>({
+    adresse_livraison: livraison.adresse_livraison ?? '', date_livraison_prevue: (livraison.date_livraison_prevue ?? '').slice(0, 10), chauffeur: livraison.chauffeur ?? '', vehicule: livraison.vehicule ?? '',
+  });
+  const valider = async () => {
+    const parsed = livraisonDemandeSchema.safeParse(form);
+    if (!parsed.success) { notifier('erreur', parsed.error.issues[0].message); return; }
+    try { await repository.modifier(livraison.id, parsed.data); notifier('succes', `Livraison ${livraison.numero} modifiée.`); onClose(); }
+    catch (error) { notifier('erreur', error instanceof Error ? error.message : 'Modification impossible.'); }
+  };
+  return (
+    <Modal titre={`Livraison ${livraison.numero}`} largeur="max-w-lg" onClose={onClose} pied={<><button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button><button type="button" onClick={valider} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg">Enregistrer</button></>}>
+      <div className="space-y-4">
+        <label className="block text-xs font-medium text-neutral-700">Adresse<input value={form.adresse_livraison} onChange={(e) => setForm({ ...form, adresse_livraison: e.target.value })} className={`${inputClass} mt-1`} /></label>
+        <div className="grid grid-cols-3 gap-4">
+          <label className="block text-xs font-medium text-neutral-700">Date prévue<input type="date" value={form.date_livraison_prevue} onChange={(e) => setForm({ ...form, date_livraison_prevue: e.target.value })} className={`${inputClass} mt-1`} /></label>
+          <label className="block text-xs font-medium text-neutral-700">Chauffeur<input value={form.chauffeur} onChange={(e) => setForm({ ...form, chauffeur: e.target.value })} className={`${inputClass} mt-1`} /></label>
+          <label className="block text-xs font-medium text-neutral-700">Véhicule<input value={form.vehicule} onChange={(e) => setForm({ ...form, vehicule: e.target.value })} className={`${inputClass} mt-1`} /></label>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
-const LIVRAISONS_MOCK: Livraison[] = [
-  { id: '1', numero: 'LIV-2026-0089', date: '2026-08-27 09:00', client: 'SARL Bâtiment Plus', adresse: 'Zone industrielle, Abidjan', chauffeur: 'M. Koné', montant: 425000, articles: 8, statut: 'EN_COURS' },
-  { id: '2', numero: 'LIV-2026-0088', date: '2026-08-27 08:30', client: 'M. Koné Construction', adresse: 'Cocody, Abidjan', chauffeur: 'M. Traoré', montant: 187500, articles: 5, statut: 'LIVREE' },
-  { id: '3', numero: 'LIV-2026-0087', date: '2026-08-26 14:00', client: 'Entreprise Diabaté', adresse: 'Yopougon, Abidjan', chauffeur: 'M. Diabaté', montant: 680000, articles: 12, statut: 'LIVREE' },
-  { id: '4', numero: 'LIV-2026-0086', date: '2026-08-26 10:00', client: 'Client Comptoir', adresse: 'Adjamé, Abidjan', chauffeur: 'M. Koné', montant: 95000, articles: 3, statut: 'ANNULEE' },
-  { id: '5', numero: 'LIV-2026-0085', date: '2026-08-27 11:00', client: 'SARL Bâtiment Plus', adresse: 'Zone industrielle, Abidjan', chauffeur: 'M. Traoré', montant: 320000, articles: 6, statut: 'A_PREPARER' },
-];
-
-const CHAUFFEURS = ['M. Koné', 'M. Traoré', 'M. Diabaté'];
-
+/** Suivi des livraisons créées depuis le point de vente. */
 export default function LivraisonsPage() {
-  const [livraisons, setLivraisons] = useState<Livraison[]>(LIVRAISONS_MOCK);
-  const [filtreStatut, setFiltreStatut] = useState<string>('Tous');
-  const [showForm, setShowForm] = useState(false);
-  const [showStatutModal, setShowStatutModal] = useState(false);
-  const [livraisonSelectionnee, setLivraisonSelectionnee] = useState<string | null>(null);
-  const [nouvelleLivraison, setNouvelleLivraison] = useState({
-    client: '', adresse: '', chauffeur: CHAUFFEURS[0],
-    montant: 0, articles: 0, date: '',
-  });
+  const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
+  const repository = useRepository(LivraisonsRepository);
+  const notifier = useNotifier();
+  const [statut, setStatut] = useState<StatutLivraison | ''>('');
+  const [recherche, setRecherche] = useState('');
+  const [edition, setEdition] = useState<LivraisonVueRow | null>(null);
+  const { sql, params } = useMemo(() => livraisonsQuery(filialeId, statut || null, recherche), [filialeId, statut, recherche]);
+  const { data: livraisons, isLoading } = useQuery<LivraisonVueRow>(sql, params);
+  const compte = (s: StatutLivraison) => livraisons.filter((l) => l.statut === s).length;
 
-  const livraisonsFiltrees = filtreStatut === 'Tous' ? livraisons : livraisons.filter(l => l.statut === filtreStatut);
-
-  const stats = {
-    total: livraisons.length,
-    aPreparer: livraisons.filter(l => l.statut === 'A_PREPARER').length,
-    enCours: livraisons.filter(l => l.statut === 'EN_COURS').length,
-    livrees: livraisons.filter(l => l.statut === 'LIVREE').length,
-    valeurTransit: livraisons.filter(l => l.statut === 'EN_COURS').reduce((s, l) => s + l.montant, 0),
+  const changer = async (l: LivraisonVueRow, s: StatutLivraison) => {
+    if (s === 'ANNULEE' && !confirm(`Annuler la livraison ${l.numero} ?`)) return;
+    try { await repository.changerStatut(l.id, s); notifier('succes', `Livraison ${l.numero} : ${LIBELLES[s]}.`); }
+    catch (error) { notifier('erreur', error instanceof Error ? error.message : 'Changement impossible.'); }
   };
 
-  const getStatutConfig = (statut: StatutLivraison) => {
-    const configs = {
-      A_PREPARER: { label: 'À préparer', color: 'bg-gray-100 text-gray-700', icon: ClockIcon },
-      EN_COURS: { label: 'En cours', color: 'bg-blue-100 text-blue-700', icon: TruckIcon },
-      LIVREE: { label: 'Livrée', color: 'bg-green-100 text-green-700', icon: CheckCircleIcon },
-      ANNULEE: { label: 'Annulée', color: 'bg-red-100 text-red-700', icon: XCircleIcon },
-    };
-    return configs[statut];
-  };
-
-  const handleNouvelleLivraison = () => {
-    if (nouvelleLivraison.client && nouvelleLivraison.adresse) {
-      const newLivraison: Livraison = {
-        id: Date.now().toString(),
-        numero: `LIV-2026-${String(livraisons.length + 1).padStart(4, '0')}`,
-        date: `${nouvelleLivraison.date || new Date().toISOString().split('T')[0]} 09:00`,
-        client: nouvelleLivraison.client,
-        adresse: nouvelleLivraison.adresse,
-        chauffeur: nouvelleLivraison.chauffeur,
-        montant: nouvelleLivraison.montant,
-        articles: nouvelleLivraison.articles,
-        statut: 'A_PREPARER',
-      };
-      setLivraisons([newLivraison, ...livraisons]);
-      setShowForm(false);
-      setNouvelleLivraison({
-        client: '', adresse: '', chauffeur: CHAUFFEURS[0],
-        montant: 0, articles: 0, date: '',
-      });
-      alert('✅ Livraison créée avec succès !');
-    }
-  };
-
-  const handleUpdateStatut = (statut: StatutLivraison) => {
-    if (livraisonSelectionnee) {
-      setLivraisons(livraisons.map(l => 
-        l.id === livraisonSelectionnee ? { ...l, statut } : l
-      ));
-      setShowStatutModal(false);
-      setLivraisonSelectionnee(null);
-      alert(`✅ Statut mis à jour : ${getStatutConfig(statut).label}`);
-    }
-  };
+  if (!filialeId) {
+    return <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400">{estVueConsolidee ? <p className="text-lg">Sélectionnez une filiale dans le menu latéral.</p> : <p>Profil utilisateur en cours de synchronisation…</p>}</div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Livraisons</h1>
-          <p className="text-sm text-neutral-500 mt-1">Suivi des bons de livraison</p>
-        </div>
-        <button 
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg"
-        >
-          <PlusIcon className="w-5 h-5" />
-          Nouvelle livraison
-        </button>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">Total livraisons</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-2">{stats.total}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border-l-4 border-l-blue-500 shadow-sm">
-          <p className="text-sm text-neutral-500">En cours</p>
-          <p className="text-2xl font-bold text-blue-600 mt-2">{stats.enCours}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border-l-4 border-l-green-500 shadow-sm">
-          <p className="text-sm text-neutral-500">Livrées</p>
-          <p className="text-2xl font-bold text-green-600 mt-2">{stats.livrees}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border-l-4 border-l-orange-500 shadow-sm">
-          <p className="text-sm text-neutral-500">Valeur en transit</p>
-          <p className="text-2xl font-bold text-orange-600 font-mono mt-2">{stats.valeurTransit.toLocaleString('fr-FR')} F</p>
-        </div>
-      </div>
-
-      {/* Filtres */}
-      <div className="flex gap-2">
-        {['Tous', 'A_PREPARER', 'EN_COURS', 'LIVREE', 'ANNULEE'].map(s => (
-          <button
-            key={s}
-            onClick={() => setFiltreStatut(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filtreStatut === s ? 'bg-primary-600 text-white' : 'bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50'
-            }`}
-          >
-            {s === 'Tous' ? 'Toutes' : getStatutConfig(s as StatutLivraison).label}
-          </button>
+      <div><h1 className="text-2xl font-bold text-neutral-900">Livraisons</h1><p className="text-sm text-neutral-500 mt-1">{filiale?.nom} · les bons sont créés depuis le point de vente</p></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {STATUTS_LIVRAISON.map((s) => (
+          <button key={s} onClick={() => setStatut(statut === s ? '' : s)} className={`bg-white p-4 rounded-xl border-2 text-left shadow-sm ${statut === s ? 'border-primary-500' : 'border-neutral-200'}`}><p className="text-xs text-neutral-500">{LIBELLES[s]}</p><p className="text-2xl font-bold mt-1">{statut && statut !== s ? '—' : compte(s)}</p></button>
         ))}
       </div>
-
-      {/* Liste */}
-      <div className="space-y-3">
-        {livraisonsFiltrees.map((livraison) => {
-          const config = getStatutConfig(livraison.statut);
-          return (
-            <div key={livraison.id} className="bg-white rounded-xl border border-neutral-200 shadow-sm p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="font-mono font-bold text-primary-700">{livraison.numero}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-                      {config.label}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-neutral-900">{livraison.client}</h3>
-                  <p className="text-sm text-neutral-600 mt-1">📍 {livraison.adresse}</p>
-                  <div className="flex items-center gap-4 mt-3 text-sm text-neutral-500">
-                    <span> {livraison.chauffeur}</span>
-                    <span>📦 {livraison.articles} articles</span>
-                    <span>🕐 {livraison.date}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-neutral-500">Montant</p>
-                  <p className="text-xl font-bold font-mono text-neutral-900">
-                    {livraison.montant.toLocaleString('fr-FR')} F
-                  </p>
-                  <button
-                    onClick={() => {
-                      setLivraisonSelectionnee(livraison.id);
-                      setShowStatutModal(true);
-                    }}
-                    className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    Changer statut →
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <div className="relative flex-1 min-w-[16rem] max-w-md"><MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" /><input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N° livraison, client, adresse, chauffeur…" className={`${inputClass} pl-10`} /></div>
+        <select value={statut} onChange={(e) => setStatut(e.target.value as StatutLivraison | '')} className={controleInlineClass}><option value="">Tous les statuts</option>{STATUTS_LIVRAISON.map((s) => <option key={s} value={s}>{LIBELLES[s]}</option>)}</select>
       </div>
-
-      {/* Modal Nouvelle Livraison */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Nouvelle livraison</h3>
-              <button onClick={() => setShowForm(false)} className="p-2 hover:bg-neutral-100 rounded-lg">
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Client *</label>
-                <input type="text" value={nouvelleLivraison.client}
-                  onChange={(e) => setNouvelleLivraison({...nouvelleLivraison, client: e.target.value})}
-                  placeholder="Nom du client"
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Adresse de livraison *</label>
-                <input type="text" value={nouvelleLivraison.adresse}
-                  onChange={(e) => setNouvelleLivraison({...nouvelleLivraison, adresse: e.target.value})}
-                  placeholder="Adresse complète"
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">Chauffeur</label>
-                  <select value={nouvelleLivraison.chauffeur}
-                    onChange={(e) => setNouvelleLivraison({...nouvelleLivraison, chauffeur: e.target.value})}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg">
-                    {CHAUFFEURS.map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">Date</label>
-                  <input type="date" value={nouvelleLivraison.date}
-                    onChange={(e) => setNouvelleLivraison({...nouvelleLivraison, date: e.target.value})}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">Nombre d'articles</label>
-                  <input type="number" value={nouvelleLivraison.articles}
-                    onChange={(e) => setNouvelleLivraison({...nouvelleLivraison, articles: Number(e.target.value)})}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">Montant (FCFA)</label>
-                  <input type="number" value={nouvelleLivraison.montant}
-                    onChange={(e) => setNouvelleLivraison({...nouvelleLivraison, montant: Number(e.target.value)})}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg" />
-                </div>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setShowForm(false)}
-                  className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">
-                  Annuler
-                </button>
-                <button onClick={handleNouvelleLivraison}
-                  className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg">
-                  Créer la livraison
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Changement Statut */}
-      {showStatutModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold mb-4">Changer le statut</h3>
-            <div className="space-y-2">
-              {(['A_PREPARER', 'EN_COURS', 'LIVREE', 'ANNULEE'] as StatutLivraison[]).map(statut => {
-                const config = getStatutConfig(statut);
-                return (
-                  <button
-                    key={statut}
-                    onClick={() => handleUpdateStatut(statut)}
-                    className={`w-full p-4 rounded-lg border-2 flex items-center gap-3 transition-colors ${
-                      config.color.replace('text-', 'border-').split(' ')[0]
-                    } hover:bg-neutral-50`}
-                  >
-                    <config.icon className="w-6 h-6" />
-                    <span className="font-medium">{config.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              onClick={() => { setShowStatutModal(false); setLivraisonSelectionnee(null); }}
-              className="w-full mt-4 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"
-            >
-              Annuler
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
+            <th className="px-3 py-3 text-left">Numéro</th><th className="px-3 py-3 text-left">Prévue</th><th className="px-3 py-3 text-left">Client</th><th className="px-3 py-3 text-left">Adresse</th><th className="px-3 py-3 text-left">Chauffeur / véhicule</th><th className="px-3 py-3 text-left">Ticket</th><th className="px-3 py-3 text-right">Montant</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center print:hidden">Actions</th>
+          </tr></thead>
+          <tbody className="divide-y divide-neutral-100">
+            {livraisons.map((l) => {
+              const s = (l.statut ?? 'A_PREPARER') as StatutLivraison;
+              return (
+                <tr key={l.id} className="hover:bg-neutral-50">
+                  <td className="px-3 py-2 text-sm font-mono text-primary-700">{l.numero}</td>
+                  <td className="px-3 py-2 text-sm">{formaterDate(l.date_livraison_prevue)}{l.date_livraison_reelle && <span className="block text-xs text-green-700">livrée le {formaterDate(l.date_livraison_reelle)}</span>}</td>
+                  <td className="px-3 py-2 text-sm">{l.client_nom ?? <span className="text-neutral-400">Comptoir</span>}</td>
+                  <td className="px-3 py-2 text-sm text-neutral-600 max-w-xs truncate" title={l.adresse_livraison ?? ''}>{l.adresse_livraison}</td>
+                  <td className="px-3 py-2 text-sm text-neutral-600">{[l.chauffeur, l.vehicule].filter(Boolean).join(' · ') || '—'}</td>
+                  <td className="px-3 py-2 text-sm font-mono text-neutral-600">{l.vente_numero ?? '—'}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono">{l.vente_total_ttc != null ? formaterFcfa(l.vente_total_ttc) : '—'}</td>
+                  <td className="px-3 py-2 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${STYLES[s]}`}>{LIBELLES[s]}</span></td>
+                  <td className="px-3 py-2 print:hidden"><div className="flex items-center justify-center gap-1 flex-wrap">
+                    {TRANSITIONS_LIVRAISON[s].map((cible) => (
+                      <button key={cible} onClick={() => changer(l, cible)} className={`px-2 py-1 rounded text-xs font-medium ${cible === 'ANNULEE' ? 'text-red-600 hover:bg-red-50' : cible === 'LIVREE' ? 'text-green-700 hover:bg-green-50' : 'text-primary-700 hover:bg-primary-50'}`}>
+                        {cible === 'EN_COURS' && <TruckIcon className="w-3.5 h-3.5 inline mr-1" />}{LIBELLES[cible]}
+                      </button>
+                    ))}
+                    {s !== 'LIVREE' && <button onClick={() => setEdition(l)} className="p-1.5 hover:bg-neutral-100 rounded text-neutral-500" title="Modifier"><PencilSquareIcon className="w-4 h-4" /></button>}
+                  </div></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
+        {!isLoading && livraisons.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune livraison.</div>}
+      </div>
+      {edition && <EditionModal livraison={edition} onClose={() => setEdition(null)} />}
     </div>
   );
 }

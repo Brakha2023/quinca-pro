@@ -1,235 +1,102 @@
-import { useState } from 'react';
-import { useAuditStore } from '../../stores/audits.store';
-import { TrashIcon, PrinterIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@powersync/react';
+import type { AuditLogRow } from '@quinca/shared-types';
+import { useFilialeCourante } from '../../auth/useFilialeCourante';
+import { controleInlineClass } from '../../components/ui/FormField';
+import Modal from '../../components/ui/Modal';
 
-const ACTION_ICONS: Record<string, string> = {
-  CREATE: '🟢', UPDATE: '🔵', DELETE: '',
-  LOGIN: '🔑', LOGOUT: '🚪',
-  SALE: '💰', STOCK_IN: '', STOCK_OUT: '📤',
-  TRANSFER: '🔄', PAYMENT: '💵',
-  IMPORT: '📂', EXPORT: '📤', PRINT: '🖨️',
+const LIBELLES_ACTION: Record<string, { label: string; cls: string }> = {
+  INSERT: { label: 'Création', cls: 'bg-green-100 text-green-700' },
+  UPDATE: { label: 'Modification', cls: 'bg-blue-100 text-blue-700' },
+  DELETE: { label: 'Suppression', cls: 'bg-red-100 text-red-700' },
 };
+const TABLES_AUDITEES = ['articles', 'ventes', 'reglements_clients', 'reglements_fournisseurs', 'mouvements_stock', 'mouvements_tresorerie', 'utilisateurs'];
+const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
+interface AuditVue extends AuditLogRow { utilisateur_nom: string | null; utilisateur_prenom: string | null; utilisateur_email: string | null }
+
+function auditQuery(filialeId: string | null, f: { table: string; action: string; dateDebut: string; dateFin: string; utilisateurId: string }) {
+  const conditions = ['(l.filiale_id = ? OR l.filiale_id IS NULL)'];
+  const params: Array<string | number> = [filialeId ?? ''];
+  if (f.table) { conditions.push('l.table_cible = ?'); params.push(f.table); }
+  if (f.action) { conditions.push('l.action = ?'); params.push(f.action); }
+  if (f.utilisateurId) { conditions.push('l.utilisateur_id = ?'); params.push(f.utilisateurId); }
+  if (f.dateDebut) { conditions.push('l.created_at >= ?'); params.push(new Date(`${f.dateDebut}T00:00:00`).toISOString()); }
+  if (f.dateFin) { conditions.push('l.created_at <= ?'); params.push(new Date(`${f.dateFin}T23:59:59.999`).toISOString()); }
+  return {
+    sql: `SELECT l.*, u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom, u.email AS utilisateur_email
+          FROM audit_log l LEFT JOIN utilisateurs u ON u.id = l.utilisateur_id WHERE ${conditions.join(' AND ')} ORDER BY l.created_at DESC LIMIT 500`,
+    params,
+  };
+}
+
+function difference(avant: string | null, apres: string | null): Array<[string, unknown, unknown]> {
+  const a = avant ? (JSON.parse(avant) as Record<string, unknown>) : {};
+  const b = apres ? (JSON.parse(apres) as Record<string, unknown>) : {};
+  const cles = new Set([...Object.keys(a), ...Object.keys(b)]);
+  return [...cles].filter((k) => k !== 'updated_at' && JSON.stringify(a[k]) !== JSON.stringify(b[k])).map((k) => [k, a[k], b[k]]);
+}
+
+/**
+ * Journal d'audit : alimenté exclusivement par les triggers Postgres
+ * (jamais par le client), synchronisé en lecture seule.
+ */
 export default function AuditPage() {
-  const store = useAuditStore();
-  const logs = store.getLogsFiltres();
-  const [showDetails, setShowDetails] = useState<string | null>(null);
-
-  const users = ['Tous', ...Array.from(new Set(logs.map(l => l.user_name)))];
-  const modules = ['Tous', ...Array.from(new Set(logs.map(l => l.module)))];
-
-  const handleExport = () => {
-    const csv = [
-      ['Date/Heure', 'Utilisateur', 'Action', 'Module', 'Description'],
-      ...logs.map(l => [
-        l.timestamp, l.user_name, l.action, l.module, l.description
-      ])
-    ].map(row => row.join(',')).join('\n');
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `audit_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
+  const { filialeId, filiale } = useFilialeCourante();
+  const [table, setTable] = useState('');
+  const [action, setAction] = useState('');
+  const [dateDebut, setDateDebut] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10); });
+  const [dateFin, setDateFin] = useState(aujourdhui);
+  const [detail, setDetail] = useState<AuditVue | null>(null);
+  const { data: utilisateurs } = useQuery<{ id: string; nom: string; prenom: string | null }>('SELECT id, nom, prenom FROM utilisateurs ORDER BY nom');
+  const [utilisateurId, setUtilisateurId] = useState('');
+  const { sql, params } = useMemo(() => auditQuery(filialeId, { table, action, dateDebut, dateFin, utilisateurId }), [filialeId, table, action, dateDebut, dateFin, utilisateurId]);
+  const { data: logs, isLoading } = useQuery<AuditVue>(sql, params);
 
   return (
-    <div className="space-y-6 print:p-0">
-      {/* Header */}
-      <div className="flex items-center justify-between print:hidden">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Journal d'Audit</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Traçabilité des actions • {logs.length} opérations enregistrées
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"
-          >
-            <PrinterIcon className="w-5 h-5" />
-            Imprimer
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg"
-          >
-            <ArrowDownTrayIcon className="w-5 h-5" />
-            Exporter CSV
-          </button>
-          <button
-            onClick={store.clearLogs}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg"
-          >
-            <TrashIcon className="w-5 h-5" />
-            Effacer logs
-          </button>
-        </div>
+    <div className="space-y-6">
+      <div><h1 className="text-2xl font-bold text-neutral-900">Journal d'audit</h1><p className="text-sm text-neutral-500 mt-1">{filiale?.nom ?? 'Toutes les filiales'} · enregistré côté serveur, infalsifiable depuis l'application</p></div>
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} className={controleInlineClass} /><span className="text-neutral-400">→</span>
+        <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} className={controleInlineClass} />
+        <select value={table} onChange={(e) => setTable(e.target.value)} className={controleInlineClass}><option value="">Toutes les tables</option>{TABLES_AUDITEES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+        <select value={action} onChange={(e) => setAction(e.target.value)} className={controleInlineClass}><option value="">Toutes les actions</option>{Object.entries(LIBELLES_ACTION).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select>
+        <select value={utilisateurId} onChange={(e) => setUtilisateurId(e.target.value)} className={controleInlineClass}><option value="">Tous les utilisateurs</option>{utilisateurs.map((u) => <option key={u.id} value={u.id}>{[u.prenom, u.nom].filter(Boolean).join(' ')}</option>)}</select>
+        <span className="ml-auto text-sm text-neutral-600">{logs.length} événement(s)</span>
       </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden">
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">Total opérations</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-2">{logs.length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">Aujourd'hui</p>
-          <p className="text-2xl font-bold text-primary-700 mt-2">
-            {logs.filter(l => l.timestamp.startsWith(new Date().toISOString().split('T')[0])).length}
-          </p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">Utilisateurs actifs</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-2">{users.length - 1}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm">
-          <p className="text-sm text-neutral-500">Modules utilisés</p>
-          <p className="text-2xl font-bold text-neutral-900 mt-2">{modules.length - 1}</p>
-        </div>
-      </div>
-
-      {/* Filtres */}
-      <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm print:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-neutral-700 mb-1">Utilisateur</label>
-            <select
-              value={store.filtreUser}
-              onChange={(e) => store.setFiltres({ filtreUser: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg"
-            >
-              {users.map(u => <option key={u}>{u}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-neutral-700 mb-1">Module</label>
-            <select
-              value={store.filtreModule}
-              onChange={(e) => store.setFiltres({ filtreModule: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg"
-            >
-              {modules.map(m => <option key={m}>{m}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-neutral-700 mb-1">Date début</label>
-            <input
-              type="date"
-              value={store.filtreDateDebut}
-              onChange={(e) => store.setFiltres({ filtreDateDebut: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-neutral-700 mb-1">Date fin</label>
-            <input
-              type="date"
-              value={store.filtreDateFin}
-              onChange={(e) => store.setFiltres({ filtreDateFin: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Tableau */}
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <div className="hidden print:block px-6 py-4 border-b border-neutral-200">
-          <h2 className="text-xl font-bold text-neutral-900">Journal d'Audit</h2>
-          <p className="text-sm text-neutral-600 mt-1">Periode: {store.filtreDateDebut || 'Debut'} au {store.filtreDateFin || 'Aujourd\'hui'}</p>
-        </div>
         <table className="w-full">
-          <thead className="bg-neutral-50 border-b border-neutral-200">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase">Date/Heure</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase">Action</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase">Module</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase">Utilisateur</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase">Description</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-neutral-600 uppercase print:hidden">Détails</th>
-            </tr>
-          </thead>
+          <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-3 text-left">Date</th><th className="px-3 py-3 text-left">Utilisateur</th><th className="px-3 py-3 text-left">Action</th><th className="px-3 py-3 text-left">Table</th><th className="px-3 py-3 text-left">Enregistrement</th><th className="px-3 py-3 text-left">Changements</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
-            {logs.map((log) => (
-              <tr key={log.id} className="hover:bg-neutral-50 transition-colors">
-                <td className="px-4 py-3 text-sm font-mono text-neutral-600">
-                  <div>{log.timestamp.split(' ')[0]}</div>
-                  <div className="text-xs text-neutral-400">{log.timestamp.split(' ')[1]}</div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
-                    <span>{ACTION_ICONS[log.action] || ''}</span>
-                    {log.action}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-neutral-700">{log.module}</td>
-                <td className="px-4 py-3 text-sm font-medium text-neutral-900">{log.user_name}</td>
-                <td className="px-4 py-3 text-sm text-neutral-600">{log.description}</td>
-                <td className="px-4 py-3 text-center print:hidden">
-                  <button
-                    onClick={() => setShowDetails(showDetails === log.id ? null : log.id)}
-                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    {showDetails === log.id ? 'Masquer' : 'Voir'}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {logs.map((l) => {
+              const a = LIBELLES_ACTION[l.action ?? ''] ?? { label: l.action ?? '', cls: 'bg-neutral-100' };
+              const diff = l.action === 'UPDATE' ? difference(l.anciennes_valeurs, l.nouvelles_valeurs) : [];
+              return (
+                <tr key={l.id} className="hover:bg-neutral-50 cursor-pointer" onClick={() => setDetail(l)}>
+                  <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{l.created_at ? new Date(l.created_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}</td>
+                  <td className="px-3 py-2 text-sm">{[l.utilisateur_prenom, l.utilisateur_nom].filter(Boolean).join(' ') || l.utilisateur_email || <span className="text-neutral-400">système</span>}</td>
+                  <td className="px-3 py-2"><span className={`px-2 py-1 rounded-full text-xs font-medium ${a.cls}`}>{a.label}</span></td>
+                  <td className="px-3 py-2 text-sm font-mono">{l.table_cible}</td>
+                  <td className="px-3 py-2 text-xs font-mono text-neutral-500">{(l.enregistrement_id ?? '').slice(0, 8)}…</td>
+                  <td className="px-3 py-2 text-xs text-neutral-600">{diff.length ? diff.slice(0, 3).map(([k]) => k).join(', ') + (diff.length > 3 ? '…' : '') : '—'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+        {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
+        {!isLoading && logs.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun événement sur la période.</div>}
       </div>
-
-      {/* Détails */}
-      {showDetails && logs.find(l => l.id === showDetails) && (
-        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-6 print:hidden">
-          <h3 className="font-semibold text-neutral-900 mb-4">Détails de l'opération</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-neutral-500">Type d'entité</p>
-              <p className="font-medium">{logs.find(l => l.id === showDetails)?.entity_type || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-neutral-500">ID Entité</p>
-              <p className="font-mono">{logs.find(l => l.id === showDetails)?.entity_id || 'N/A'}</p>
-            </div>
-            {logs.find(l => l.id === showDetails)?.old_value && (
-              <div className="col-span-2">
-                <p className="text-neutral-500">Anciennes valeurs</p>
-                <pre className="bg-red-50 p-3 rounded-lg text-xs mt-1 text-red-700">
-                  {JSON.stringify(logs.find(l => l.id === showDetails)?.old_value, null, 2)}
-                </pre>
-              </div>
-            )}
-            {logs.find(l => l.id === showDetails)?.new_value && (
-              <div className="col-span-2">
-                <p className="text-neutral-500">Nouvelles valeurs</p>
-                <pre className="bg-green-50 p-3 rounded-lg text-xs mt-1 text-green-700">
-                  {JSON.stringify(logs.find(l => l.id === showDetails)?.new_value, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        </div>
+      {detail && (
+        <Modal titre={`${LIBELLES_ACTION[detail.action ?? '']?.label ?? detail.action} · ${detail.table_cible}`} sousTitre={detail.enregistrement_id ?? ''} largeur="max-w-3xl" onClose={() => setDetail(null)}>
+          {detail.action === 'UPDATE' ? (
+            <table className="w-full text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Champ</th><th className="px-3 py-2 text-left">Avant</th><th className="px-3 py-2 text-left">Après</th></tr></thead>
+              <tbody className="divide-y divide-neutral-100">{difference(detail.anciennes_valeurs, detail.nouvelles_valeurs).map(([k, a, b]) => <tr key={k}><td className="px-3 py-2 font-mono">{k}</td><td className="px-3 py-2 text-red-700 font-mono break-all">{String(a ?? '∅')}</td><td className="px-3 py-2 text-green-700 font-mono break-all">{String(b ?? '∅')}</td></tr>)}</tbody></table>
+          ) : (
+            <pre className="text-xs bg-neutral-50 rounded-lg p-4 overflow-x-auto">{JSON.stringify(JSON.parse(detail.nouvelles_valeurs ?? detail.anciennes_valeurs ?? '{}'), null, 2)}</pre>
+          )}
+        </Modal>
       )}
-
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          .print\\:p-0, .print\\:p-0 * { visibility: visible; }
-          .print\\:p-0 {
-            position: absolute;
-            left: 0; top: 0; width: 100%;
-            padding: 20px;
-          }
-        }
-      `}</style>
     </div>
   );
 }

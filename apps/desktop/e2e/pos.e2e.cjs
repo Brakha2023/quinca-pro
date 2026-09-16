@@ -114,6 +114,21 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(true, 'détail du ticket avec ses lignes');
   await page.keyboard.press('Escape');
 
+  console.log('Pages alimentées par les ventes');
+  await page.goto(`${BASE_URL}/#/`);
+  await page.locator('main h1', { hasText: 'Filiale Abidjan' }).waitFor();
+  await page.locator('text=CA du jour').waitFor();
+  verifier((await page.textContent('main')).includes('Top articles'), 'dashboard : KPIs et top articles');
+  await page.goto(`${BASE_URL}/#/tresorerie`);
+  await page.locator('tbody tr', { hasText: 'Vente' }).first().waitFor();
+  verifier((await page.locator('tbody tr').count()) >= 3, 'trésorerie : recettes de ventes journalisées');
+  await page.goto(`${BASE_URL}/#/livraisons`);
+  await page.locator('tbody tr', { hasText: 'Cocody' }).waitFor();
+  verifier((await page.locator('tbody tr', { hasText: 'Annulée' }).count()) === 1, 'livraisons : bon annulé avec la vente');
+  await page.goto(`${BASE_URL}/#/audit`);
+  await page.locator('main h1', { hasText: 'audit' }).waitFor();
+  verifier(true, 'audit : page rendue (journal serveur, vide hors ligne)');
+
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');
