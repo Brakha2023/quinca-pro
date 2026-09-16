@@ -44,8 +44,7 @@ const menuSections: MenuSection[] = [
     items: [
       { name: 'Point de Vente', href: '/pos', icon: ShoppingCartIcon },
       { name: 'Vente day', href: '/vente-day', icon: CreditCardIcon },
-      // { name: 'Articles', href: '/articles', icon: CubeTransparentIcon },
-      { name: 'Articles (PowerSync)', href: '/articles-sync', icon: CubeTransparentIcon },
+      { name: 'Catalogue', href: '/articles', icon: CubeTransparentIcon },
       { name: 'Stock', href: '/stock', icon: CubeIcon },
     ],
   },

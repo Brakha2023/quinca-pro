@@ -1,82 +1,105 @@
-import type { CommonPowerSyncDatabase, Transaction } from '@powersync/web';
-import type { ArticleRow, FamilleArticleRow } from '@quinca/shared-types';
-import { v4 as uuidv4 } from 'uuid';
+import type { Transaction } from '@powersync/web';
+import type { FamilleArticleRow } from '@quinca/shared-types';
+import { preparerImport, type ArticleForm, type LigneImportArticle, type ResultatImport } from '../../../core/articles';
+import { BaseRepository } from './BaseRepository';
 
-export type { ArticleRow };
-export type FamilleRow = Pick<FamilleArticleRow, 'id' | 'code' | 'nom'>;
-
-export interface NouvelArticle {
-  code: string;
-  designation: string;
-  famille_id: string | null;
-  prix_achat: number;
-  prix_vente: number;
-  tva: number;
-  stock_min: number;
-  stock_max: number;
-  unite: string;
+export interface FiltresArticles {
+  recherche?: string;
+  familleId?: string | null;
+  inclureInactifs?: boolean;
 }
-
-export interface LigneImportArticle {
-  code: string;
-  designation: string;
-  prix_achat: number;
-  prix_vente: number;
-  famille_nom: string;
-}
-
-export const ARTICLES_QUERY = 'SELECT * FROM articles WHERE filiale_id = ? AND est_actif = 1 ORDER BY designation';
-export const FAMILLES_QUERY =
-  'SELECT id, code, nom FROM familles_articles WHERE filiale_id = ? AND est_active = 1 ORDER BY nom';
 
 /**
- * Accès en écriture aux articles et familles dans la base locale.
- * Les identifiants sont générés côté client (UUID v4) : indispensable hors ligne.
+ * Requête de liste paramétrée : le filtrage se fait en SQL (pas en JS)
+ * pour rester rapide sur un catalogue de plusieurs milliers d'articles.
  */
-export class ArticlesRepository {
-  constructor(private readonly db: CommonPowerSyncDatabase) {}
+export function articlesQuery(filialeId: string | null, filtres: FiltresArticles = {}) {
+  const conditions = ['filiale_id = ?'];
+  const params: Array<string | number> = [filialeId ?? ''];
 
-  async create(filialeId: string, article: NouvelArticle): Promise<string> {
-    const id = uuidv4();
-    const now = new Date().toISOString();
+  if (!filtres.inclureInactifs) conditions.push('est_actif = 1');
+  if (filtres.familleId) {
+    conditions.push('famille_id = ?');
+    params.push(filtres.familleId);
+  }
+  const q = filtres.recherche?.trim();
+  if (q) {
+    conditions.push('(code LIKE ? OR designation LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`);
+  }
+
+  return {
+    sql: `SELECT * FROM articles WHERE ${conditions.join(' AND ')} ORDER BY designation`,
+    params,
+  };
+}
+
+export class ArticlesRepository extends BaseRepository {
+  async create(filialeId: string, form: ArticleForm): Promise<string> {
+    const id = this.nouvelId();
+    const now = this.maintenant();
     await this.db.execute(
-      `INSERT INTO articles (id, code, designation, famille_id, prix_achat, prix_vente, tva, stock_min, stock_max, unite, filiale_id, est_actif, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+      `INSERT INTO articles (id, code, designation, famille_id, sous_famille, prix_achat, prix_vente, prix_vip, tva,
+                             stock_min, stock_max, unite, filiale_id, est_actif, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
       [
-        id,
-        article.code,
-        article.designation,
-        article.famille_id,
-        article.prix_achat,
-        article.prix_vente,
-        article.tva,
-        article.stock_min,
-        article.stock_max,
-        article.unite,
-        filialeId,
-        now,
-        now,
+        id, form.code, form.designation, form.famille_id, form.sous_famille || null,
+        form.prix_achat, form.prix_vente, form.prix_vip === '' ? null : form.prix_vip, form.tva,
+        form.stock_min, form.stock_max, form.unite, filialeId, now, now,
       ],
     );
     return id;
   }
 
-  /**
-   * Import en masse dans une seule transaction locale : soit tout, soit rien.
-   * Les familles inconnues sont créées à la volée.
-   */
-  async importMany(filialeId: string, lignes: LigneImportArticle[]): Promise<number> {
-    return this.db.writeTransaction(async (tx) => {
-      const famillesParNom = await this.chargerFamillesParNom(tx, filialeId);
-      const now = new Date().toISOString();
-      let count = 0;
+  async update(id: string, form: ArticleForm): Promise<void> {
+    await this.patch(this.db, 'articles', id, {
+      code: form.code,
+      designation: form.designation,
+      famille_id: form.famille_id,
+      sous_famille: form.sous_famille || null,
+      prix_achat: form.prix_achat,
+      prix_vente: form.prix_vente,
+      prix_vip: form.prix_vip === '' ? null : form.prix_vip,
+      tva: form.tva,
+      stock_min: form.stock_min,
+      stock_max: form.stock_max,
+      unite: form.unite,
+    });
+  }
 
-      for (const ligne of lignes) {
+  /** Un article ne se supprime jamais (historique des ventes) : il se désactive. */
+  async setActif(id: string, actif: boolean): Promise<void> {
+    await this.patch(this.db, 'articles', id, { est_actif: actif ? 1 : 0 });
+  }
+
+  async codeExiste(filialeId: string, code: string, excludeId?: string): Promise<boolean> {
+    const rows = await this.db.getAll<{ id: string }>(
+      'SELECT id FROM articles WHERE filiale_id = ? AND code = ? AND id != ? LIMIT 1',
+      [filialeId, code, excludeId ?? ''],
+    );
+    return rows.length > 0;
+  }
+
+  /**
+   * Import en masse dans une seule transaction locale. Les codes déjà présents
+   * sont ignorés (jamais écrasés) ; les familles inconnues sont créées.
+   */
+  async importMany(filialeId: string, lignes: LigneImportArticle[]): Promise<ResultatImport> {
+    return this.db.writeTransaction(async (tx) => {
+      const codesExistants = new Set(
+        (await tx.getAll<{ code: string }>('SELECT code FROM articles WHERE filiale_id = ?', [filialeId])).map((r) =>
+          (r.code ?? '').toUpperCase(),
+        ),
+      );
+      const { valides, ignores } = preparerImport(lignes, codesExistants);
+      const famillesParNom = await this.chargerFamillesParNom(tx, filialeId);
+      const now = this.maintenant();
+
+      for (const ligne of valides) {
         const nomFamille = ligne.famille_nom.trim().toUpperCase() || 'DIVERS';
         let familleId = famillesParNom.get(nomFamille);
-
         if (!familleId) {
-          familleId = uuidv4();
+          familleId = this.nouvelId();
           await tx.execute(
             `INSERT INTO familles_articles (id, code, nom, filiale_id, est_active, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)`,
             [familleId, nomFamille.slice(0, 10), nomFamille, filialeId, now, now],
@@ -86,18 +109,20 @@ export class ArticlesRepository {
 
         await tx.execute(
           `INSERT INTO articles (id, code, designation, famille_id, prix_achat, prix_vente, tva, stock_min, stock_max, unite, filiale_id, est_actif, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, 18, 10, 100, 'PIECE', ?, 1, ?, ?)`,
-          [uuidv4(), ligne.code, ligne.designation, familleId, ligne.prix_achat, ligne.prix_vente, filialeId, now, now],
+           VALUES (?, ?, ?, ?, ?, ?, 18, 0, 0, 'PIECE', ?, 1, ?, ?)`,
+          [this.nouvelId(), ligne.code, ligne.designation, familleId, ligne.prix_achat, ligne.prix_vente, filialeId, now, now],
         );
-        count++;
       }
 
-      return count;
+      return { importes: valides.length, ignores };
     });
   }
 
   private async chargerFamillesParNom(tx: Transaction, filialeId: string): Promise<Map<string, string>> {
-    const familles = await tx.getAll<FamilleRow>(FAMILLES_QUERY, [filialeId]);
+    const familles = await tx.getAll<Pick<FamilleArticleRow, 'id' | 'nom'>>(
+      'SELECT id, nom FROM familles_articles WHERE filiale_id = ?',
+      [filialeId],
+    );
     return new Map(familles.map((f) => [(f.nom ?? '').toUpperCase(), f.id]));
   }
 }

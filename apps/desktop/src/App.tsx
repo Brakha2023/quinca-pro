@@ -8,7 +8,6 @@ import ClientsPage from './presentation/pages/Clients/ClientsPage';
 import FournisseursPage from './presentation/pages/Fournisseurs/FournisseursPage';
 import ConsolidationPage from './presentation/pages/Consolidation/ConsolidationPage';
 import ArticlesPage from './presentation/pages/Articles/ArticlesPage';
-import ArticlesPowerSyncPage from './presentation/pages/Articles/ArticlesPowerSyncPage';
 import StockPage from './presentation/pages/Stock/StockPage';
 import TresoreriePage from './presentation/pages/Tresorerie/TresoreriePage';
 import LivraisonsPage from './presentation/pages/Livraisons/LivraisonsPage';
@@ -26,7 +25,6 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="pos" element={<POSPage />} />
             <Route path="articles" element={<ArticlesPage />} />
-            <Route path="articles-sync" element={<ArticlesPowerSyncPage />} />
             <Route path="stock" element={<StockPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="fournisseurs" element={<FournisseursPage />} />

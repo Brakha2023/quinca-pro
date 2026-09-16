@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import {
-  CubeIcon, ArrowDownTrayIcon, ArrowUpTrayIcon,
+  ArrowDownTrayIcon, ArrowUpTrayIcon,
   ArrowsRightLeftIcon, BuildingLibraryIcon,
   CogIcon, ArrowTrendingDownIcon, ClipboardDocumentCheckIcon,
   BellIcon,
 } from '@heroicons/react/24/outline';
 import type { ComponentType } from 'react';
 import { useStockStore } from '../../stores/stocks.store';
-import ArticlesTab from './Tabs/ArticlesTab';
 import EntreeStockTab from './Tabs/EntreeStockTab';
 import SortieStockTab from './Tabs/SortieStockTab';
 import TransfertDepotTab from './Tabs/TransfertDepotTab';
@@ -16,13 +15,11 @@ import DestockageTab from './Tabs/DestockageTab';
 import SuiviStockTab from './Tabs/SuiviStockTab';
 import InventaireTab from './Tabs/InventaireTab';
 import AlertesTab from './Tabs/AlertesTab';
-import ArticlesPowerSyncTab from './Tabs/ArticlesPowerSyncTab';
 
 
-type TabId = 'articles' | 'entree' | 'sortie' | 'transfert_depot' | 'transfert_filiale' | 'production' | 'destockage' | 'suivi' | 'inventaire' | 'alertes'| 'articles_sync';
+type TabId = 'entree' | 'sortie' | 'transfert_depot' | 'transfert_filiale' | 'production' | 'destockage' | 'suivi' | 'inventaire' | 'alertes';
 
 const TABS: Array<{ id: TabId; label: string; icon: ComponentType<{ className?: string }>; color: string }> = [
-  { id: 'articles', label: 'Articles', icon: CubeIcon, color: 'bg-blue-500' },
   { id: 'entree', label: 'Entrée en stock', icon: ArrowDownTrayIcon, color: 'bg-green-500' },
   { id: 'sortie', label: 'Sortie en stock', icon: ArrowUpTrayIcon, color: 'bg-orange-500' },
   { id: 'transfert_depot', label: 'Transfert inter-dépôt', icon: ArrowsRightLeftIcon, color: 'bg-purple-500' },
@@ -32,12 +29,11 @@ const TABS: Array<{ id: TabId; label: string; icon: ComponentType<{ className?: 
   { id: 'suivi', label: 'Suivi de stock', icon: ClipboardDocumentCheckIcon, color: 'bg-teal-500' },
   { id: 'inventaire', label: 'Inventaire physique', icon: ClipboardDocumentCheckIcon, color: 'bg-pink-500' },
   { id: 'alertes', label: 'Alertes & Rapports', icon: BellIcon, color: 'bg-amber-500' },
-  { id: 'articles_sync', label: 'Articles (PowerSync)', icon: CubeIcon, color: 'bg-green-500' },
 
 ];
 
 export default function StockPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('articles');
+  const [activeTab, setActiveTab] = useState<TabId>('suivi');
   const store = useStockStore();
 
   const valeurStock = store.getValeurStockTotal();
@@ -100,7 +96,6 @@ export default function StockPage() {
 
         {/* Content */}
         <div className="p-6">
-          {activeTab === 'articles' && <ArticlesTab />}
           {activeTab === 'entree' && <EntreeStockTab />}
           {activeTab === 'sortie' && <SortieStockTab />}
           {activeTab === 'transfert_depot' && <TransfertDepotTab type="INTER_DEPOT" />}
@@ -110,7 +105,6 @@ export default function StockPage() {
           {activeTab === 'suivi' && <SuiviStockTab />}
           {activeTab === 'inventaire' && <InventaireTab />}
           {activeTab === 'alertes' && <AlertesTab />}
-          {activeTab === 'articles_sync' && <ArticlesPowerSyncTab />}
         </div>
       </div>
     </div>
