@@ -8,3 +8,21 @@
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
 }
+/* Zone d'impression du ticket de caisse : masquée à l'écran, seule imprimée. */
+#zone-impression { display: none; }
+@media print {
+  /* Quand un ticket est présent, seul le ticket est imprimé ; sinon la page courante s'imprime normalement. */
+  body:has(#zone-impression) > #root { display: none !important; }
+  #zone-impression { display: block; }
+  @page { margin: 4mm; }
+  .ticket { width: 72mm; font: 11px/1.35 "Courier New", monospace; color: #000; }
+  .ticket p { margin: 0; }
+  .ticket-entete { text-align: center; margin-bottom: 4px; }
+  .ticket-titre { font-weight: bold; font-size: 14px; }
+  .ticket-ligne-sep { border-top: 1px dashed #000; margin: 4px 0; }
+  .ticket-table { width: 100%; border-collapse: collapse; }
+  .ticket-table td { padding: 1px 0; vertical-align: top; }
+  .ticket-droite { text-align: right; white-space: nowrap; }
+  .ticket-total td { font-weight: bold; font-size: 13px; border-top: 1px solid #000; padding-top: 3px; }
+  .ticket-pied { text-align: center; margin-top: 6px; }
+}

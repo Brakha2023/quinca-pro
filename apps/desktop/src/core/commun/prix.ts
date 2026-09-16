@@ -18,6 +18,7 @@ export function margePourcent(prixAchat: number, prixVente: number): number {
   return Math.round(((prixVente - prixAchat) / prixAchat) * 100);
 }
 
+/** Affichage monétaire : le franc CFA n'a pas de centimes, on arrondit à l'unité. */
 export function formaterFcfa(montant: number | null | undefined): string {
-  return `${(montant ?? 0).toLocaleString('fr-FR')} F`;
+  return `${Math.round(montant ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F`;
 }

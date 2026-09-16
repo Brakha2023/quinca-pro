@@ -34,6 +34,24 @@ export function articlesQuery(filialeId: string | null, filtres: FiltresArticles
   };
 }
 
+/** Catalogue du point de vente : articles actifs avec le disponible du dépôt de vente. */
+export function catalogueQuery(filialeId: string | null, depotId: string | null, filtres: FiltresArticles = {}) {
+  const conditions = ['a.filiale_id = ?', 'a.est_actif = 1'];
+  const params: Array<string | number> = [depotId ?? '', filialeId ?? ''];
+  if (filtres.familleId) { conditions.push('a.famille_id = ?'); params.push(filtres.familleId); }
+  const q = filtres.recherche?.trim();
+  if (q) { conditions.push('(a.code LIKE ? OR a.designation LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  return {
+    sql: `SELECT a.*, COALESCE(s.quantite_disponible, 0) AS stock_disponible
+          FROM articles a
+          LEFT JOIN stocks s ON s.article_id = a.id AND s.depot_id = ?
+          WHERE ${conditions.join(' AND ')}
+          ORDER BY a.designation
+          LIMIT 200`,
+    params,
+  };
+}
+
 export class ArticlesRepository extends BaseRepository {
   async create(filialeId: string, form: ArticleForm): Promise<string> {
     const id = this.nouvelId();

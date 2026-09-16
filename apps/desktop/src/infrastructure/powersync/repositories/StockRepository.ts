@@ -110,10 +110,15 @@ export function mouvementsQuery(filialeId: string | null, filtres: FiltresMouvem
   };
 }
 
-interface LigneAAppliquer {
+export interface LigneAAppliquer {
   article_id: string;
   quantite: number;
   cout_unitaire: number | null;
+}
+
+export interface OptionsMouvement {
+  /** Autorise une sortie au-delà du disponible (stock négatif assumé, ex. vente forcée par un gérant). */
+  autoriserNegatif?: boolean;
 }
 
 /**
@@ -202,6 +207,24 @@ export class StockRepository extends BaseRepository {
     };
   }
 
+  /**
+   * Applique un mouvement dans une transaction ouverte par l'appelant
+   * (utilisé aussi par les ventes). Lève `StockInsuffisantError` si le
+   * disponible ne couvre pas une sortie.
+   */
+  async appliquerDansTransaction(
+    tx: Transaction,
+    ctx: ContexteMouvement,
+    depotId: string,
+    type: TypeMouvementStock,
+    ligne: LigneAAppliquer,
+    reference: string,
+    motif: string | null,
+    options: OptionsMouvement = {},
+  ): Promise<void> {
+    return this.appliquer(tx, ctx, depotId, type, ligne, reference, motif, options);
+  }
+
   private async appliquer(
     tx: Transaction,
     ctx: ContexteMouvement,
@@ -210,9 +233,10 @@ export class StockRepository extends BaseRepository {
     ligne: LigneAAppliquer,
     reference: string,
     motif: string | null,
+    options: OptionsMouvement = {},
   ): Promise<void> {
     const etat = await this.lireEtat(tx, ligne.article_id, depotId);
-    const resultat = appliquerMouvement(etat, type, ligne.quantite, ligne.cout_unitaire, { articleId: ligne.article_id });
+    const resultat = appliquerMouvement(etat, type, ligne.quantite, ligne.cout_unitaire, { articleId: ligne.article_id, autoriserNegatif: options.autoriserNegatif });
     const now = this.maintenant();
 
     if (etat.id) {

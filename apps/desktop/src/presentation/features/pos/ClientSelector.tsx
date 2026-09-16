@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { BuildingOfficeIcon, PlusIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { statutCredit, type Client } from '../../../core/clients';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
-import ClientFormModal from '../../features/clients/ClientFormModal';
-import { STATUT_CREDIT_STYLE } from '../../features/clients/ClientDetailsModal';
-import { useClients } from '../../features/clients/hooks';
+import ClientFormModal from '../clients/ClientFormModal';
+import { STATUT_CREDIT_STYLE } from '../clients/ClientDetailsModal';
+import { useClients } from '../clients/hooks';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { usePOSStore } from '../../stores/pos.store';
 

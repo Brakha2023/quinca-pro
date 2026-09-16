@@ -3,7 +3,6 @@ import RequireAuth from './presentation/auth/RequireAuth';
 import MainLayout from './presentation/layout/MainLayout';
 import DashboardPage from './presentation/pages/Dashboard/DashboardPage';
 import POSPage from './presentation/pages/POS/POSPage';
-import HistoriquePage from './presentation/pages/Historique/HistoriquePage';
 import ClientsPage from './presentation/pages/Clients/ClientsPage';
 import FournisseursPage from './presentation/pages/Fournisseurs/FournisseursPage';
 import ConsolidationPage from './presentation/pages/Consolidation/ConsolidationPage';
@@ -12,7 +11,7 @@ import StockPage from './presentation/pages/Stock/StockPage';
 import TresoreriePage from './presentation/pages/Tresorerie/TresoreriePage';
 import LivraisonsPage from './presentation/pages/Livraisons/LivraisonsPage';
 import AuditPage from './presentation/pages/Audit/AuditPage';
-import VenteDayPage from './presentation/pages/VenteDay/VenteDayPage';
+import VentesPage from './presentation/pages/Ventes/VentesPage';
 import LoginPage from './presentation/pages/Auth/LoginPage';
 
 function App() {
@@ -30,8 +29,7 @@ function App() {
             <Route path="fournisseurs" element={<FournisseursPage />} />
             <Route path="tresorerie" element={<TresoreriePage />} />
             <Route path="livraisons" element={<LivraisonsPage />} />
-            <Route path="historique" element={<HistoriquePage />} />
-            <Route path="vente-day" element={<VenteDayPage />} />
+            <Route path="ventes" element={<VentesPage />} />
             <Route path="consolidation" element={<ConsolidationPage />} />
             <Route path="audit" element={<AuditPage />} />
           </Route>

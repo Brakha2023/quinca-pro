@@ -1,48 +1,65 @@
-import { useMemo } from 'react';
-import { usePOSStore } from '../../stores/pos.store';
-import { ARTICLES_MOCK } from '../../stores/mock-data';
-import SearchBar from '../../components/pos/SearchBar';
-import ArticleCard from '../../components/pos/ArticleCard';
-import TicketPanel from '../../components/pos/TicketPanel';
+import { useState } from 'react';
+import { Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
+import { useFilialeCourante } from '../../auth/useFilialeCourante';
+import CataloguePanel from '../../features/pos/CataloguePanel';
+import PosteModal from '../../features/pos/PosteModal';
+import TicketPanel from '../../features/pos/TicketPanel';
+import { usePoste } from '../../features/pos/hooks';
 
+/** Point de vente : catalogue à gauche, ticket à droite. Nécessite une caisse et un dépôt configurés sur le poste. */
 export default function POSPage() {
-  const { familleActive, recherche } = usePOSStore();
+  const { filialeId, estVueConsolidee } = useFilialeCourante();
+  const { utilisateur } = useCurrentUtilisateur();
+  const poste = usePoste(filialeId);
+  const [reglages, setReglages] = useState(false);
 
-  const articlesFiltres = useMemo(() => {
-    return ARTICLES_MOCK.filter((article) => {
-      const matchFamille = familleActive === 'Tous' || article.famille === familleActive;
-      const matchRecherche = article.designation.toLowerCase().includes(recherche.toLowerCase()) ||
-                            article.code_auto.toLowerCase().includes(recherche.toLowerCase());
-      return matchFamille && matchRecherche;
-    });
-  }, [familleActive, recherche]);
+  if (!filialeId) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400">
+        {estVueConsolidee ? <p className="text-lg">Sélectionnez une filiale pour vendre.</p> : <p>Profil utilisateur en cours de synchronisation…</p>}
+      </div>
+    );
+  }
+
+  if (!poste.estConfigure || reglages) {
+    return (
+      <>
+        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400">Configuration du poste…</div>
+        <PosteModal
+          caisses={poste.caisses}
+          depots={poste.depots}
+          caisseId={poste.caisse?.id}
+          depotId={poste.depot?.id}
+          onValider={(c, d) => { poste.definir(c, d); setReglages(false); }}
+          onClose={poste.estConfigure ? () => setReglages(false) : undefined}
+        />
+      </>
+    );
+  }
+
+  const ctx = {
+    filialeId,
+    utilisateurId: utilisateur?.id ?? null,
+    caisseId: poste.caisse!.id,
+    caisseCode: poste.caisse!.code ?? 'CAISSE',
+    depotId: poste.depot!.id,
+  };
+  const peutForcerStock = utilisateur?.profil === 'GERANT' || utilisateur?.profil === 'DIRECTEUR';
 
   return (
-    <div className="h-full flex gap-6">
-      {/* Colonne gauche - Catalogue (65%) */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <SearchBar />
-        
-        <div className="mt-4 flex-1 overflow-y-auto">
-          {articlesFiltres.length === 0 ? (
-            <div className="text-center py-20 text-neutral-400">
-              <p className="text-5xl mb-3">🔍</p>
-              <p className="text-lg font-medium">Aucun article trouvé</p>
-              <p className="text-sm mt-1">Essayez une autre recherche ou famille</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {articlesFiltres.map((article) => (
-                <ArticleCard key={article.id} article={article} />
-              ))}
-            </div>
-          )}
-        </div>
+    <div className="h-full flex flex-col gap-3 min-h-0">
+      <div className="flex items-center justify-between text-xs text-neutral-500 print:hidden">
+        <span>Caisse <strong className="text-neutral-700">{poste.caisse!.nom}</strong> · Dépôt <strong className="text-neutral-700">{poste.depot!.nom}</strong></span>
+        <button onClick={() => setReglages(true)} className="flex items-center gap-1 hover:text-neutral-800"><Cog6ToothIcon className="w-4 h-4" /> Changer</button>
       </div>
-
-      {/* Colonne droite - Ticket (35%) */}
-      <div className="w-96 flex-shrink-0">
-        <TicketPanel />
+      <div className="flex-1 flex gap-6 min-h-0">
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          <CataloguePanel filialeId={filialeId} depotId={ctx.depotId} />
+        </div>
+        <div className="w-96 flex-shrink-0 min-h-0">
+          <TicketPanel ctx={ctx} peutForcerStock={peutForcerStock} />
+        </div>
       </div>
     </div>
   );

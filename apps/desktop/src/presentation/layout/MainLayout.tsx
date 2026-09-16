@@ -43,7 +43,7 @@ const menuSections: MenuSection[] = [
     title: 'Exploitation',
     items: [
       { name: 'Point de Vente', href: '/pos', icon: ShoppingCartIcon },
-      { name: 'Vente day', href: '/vente-day', icon: CreditCardIcon },
+      { name: 'Ventes', href: '/ventes', icon: CreditCardIcon },
       { name: 'Catalogue', href: '/articles', icon: CubeTransparentIcon },
       { name: 'Stock', href: '/stock', icon: CubeIcon },
     ],

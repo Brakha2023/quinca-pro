@@ -1,117 +1,64 @@
 import { create } from 'zustand';
-import { Article } from '../../core/entities/article.entity';
-import { LigneVente } from '../../core/entities/vente.entity';
 import type { Client } from '../../core/clients';
-import { v4 as uuidv4 } from 'uuid';
+import { ajouterAuPanier, type LignePanier } from '../../core/ventes';
+import type { Article } from '../../core/articles';
 
 interface POSState {
-  lignes: LigneVente[];
+  lignes: LignePanier[];
   /** Client du ticket en cours ; null = client comptoir. */
   client: Client | null;
-  setClient: (client: Client | null) => void;
-  familleActive: string;
-  recherche: string;
   remiseGlobale: number;
-  dateVente: string;
-  
-  setFamilleActive: (famille: string) => void;
-  setRecherche: (recherche: string) => void;
+  familleId: string;
+  recherche: string;
+
+  setClient: (client: Client | null) => void;
   setRemiseGlobale: (remise: number) => void;
-  
-  ajouterArticle: (article: Article, quantite?: number) => void;
-  modifierQuantite: (ligneId: string, quantite: number) => void;
-  supprimerLigne: (ligneId: string) => void;
+  setFamilleId: (id: string) => void;
+  setRecherche: (recherche: string) => void;
+
+  ajouterArticle: (article: Article, quantite?: number, prixVip?: boolean) => void;
+  modifierQuantite: (articleId: string, quantite: number) => void;
+  modifierRemiseLigne: (articleId: string, remise: number) => void;
+  supprimerLigne: (articleId: string) => void;
   viderPanier: () => void;
-  
-  calculerSousTotal: () => number;
-  calculerTVA: () => number;
-  calculerTotal: () => number;
-  calculerNombreArticles: () => number;
 }
 
+/** État du ticket en cours (UI uniquement ; la persistance se fait à la validation). */
 export const usePOSStore = create<POSState>((set, get) => ({
   lignes: [],
   client: null,
-  setClient: (client) => set({ client }),
-  familleActive: 'Tous',
-  recherche: '',
   remiseGlobale: 0,
-  dateVente: new Date().toISOString(),
+  familleId: '',
+  recherche: '',
 
-  setFamilleActive: (famille) => set({ familleActive: famille }),
+  setClient: (client) => set({ client }),
+  setRemiseGlobale: (remise) => set({ remiseGlobale: Math.min(Math.max(remise, 0), 100) }),
+  setFamilleId: (familleId) => set({ familleId }),
   setRecherche: (recherche) => set({ recherche }),
-  setRemiseGlobale: (remise) => set({ remiseGlobale: remise }),
 
-  ajouterArticle: (article, quantite = 1) => {
-    const state = get();
-    const ligneExistante = state.lignes.find(l => l.article_id === article.id);
-
-    if (ligneExistante) {
-      set({
-        lignes: state.lignes.map(l =>
-          l.article_id === article.id
-            ? { ...l, quantite: l.quantite + quantite }
-            : l
-        ),
-      });
-    } else {
-      const prixUnitaire = article.prix_vente_ttc;
-      const totalTTC = prixUnitaire * quantite;
-      const totalHT = totalTTC / (1 + article.tva / 100);
-
-      const nouvelleLigne: LigneVente = {
-        id: uuidv4(),
-        article_id: article.id,
-        designation: article.designation,
-        prix_unitaire: prixUnitaire,
-        quantite,
-        remise_pct: 0,
-        total_ht: totalHT,
-        total_ttc: totalTTC,
-      };
-
-      set({ lignes: [...state.lignes, nouvelleLigne] });
-    }
-  },
-
-  modifierQuantite: (ligneId, quantite) => {
-    if (quantite <= 0) {
-      get().supprimerLigne(ligneId);
-      return;
-    }
+  ajouterArticle: (article, quantite = 1, prixVip = false) =>
     set({
-      lignes: get().lignes.map(l => {
-        if (l.id === ligneId) {
-          const totalTTC = l.prix_unitaire * quantite;
-          const totalHT = totalTTC / 1.18;
-          return { ...l, quantite, total_ht: totalHT, total_ttc: totalTTC };
-        }
-        return l;
+      lignes: ajouterAuPanier(get().lignes, {
+        article_id: article.id,
+        code: article.code,
+        designation: article.designation,
+        unite: article.unite,
+        prix_unitaire_ttc: prixVip && article.prix_vip != null ? article.prix_vip : article.prix_vente,
+        tva_percent: article.tva,
+        quantite,
+        remise_percent: 0,
       }),
-    });
+    }),
+
+  modifierQuantite: (articleId, quantite) => {
+    if (quantite <= 0) { get().supprimerLigne(articleId); return; }
+    set({ lignes: get().lignes.map((l) => (l.article_id === articleId ? { ...l, quantite } : l)) });
   },
 
-  supprimerLigne: (ligneId) => {
-    set({ lignes: get().lignes.filter(l => l.id !== ligneId) });
-  },
+  modifierRemiseLigne: (articleId, remise) =>
+    set({ lignes: get().lignes.map((l) => (l.article_id === articleId ? { ...l, remise_percent: Math.min(Math.max(remise, 0), 100) } : l)) }),
 
-  viderPanier: () => set({ lignes: [], client: null, remiseGlobale: 0, dateVente: new Date().toISOString() }),
+  supprimerLigne: (articleId) => set({ lignes: get().lignes.filter((l) => l.article_id !== articleId) }),
 
-  calculerSousTotal: () => {
-    return get().lignes.reduce((sum, l) => sum + l.total_ht, 0);
-  },
-
-  calculerTVA: () => {
-    return get().calculerTotal() - get().calculerSousTotal();
-  },
-
-  calculerTotal: () => {
-    const total = get().lignes.reduce((sum, l) => sum + l.total_ttc, 0);
-    const remise = get().remiseGlobale;
-    return total - (total * remise / 100);
-  },
-
-  calculerNombreArticles: () => {
-    return get().lignes.reduce((sum, l) => sum + l.quantite, 0);
-  },
+  viderPanier: () => set({ lignes: [], client: null, remiseGlobale: 0 }),
 }));
