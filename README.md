@@ -11,7 +11,7 @@ apps/desktop            Application Tauri 2 + React 19 (Vite, Tailwind)
   src/infrastructure    Adaptateurs : env, Supabase, PowerSync (schéma, connector, repositories)
   src/presentation      React : auth, layout, pages, composants, stores d'UI
 packages/shared-types   Description unique des tables (types de lignes + schéma SQLite) et énumérations
-supabase/               Migrations Postgres, seed, sync rules PowerSync
+supabase/               Migrations Postgres, seed, Sync Streams PowerSync
 ```
 
 Flux de données :
@@ -24,7 +24,7 @@ UI (repository) ─écrit─▶ SQLite locale ─file CRUD─▶ SupabaseConnect
 - Les lectures ne touchent **jamais** le réseau.
 - Les écritures sont appliquées localement puis rejouées vers Supabase par
   [`SupabaseConnector`](apps/desktop/src/infrastructure/powersync/SupabaseConnector.ts).
-- Le périmètre synchronisé par utilisateur est défini par [`supabase/sync-rules.yaml`](supabase/sync-rules.yaml) :
+- Le périmètre synchronisé par utilisateur est défini par [`supabase/sync-streams.yaml`](supabase/sync-streams.yaml) :
   sa filiale pour un gérant/caissier/magasinier, toutes les filiales pour le directeur.
 - La sécurité côté serveur repose sur les politiques RLS de la migration (le client n'utilise que la clé `anon` + JWT).
 
@@ -42,10 +42,12 @@ UI (repository) ─écrit─▶ SQLite locale ─file CRUD─▶ SupabaseConnect
 2. **PowerSync** (dashboard de l'instance) :
    - *Connection* : connecter la base Supabase (le dashboard fournit le SQL du rôle de réplication ;
      la publication `powersync` est créée par la migration) ;
-   - *Client Auth* : les JWT Supabase sont signés en ES256 → ajouter l'URL JWKS
-     `https://<ref>.supabase.co/auth/v1/.well-known/jwks.json` (ou activer « Supabase Auth » avec l'URL du projet) ;
+   - *Client Auth* : les JWT Supabase sont signés en ES256 → renseigner **JWKS URI** =
+     `https://<ref>.supabase.co/auth/v1/.well-known/jwks.json` puis « Save and Deploy »
+     (la case « Use Supabase Auth » ne couvre que l'ancien secret HS256) ;
      sans cela le client reçoit `PSYNC_S2101 … no key matched the token KID` ;
-   - *Sync Rules* : coller `supabase/sync-rules.yaml` et déployer.
+   - *Sync Streams* : coller `supabase/sync-streams.yaml` et déployer. Le périmètre par utilisateur
+     vient de la table `acces_filiales` (migration `20260916100000`), maintenue par trigger.
 3. **Utilisateurs** : créer les comptes dans Supabase Auth avec les métadonnées
    `{ "nom": "…", "prenom": "…", "profil": "DIRECTEUR|GERANT|CAISSIER|MAGASINIER", "filiale_id": "<uuid ou vide pour DIRECTEUR>" }`.
    Le profil `utilisateurs` est créé automatiquement par trigger.
