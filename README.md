@@ -48,6 +48,7 @@ UI (repository) ─écrit─▶ SQLite locale ─file CRUD─▶ SupabaseConnect
      sans cela le client reçoit `PSYNC_S2101 … no key matched the token KID` ;
    - *Sync Streams* : coller `supabase/sync-streams.yaml` et déployer. Le périmètre par utilisateur
      vient de la table `acces_filiales` (migration `20260916100000`), maintenue par trigger.
+   ⚠ Vérifier que `VITE_POWERSYNC_URL` pointe sur l'instance configurée (dashboard → *Client SDK Setup*).
 3. **Utilisateurs** : créer les comptes dans Supabase Auth avec les métadonnées
    `{ "nom": "…", "prenom": "…", "profil": "DIRECTEUR|GERANT|CAISSIER|MAGASINIER", "filiale_id": "<uuid ou vide pour DIRECTEUR>" }`.
    Le profil `utilisateurs` est créé automatiquement par trigger.
@@ -60,6 +61,8 @@ pnpm install
 pnpm desktop           # lance Tauri + Vite (fenêtre native)
 pnpm --filter @quinca/desktop dev   # Vite seul, dans le navigateur (http://localhost:1420)
 
+pnpm --filter @quinca/desktop e2e        # scénario Catalogue en local (Chromium headless, sans backend)
+E2E_EMAIL=… E2E_PASSWORD=… pnpm --filter @quinca/desktop e2e:sync   # aller-retour réel Supabase/PowerSync
 pnpm check-types       # tsc sur tout le monorepo
 pnpm lint              # eslint
 pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop tauri build` pour l'installeur
