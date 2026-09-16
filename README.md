@@ -36,10 +36,16 @@ UI (repository) ─écrit─▶ SQLite locale ─file CRUD─▶ SupabaseConnect
 
 ## Mise en place du backend
 
-1. **Supabase** : exécuter `supabase/migrations/*.sql` puis `supabase/seed.sql` (SQL Editor ou `supabase db push`).
-2. **PowerSync** : créer l'instance, la connecter à Supabase (le dashboard fournit le SQL pour créer le rôle
-   de réplication ; la publication `powersync` est déjà créée par la migration), configurer l'auth Supabase
-   (JWT secret ou JWKS), puis déployer `supabase/sync-rules.yaml`.
+1. **Supabase** : exécuter `supabase/migrations/*.sql` puis `supabase/seed.sql` (SQL Editor ou `psql`).
+   En `psql`, l'hôte direct `db.<ref>.supabase.co` n'a qu'une adresse IPv6 : passer par le pooler en mode
+   session, `aws-1-<region>.pooler.supabase.com:5432`, utilisateur `postgres.<ref>`.
+2. **PowerSync** (dashboard de l'instance) :
+   - *Connection* : connecter la base Supabase (le dashboard fournit le SQL du rôle de réplication ;
+     la publication `powersync` est créée par la migration) ;
+   - *Client Auth* : les JWT Supabase sont signés en ES256 → ajouter l'URL JWKS
+     `https://<ref>.supabase.co/auth/v1/.well-known/jwks.json` (ou activer « Supabase Auth » avec l'URL du projet) ;
+     sans cela le client reçoit `PSYNC_S2101 … no key matched the token KID` ;
+   - *Sync Rules* : coller `supabase/sync-rules.yaml` et déployer.
 3. **Utilisateurs** : créer les comptes dans Supabase Auth avec les métadonnées
    `{ "nom": "…", "prenom": "…", "profil": "DIRECTEUR|GERANT|CAISSIER|MAGASINIER", "filiale_id": "<uuid ou vide pour DIRECTEUR>" }`.
    Le profil `utilisateurs` est créé automatiquement par trigger.

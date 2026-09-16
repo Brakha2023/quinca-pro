@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { ArticleRow } from '@quinca/shared-types';
 import { margePourcent } from '../commun/prix';
 
-export const UNITES = ['PIECE', 'KG', 'M', 'M2', 'M3', 'L', 'SAC', 'CARTON', 'PAQUET', 'ROULEAU', 'BOITE'] as const;
+export const UNITES = ['PIECE', 'KG', 'M', 'M2', 'M3', 'L', 'BIDON', 'SAC', 'CARTON', 'PAQUET', 'ROULEAU', 'BOITE'] as const;
 export type Unite = (typeof UNITES)[number];
 
 export const TVA_PAR_DEFAUT = 18;
