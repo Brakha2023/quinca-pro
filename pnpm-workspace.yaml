@@ -1,8 +1,6 @@
 packages:
-  - 'apps/desktop/src'
-  - 'apps/server/api'
-  - 'packages/shared-types'
-  - 'packages/design-system'
+  - 'apps/*'
+  - 'packages/*'
 
 allowBuilds:
   '@swc/core': false
