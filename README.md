@@ -7,9 +7,11 @@ chaque poste travaille sur une base SQLite locale et se synchronise avec le serv
 
 ```
 apps/desktop            Application Tauri 2 + React 19 (Vite, Tailwind)
-  src/core              Domaine pur : entités, règles métier — aucune dépendance React/PowerSync
-  src/infrastructure    Adaptateurs : env, Supabase, PowerSync (schéma, connector, repositories)
-  src/presentation      React : auth, layout, pages, composants, stores d'UI
+  src/core              Domaine pur par module (articles, stock, clients, ventes, fournisseurs, tresorerie) :
+                        entités, schémas zod, règles métier — aucune dépendance React/PowerSync, tests vitest
+  src/infrastructure    Adaptateurs : env, Supabase, PowerSync (schéma, connector, repositories transactionnels)
+  src/presentation      React : auth, layout, pages, features/<module> (hooks useQuery + composants), stores d'UI
+  e2e/                  Scénarios Playwright headless (base locale réelle + UI), `pnpm e2e` / `pnpm e2e:sync`
 packages/shared-types   Description unique des tables (types de lignes + schéma SQLite) et énumérations
 supabase/               Migrations Postgres, seed, Sync Streams PowerSync
 ```
@@ -77,11 +79,17 @@ pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop taur
   Toute évolution de schéma = migration SQL **et** mise à jour de `packages/shared-types/src/tables.ts`.
 - Pas de logique métier dans les pages : elle vit dans `core/` (testable sans React).
 
-## Feuille de route
+## État d'avancement
 
-Voir l'historique des commits « phase 0 » pour l'état des fondations. Prochaines phases :
-domaine par domaine sur PowerSync (articles → stock → clients → POS → fournisseurs → trésorerie → livraisons),
-puis packaging desktop (impression, mises à jour, signature), puis pilotage/consolidation.
+- **Phase 0 — fondations** : faite (structure, typage strict, connector PowerSync, auth, schéma Postgres, Sync Streams).
+- **Phase 1 — métier local-first** : faite. Catalogue (articles, familles, dépôts, import Excel), Stock (entrées,
+  sorties, transferts, inventaire, journal, alertes), Clients (créances, règlements), Point de vente (vente atomique,
+  crédit, livraison, ticket), Ventes (journée, validation, annulation), Fournisseurs (achats réceptionnés, dettes,
+  paiements), Trésorerie (caisses, opérations, transferts), Livraisons, Audit, Dashboard et Consolidation.
+  Chaque écriture métier est une transaction SQLite locale rejouée vers Supabase ; les lectures sont temps réel.
+- **Phase 2 — desktop prod** : à faire (CSP Tauri, impression thermique, plugins Rust, auto-update, signature,
+  build Windows testé).
+- **Phase 3 — pilotage avancé** : exports Excel, rapports périodiques, bons de commande fournisseurs, recherche accentuée.
 
 ## Backlog technique connu
 
