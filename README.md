@@ -88,3 +88,6 @@ puis packaging desktop (impression, mises à jour, signature), puis pilotage/con
 - **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).
   Prévu : colonne `cle_recherche` (minuscules sans accents) sur `articles`, `clients`, `fournisseurs`, calculée
   côté client à l'écriture et par trigger côté serveur, et utilisée par toutes les recherches.
+- **Bons de commande fournisseurs** (avant réception) : le schéma n'a pas de table de lignes de commande ;
+  aujourd'hui un achat est saisi à la réception (BL/facture). Prévu : table `lignes_commandes_fournisseurs`,
+  statuts BROUILLON → ENVOYEE → PARTIELLE/LIVREE avec réception partielle.
