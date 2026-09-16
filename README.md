@@ -82,3 +82,9 @@ pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop taur
 Voir l'historique des commits « phase 0 » pour l'état des fondations. Prochaines phases :
 domaine par domaine sur PowerSync (articles → stock → clients → POS → fournisseurs → trésorerie → livraisons),
 puis packaging desktop (impression, mises à jour, signature), puis pilotage/consolidation.
+
+## Backlog technique connu
+
+- **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).
+  Prévu : colonne `cle_recherche` (minuscules sans accents) sur `articles`, `clients`, `fournisseurs`, calculée
+  côté client à l'écriture et par trigger côté serveur, et utilisée par toutes les recherches.

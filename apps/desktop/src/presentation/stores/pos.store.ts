@@ -1,10 +1,14 @@
 import { create } from 'zustand';
 import { Article } from '../../core/entities/article.entity';
 import { LigneVente } from '../../core/entities/vente.entity';
+import type { Client } from '../../core/clients';
 import { v4 as uuidv4 } from 'uuid';
 
 interface POSState {
   lignes: LigneVente[];
+  /** Client du ticket en cours ; null = client comptoir. */
+  client: Client | null;
+  setClient: (client: Client | null) => void;
   familleActive: string;
   recherche: string;
   remiseGlobale: number;
@@ -27,6 +31,8 @@ interface POSState {
 
 export const usePOSStore = create<POSState>((set, get) => ({
   lignes: [],
+  client: null,
+  setClient: (client) => set({ client }),
   familleActive: 'Tous',
   recherche: '',
   remiseGlobale: 0,
@@ -89,7 +95,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     set({ lignes: get().lignes.filter(l => l.id !== ligneId) });
   },
 
-  viderPanier: () => set({ lignes: [], remiseGlobale: 0, dateVente: new Date().toISOString() }),
+  viderPanier: () => set({ lignes: [], client: null, remiseGlobale: 0, dateVente: new Date().toISOString() }),
 
   calculerSousTotal: () => {
     return get().lignes.reduce((sum, l) => sum + l.total_ht, 0);

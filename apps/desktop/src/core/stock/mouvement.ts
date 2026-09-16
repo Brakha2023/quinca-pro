@@ -1,6 +1,7 @@
 import type { MouvementStockRow, StockRow } from '@quinca/shared-types';
 import type { TypeMouvementStock } from '@quinca/shared-types';
 import { arrondirMontant } from '../commun/prix';
+import { genererNumeroPiece } from '../commun/numerotation';
 
 export interface Stock {
   id: string;
@@ -182,17 +183,5 @@ export function statutStock(quantite: number, stockMin: number, stockMax: number
   return 'OK';
 }
 
-/**
- * Numéro de bon lisible et unique hors ligne : préfixe, date, suffixe aléatoire.
- * Ex. `ENT-20260916-K7Q2`. Pas de compteur central : deux postes hors ligne
- * ne peuvent pas entrer en collision.
- */
-export function genererNumeroBon(prefixe: string, date: Date = new Date()): string {
-  const jour = date.toISOString().slice(0, 10).replace(/-/g, '');
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let suffixe = '';
-  const aleatoire = new Uint8Array(4);
-  crypto.getRandomValues(aleatoire);
-  for (const b of aleatoire) suffixe += alphabet[b % alphabet.length];
-  return `${prefixe}-${jour}-${suffixe}`;
-}
+/** Numéro de bon de stock, ex. `ENT-20260916-K7Q2` (voir {@link genererNumeroPiece}). */
+export const genererNumeroBon = genererNumeroPiece;

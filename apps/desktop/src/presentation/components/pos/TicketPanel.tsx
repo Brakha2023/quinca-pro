@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { usePOSStore } from '../../stores/pos.store';
-import { useClientsStore } from '../../stores/clients.store';
 import { PlusIcon, MinusIcon, TrashIcon, UserIcon, TruckIcon } from '@heroicons/react/24/outline';
 import ClientSelector from './ClientSelector';
 import LivraisonModal, { LivraisonData } from './LivraisonModal';
@@ -18,9 +17,9 @@ export default function TicketPanel() {
     modifierQuantite,
     supprimerLigne,
     viderPanier,
+    client: selectedClient,
   } = usePOSStore();
-
-  const { selectedClient, isComptoir } = useClientsStore();
+  const isComptoir = selectedClient === null;
 
   const [showClientSelector, setShowClientSelector] = useState(false);
   const [showLivraison, setShowLivraison] = useState(false);
