@@ -10,6 +10,7 @@ import ArticlePicker from './ArticlePicker';
 import { CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire } from './EnteteBon';
 import { useStocks } from './hooks';
 import { useContexteMouvement } from './useContexteMouvement';
+import { useConfirmation } from '../../confirmation/useConfirmation';
 
 interface LigneComptage {
   article_id: string;
@@ -28,6 +29,7 @@ interface LigneComptage {
 export default function InventairePanel({ filialeId }: { filialeId: string }) {
   const repository = useRepository(StockRepository);
   const notifier = useNotifier();
+  const confirmer = useConfirmation();
   const ctx = useContexteMouvement(filialeId);
   const { depots } = useDepots(filialeId, { actifs: true });
   const [depotId, setDepotId] = useState('');
@@ -76,7 +78,7 @@ export default function InventairePanel({ filialeId }: { filialeId: string }) {
       lignes: lignesSaisies.map((l) => ({ article_id: l.article_id, quantite_comptee: l.comptee })),
     });
     if (!parsed.success) { notifier('erreur', parsed.error.issues[0].message); return; }
-    if (!confirm(`Valider l'inventaire : ${lignesSaisies.length} article(s) comptés, ${ecarts} écart(s) à régulariser ?`)) return;
+    if (!(await confirmer({ titre: 'Valider l’inventaire', message: `${lignesSaisies.length} article(s) comptés, ${ecarts} écart(s) à régulariser. Les quantités comptées remplaceront le stock actuel.`, libelleConfirmer: 'Valider' }))) return;
     setEnCours(true);
     try {
       const r = await repository.enregistrerInventaire(ctx, parsed.data);

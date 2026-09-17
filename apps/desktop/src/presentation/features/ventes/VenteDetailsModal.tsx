@@ -33,7 +33,6 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
 
   const annuler = async () => {
     if (motif.trim().length < 3) { notifier('erreur', 'Indiquez un motif d\'annulation.'); return; }
-    if (!confirm(`Annuler la vente ${vente.numero} ? Les articles reviendront en stock et l'encaissement sera contre-passé.`)) return;
     try {
       await repository.annuler({ filialeId, utilisateurId: utilisateur?.id ?? null }, vente.id, motif.trim());
       notifier('succes', `Vente ${vente.numero} annulée.`);

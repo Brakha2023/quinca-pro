@@ -19,6 +19,7 @@ import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
+import { useConfirmation } from '../../confirmation/useConfirmation';
 import { useNotifier } from '../../notifications/useNotifier';
 import { usePOSStore } from '../../stores/pos.store';
 import TicketImprimable from './TicketImprimable';
@@ -37,6 +38,7 @@ const COUPURES = [500, 1000, 2000, 5000, 10000];
 export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose, onTerminee }: Props) {
   const repository = useRepository(VentesRepository);
   const notifier = useNotifier();
+  const confirmer = useConfirmation();
   const { utilisateur } = useCurrentUtilisateur();
   const { filiale } = useFilialeCourante();
   const { lignes, client, remiseGlobale, viderPanier } = usePOSStore();
@@ -71,9 +73,9 @@ export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose
       if (error instanceof StockInsuffisantError) {
         const article = lignes.find((l) => l.article_id === error.articleId);
         const msg = `Stock insuffisant pour ${article?.designation ?? 'un article'} : ${error.disponible} disponible(s), ${error.demande} demandé(s).`;
-        if (peutForcerStock && !forcerStock && confirm(`${msg}\n\nVendre quand même (le stock passera en négatif) ?`)) {
-          setEnCours(false);
-          return encaisser(true);
+        if (peutForcerStock && !forcerStock) {
+          const forcer = await confirmer({ titre: 'Stock insuffisant', message: `${msg}\n\nVendre quand même ? Le stock passera en négatif.`, libelleConfirmer: 'Vendre quand même', danger: true });
+          if (forcer) { setEnCours(false); return encaisser(true); }
         }
         notifier('erreur', msg);
       } else if (error instanceof VenteInvalideError) {

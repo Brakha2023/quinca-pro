@@ -112,7 +112,35 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('tbody tr').first().getByTitle('Détail').click();
   await page.getByRole('dialog').locator('td', { hasText: 'Ciment' }).waitFor();
   verifier(true, 'détail du ticket avec ses lignes');
+
+  // Annulation depuis l'interface : motif obligatoire, puis bouton rouge (sans confirm() natif, absent sous Tauri).
+  const enAttenteAvant = await page.locator('tbody tr', { hasText: 'En attente' }).count();
+  await page.getByRole('dialog').getByRole('button', { name: 'Annuler cette vente' }).click();
+  await page.getByRole('dialog').getByPlaceholder(/motif/i).fill('Retour d’articles');
+  await page.getByRole('dialog').getByRole('button', { name: "Confirmer l'annulation" }).click();
+  await page.locator('tbody tr').first().locator('text=Annulée').waitFor();
+  verifier((await page.locator('tbody tr', { hasText: 'En attente' }).count()) === enAttenteAvant - 1, 'annulation UI : le ticket passe en Annulée');
+
+  // Seconde vente rapide, puis validation de journée via la boîte de confirmation applicative.
+  await page.goto(`${BASE_URL}/#/pos`);
+  await page.locator('input[type=search]').waitFor();
+  await page.keyboard.press('F2');
+  await page.keyboard.type('CIM-50');
+  await page.keyboard.press('Enter');
+  await ticket.locator('text=Ciment 50kg').waitFor();
+  await page.keyboard.press('F11');
+  await page.getByRole('dialog', { name: 'Encaissement' }).waitFor();
+  await page.getByRole('button', { name: 'Valider la vente' }).click();
+  await page.getByRole('dialog', { name: 'Vente enregistrée' }).waitFor();
   await page.keyboard.press('Escape');
+  await page.goto(`${BASE_URL}/#/ventes`);
+  await page.locator('tbody tr', { hasText: 'En attente' }).first().waitFor();
+  await page.locator('thead input[type=checkbox]').check();
+  await page.getByRole('button', { name: /^Valider \(/ }).click();
+  await page.getByRole('dialog', { name: 'Validation de journée' }).waitFor();
+  await page.getByRole('dialog', { name: 'Validation de journée' }).getByRole('button', { name: 'Valider' }).click();
+  await page.locator('tbody tr', { hasText: 'En attente' }).first().waitFor({ state: 'detached' });
+  verifier((await page.locator('tbody tr', { hasText: 'Validée' }).count()) >= 3, 'validation de journée via la boîte de confirmation');
 
   console.log('Pages alimentées par les ventes');
   await page.goto(`${BASE_URL}/#/`);

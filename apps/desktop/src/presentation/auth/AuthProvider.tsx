@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../../infrastructure/supabase/client';
+import { estErreurReseau, lireSessionPersistee, supabase } from '../../infrastructure/supabase/client';
 import { clearLocalData, connectSync, countPendingUploads } from '../../infrastructure/powersync/database';
 import { AuthContext } from './AuthContext';
 
@@ -8,12 +8,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    // Hors ligne avec un jeton expiré, getSession() renvoie null alors que la session
+    // est toujours sur disque : on la reprend pour laisser travailler en local.
+    supabase.auth.getSession().then(({ data }) => setSession(data.session ?? lireSessionPersistee()));
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'SIGNED_OUT') { setSession(null); return; }
+      setSession(nextSession ?? lireSessionPersistee());
     });
 
     return () => subscription.unsubscribe();
@@ -30,7 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      if (estErreurReseau(error)) throw new Error('Serveur injoignable : la première connexion sur ce poste nécessite Internet.');
+      throw error;
+    }
   }, []);
 
   const logout = useCallback(async (options?: { force?: boolean }) => {

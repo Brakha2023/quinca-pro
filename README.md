@@ -63,7 +63,8 @@ pnpm install
 pnpm desktop           # lance Tauri + Vite (fenêtre native)
 pnpm --filter @quinca/desktop dev   # Vite seul, dans le navigateur (http://localhost:1420)
 
-pnpm --filter @quinca/desktop e2e        # scénario Catalogue en local (Chromium headless, sans backend)
+pnpm --filter @quinca/desktop e2e        # scénarios locaux (Chromium headless, sans backend) — nécessite un Vite lancé ;
+                                         # E2E_BASE_URL=http://localhost:1421 pour ne pas gêner `pnpm desktop` sur 1420
 E2E_EMAIL=… E2E_PASSWORD=… pnpm --filter @quinca/desktop e2e:sync   # aller-retour réel Supabase/PowerSync
 pnpm check-types       # tsc sur tout le monorepo
 pnpm lint              # eslint
@@ -78,6 +79,19 @@ pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop taur
 - Les types de lignes viennent de `@quinca/shared-types` (`Row<'articles'>`) ; les énumérations aussi.
   Toute évolution de schéma = migration SQL **et** mise à jour de `packages/shared-types/src/tables.ts`.
 - Pas de logique métier dans les pages : elle vit dans `core/` (testable sans React).
+- Jamais `alert()` / `confirm()` / `prompt()` : la WebView de Tauri ne les affiche pas (`confirm` renvoie
+  `false`). Utiliser `useNotifier()` et `useConfirmation()`.
+- Les montants TTC encaissés sont arrondis au franc (`arrondirFcfa`) ; seuls les HT/TVA gardent 2 décimales.
+
+### Fonctionnement hors ligne
+
+- **Première connexion sur un poste : Internet obligatoire** (vérification du mot de passe par Supabase,
+  puis synchronisation initiale des données de la filiale).
+- Ensuite, l'app fonctionne sans réseau : lectures et écritures en SQLite local, file d'envoi rejouée
+  au retour de la connexion. La session est persistée (`quinca.auth`) et **réutilisée même si le jeton
+  d'accès est expiré** ; il est renouvelé automatiquement dès que le serveur redevient joignable.
+- Se déconnecter efface la base locale : ne pas le faire hors ligne (l'app prévient s'il reste des
+  opérations non envoyées).
 
 ## État d'avancement
 

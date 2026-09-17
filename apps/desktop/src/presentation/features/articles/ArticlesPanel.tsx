@@ -8,6 +8,7 @@ import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import ArticleFormModal from './ArticleFormModal';
 import { useArticles, useFamilles } from './hooks';
+import { useConfirmation } from '../../confirmation/useConfirmation';
 
 interface Props {
   filialeId: string;
@@ -41,6 +42,7 @@ function BadgeMarge({ article }: { article: Article }) {
 export default function ArticlesPanel({ filialeId }: Props) {
   const repository = useRepository(ArticlesRepository);
   const notifier = useNotifier();
+  const confirmer = useConfirmation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [recherche, setRecherche] = useState('');
@@ -71,7 +73,7 @@ export default function ArticlesPanel({ filialeId }: Props) {
 
   const basculerActif = async (article: Article) => {
     const action = article.est_actif ? 'désactiver' : 'réactiver';
-    if (!confirm(`Voulez-vous ${action} l'article ${article.code} — ${article.designation} ?`)) return;
+    if (!(await confirmer({ message: `Voulez-vous ${action} l'article ${article.code} — ${article.designation} ?`, libelleConfirmer: article.est_actif ? 'Désactiver' : 'Réactiver', danger: article.est_actif }))) return;
     try {
       await repository.setActif(article.id, !article.est_actif);
       notifier('succes', `Article ${article.code} ${article.est_actif ? 'désactivé' : 'réactivé'}.`);

@@ -12,6 +12,7 @@ import { useVentes } from '../../features/ventes/hooks';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
+import { useConfirmation } from '../../confirmation/useConfirmation';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
@@ -21,6 +22,7 @@ export default function VentesPage() {
   const { utilisateur } = useCurrentUtilisateur();
   const repository = useRepository(VentesRepository);
   const notifier = useNotifier();
+  const confirmer = useConfirmation();
   const caisses = useCaisses(filialeId);
 
   const [dateDebut, setDateDebut] = useState(aujourdhui);
@@ -57,7 +59,7 @@ export default function VentesPage() {
   const validerSelection = async () => {
     const ids = [...selection].filter((id) => enAttenteIds.includes(id));
     if (ids.length === 0) return;
-    if (!confirm(`Valider ${ids.length} vente(s) ? Elles ne pourront plus être annulées depuis l'application.`)) return;
+    if (!(await confirmer({ titre: 'Validation de journée', message: `Valider ${ids.length} vente(s) ? Elles ne pourront plus être annulées depuis l'application.`, libelleConfirmer: 'Valider' }))) return;
     try {
       const n = await repository.valider(ids);
       notifier('succes', `${n} vente(s) validée(s).`);

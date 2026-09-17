@@ -11,6 +11,7 @@ import { useClients } from '../../features/clients/hooks';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
+import { useConfirmation } from '../../confirmation/useConfirmation';
 
 type ModalState = { type: 'creer' } | { type: 'details'; clientId: string } | { type: 'reglement'; client: Client } | null;
 
@@ -19,6 +20,7 @@ export default function ClientsPage() {
   const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
   const repository = useRepository(ClientsRepository);
   const notifier = useNotifier();
+  const confirmer = useConfirmation();
   const [recherche, setRecherche] = useState('');
   const [avecCreance, setAvecCreance] = useState(false);
   const [inclureInactifs, setInclureInactifs] = useState(false);
@@ -31,7 +33,7 @@ export default function ClientsPage() {
 
   const basculerActif = async (client: Client) => {
     if (client.est_actif && client.solde_actuel !== 0) { notifier('erreur', 'Impossible de désactiver un client dont le compte n\'est pas soldé.'); return; }
-    if (!confirm(`${client.est_actif ? 'Désactiver' : 'Réactiver'} le client ${client.raison_sociale} ?`)) return;
+    if (!(await confirmer({ message: `${client.est_actif ? 'Désactiver' : 'Réactiver'} le client ${client.raison_sociale} ?`, libelleConfirmer: client.est_actif ? 'Désactiver' : 'Réactiver', danger: client.est_actif }))) return;
     try {
       await repository.setActif(client.id, !client.est_actif);
       notifier('succes', `Client ${client.raison_sociale} ${client.est_actif ? 'désactivé' : 'réactivé'}.`);

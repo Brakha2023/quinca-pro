@@ -12,6 +12,7 @@ import { useFournisseurs } from '../../features/fournisseurs/hooks';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
+import { useConfirmation } from '../../confirmation/useConfirmation';
 
 type ModalState = { type: 'creer' } | { type: 'details'; id: string } | { type: 'achat'; f: Fournisseur } | { type: 'reglement'; f: Fournisseur } | null;
 
@@ -20,6 +21,7 @@ export default function FournisseursPage() {
   const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
   const repository = useRepository(FournisseursRepository);
   const notifier = useNotifier();
+  const confirmer = useConfirmation();
   const [recherche, setRecherche] = useState('');
   const [avecDette, setAvecDette] = useState(false);
   const [inclureInactifs, setInclureInactifs] = useState(false);
@@ -30,7 +32,7 @@ export default function FournisseursPage() {
 
   const basculerActif = async (f: Fournisseur) => {
     if (f.est_actif && f.solde_actuel !== 0) { notifier('erreur', "Impossible de désactiver un fournisseur dont le compte n'est pas soldé."); return; }
-    if (!confirm(`${f.est_actif ? 'Désactiver' : 'Réactiver'} ${f.raison_sociale} ?`)) return;
+    if (!(await confirmer({ message: `${f.est_actif ? 'Désactiver' : 'Réactiver'} ${f.raison_sociale} ?`, libelleConfirmer: f.est_actif ? 'Désactiver' : 'Réactiver', danger: f.est_actif }))) return;
     try { await repository.setActif(f.id, !f.est_actif); notifier('succes', `${f.raison_sociale} ${f.est_actif ? 'désactivé' : 'réactivé'}.`); }
     catch (error) { notifier('erreur', error instanceof Error ? error.message : 'Opération impossible.'); }
   };

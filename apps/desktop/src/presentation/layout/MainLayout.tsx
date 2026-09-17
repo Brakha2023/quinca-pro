@@ -9,6 +9,7 @@ import FilialeSelector from '../components/FilialeSelector';
 import SyncStatusBadge from '../components/layout/SyncStatusBadge';
 import { useAuth } from '../auth/useAuth';
 import { useCurrentUtilisateur } from '../auth/useCurrentUtilisateur';
+import { useConfirmation } from '../confirmation/useConfirmation';
 
 const PROFIL_LABELS: Record<string, string> = {
   DIRECTEUR: 'Directeur général',
@@ -70,15 +71,18 @@ export default function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
   const { session, logout } = useAuth();
+  const confirmer = useConfirmation();
   const { utilisateur } = useCurrentUtilisateur();
 
   const handleLogout = async () => {
     const result = await logout();
     if (result && result.pendingUploads > 0) {
-      const ok = confirm(
-        `${result.pendingUploads} opération(s) ne sont pas encore envoyées au serveur.\n` +
-        'Se déconnecter maintenant les PERDRA définitivement. Continuer ?',
-      );
+      const ok = await confirmer({
+        titre: 'Déconnexion',
+        message: `${result.pendingUploads} opération(s) ne sont pas encore envoyées au serveur.\nSe déconnecter maintenant les PERDRA définitivement.`,
+        libelleConfirmer: 'Se déconnecter quand même',
+        danger: true,
+      });
       if (ok) await logout({ force: true });
     }
   };

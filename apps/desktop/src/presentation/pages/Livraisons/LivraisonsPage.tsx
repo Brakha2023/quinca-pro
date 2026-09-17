@@ -10,6 +10,7 @@ import Modal from '../../components/ui/Modal';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa, formaterDate } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
+import { useConfirmation } from '../../confirmation/useConfirmation';
 
 const LIBELLES: Record<StatutLivraison, string> = { A_PREPARER: 'À préparer', EN_COURS: 'En cours', LIVREE: 'Livrée', ANNULEE: 'Annulée' };
 const STYLES: Record<StatutLivraison, string> = { A_PREPARER: 'bg-orange-100 text-orange-700', EN_COURS: 'bg-blue-100 text-blue-700', LIVREE: 'bg-green-100 text-green-700', ANNULEE: 'bg-red-100 text-red-700' };
@@ -45,6 +46,7 @@ export default function LivraisonsPage() {
   const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
   const repository = useRepository(LivraisonsRepository);
   const notifier = useNotifier();
+  const confirmer = useConfirmation();
   const [statut, setStatut] = useState<StatutLivraison | ''>('');
   const [recherche, setRecherche] = useState('');
   const [edition, setEdition] = useState<LivraisonVueRow | null>(null);
@@ -53,7 +55,7 @@ export default function LivraisonsPage() {
   const compte = (s: StatutLivraison) => livraisons.filter((l) => l.statut === s).length;
 
   const changer = async (l: LivraisonVueRow, s: StatutLivraison) => {
-    if (s === 'ANNULEE' && !confirm(`Annuler la livraison ${l.numero} ?`)) return;
+    if (s === 'ANNULEE' && !(await confirmer({ message: `Annuler la livraison ${l.numero} ?`, libelleConfirmer: 'Annuler la livraison', danger: true }))) return;
     try { await repository.changerStatut(l.id, s); notifier('succes', `Livraison ${l.numero} : ${LIBELLES[s]}.`); }
     catch (error) { notifier('erreur', error instanceof Error ? error.message : 'Changement impossible.'); }
   };
