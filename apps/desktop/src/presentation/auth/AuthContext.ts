@@ -4,13 +4,19 @@ import type { Session } from '@supabase/supabase-js';
 export interface AuthContextValue {
   /** `undefined` tant que la session initiale n'a pas été lue. */
   session: Session | null | undefined;
+  /** Poste verrouillé : la session existe mais l'interface exige le mot de passe. */
+  verrouille: boolean;
+  /**
+   * Connexion ou déverrouillage. En ligne, le mot de passe est vérifié par
+   * Supabase ; hors ligne, par l'empreinte locale mémorisée à la dernière
+   * connexion réussie (même utilisateur uniquement).
+   */
   login: (email: string, password: string) => Promise<void>;
   /**
-   * Déconnecte l'utilisateur et efface les données locales.
-   * Refuse si des écritures ne sont pas encore remontées au serveur,
-   * sauf si `force` est vrai.
+   * Verrouille le poste : la session et la base locale sont conservées, la
+   * synchronisation continue en arrière-plan. Rien n'est jamais perdu.
    */
-  logout: (options?: { force?: boolean }) => Promise<{ pendingUploads: number } | void>;
+  logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

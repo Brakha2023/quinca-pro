@@ -75,16 +75,12 @@ export default function MainLayout() {
   const { utilisateur } = useCurrentUtilisateur();
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result && result.pendingUploads > 0) {
-      const ok = await confirmer({
-        titre: 'Déconnexion',
-        message: `${result.pendingUploads} opération(s) ne sont pas encore envoyées au serveur.\nSe déconnecter maintenant les PERDRA définitivement.`,
-        libelleConfirmer: 'Se déconnecter quand même',
-        danger: true,
-      });
-      if (ok) await logout({ force: true });
-    }
+    const ok = await confirmer({
+      titre: 'Verrouiller le poste',
+      message: 'La session sera verrouillée : le mot de passe sera demandé pour reprendre. Les opérations non encore envoyées restent sur le poste et partiront automatiquement dès que le réseau sera disponible.',
+      libelleConfirmer: 'Verrouiller',
+    });
+    if (ok) await logout();
   };
 
   const getCurrentPageName = () => {
@@ -175,7 +171,7 @@ export default function MainLayout() {
             )}
             <button
               onClick={handleLogout}
-              title="Se déconnecter"
+              title="Verrouiller le poste"
               className="p-2 rounded-lg text-primary-300 hover:bg-primary-800 hover:text-white transition-colors"
             >
               <ArrowRightStartOnRectangleIcon className="w-5 h-5" />

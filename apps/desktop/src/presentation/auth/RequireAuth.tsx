@@ -1,9 +1,9 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth';
 
-/** Protège un sous-arbre de routes : redirige vers /login sans session. */
+/** Protège un sous-arbre de routes : redirige vers /login sans session ou si le poste est verrouillé. */
 export default function RequireAuth() {
-  const { session } = useAuth();
+  const { session, verrouille } = useAuth();
   const location = useLocation();
 
   if (session === undefined) {
@@ -14,7 +14,7 @@ export default function RequireAuth() {
     );
   }
 
-  if (!session) {
+  if (!session || verrouille) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 

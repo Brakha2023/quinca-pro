@@ -88,10 +88,15 @@ pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop taur
 - **Première connexion sur un poste : Internet obligatoire** (vérification du mot de passe par Supabase,
   puis synchronisation initiale des données de la filiale).
 - Ensuite, l'app fonctionne sans réseau : lectures et écritures en SQLite local, file d'envoi rejouée
-  au retour de la connexion. La session est persistée (`quinca.auth`) et **réutilisée même si le jeton
-  d'accès est expiré** ; il est renouvelé automatiquement dès que le serveur redevient joignable.
-- Se déconnecter efface la base locale : ne pas le faire hors ligne (l'app prévient s'il reste des
-  opérations non envoyées).
+  automatiquement au retour de la connexion. La session est persistée (`quinca.auth`) et réutilisée
+  même si le jeton d'accès est expiré ; il est renouvelé dès que le serveur redevient joignable.
+- **« Se déconnecter » verrouille le poste** : la session et la base locale sont conservées, la
+  synchronisation continue en arrière-plan (l'écran verrouillé affiche la file d'envoi). Rien n'est
+  jamais perdu. Le déverrouillage se fait par mot de passe — vérifié par Supabase en ligne, ou hors
+  ligne par une empreinte locale (PBKDF2, `quinca.empreinte`) mémorisée à la dernière connexion réussie.
+- **Changer d'utilisateur** sur un poste exige le réseau et une file d'envoi vide : la base locale est
+  alors effacée avant la synchronisation du nouvel utilisateur (les écritures du précédent ne partent
+  jamais sous un autre nom).
 
 ## État d'avancement
 

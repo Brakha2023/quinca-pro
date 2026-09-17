@@ -40,8 +40,25 @@ export async function countPendingUploads(): Promise<number> {
 
 /**
  * Coupe la synchronisation et efface les données locales.
- * À utiliser à la déconnexion d'un utilisateur : le poste peut être partagé.
+ * Uniquement quand un autre utilisateur prend le poste, et seulement si la
+ * file d'envoi est vide (sinon ses écritures seraient perdues).
  */
 export async function clearLocalData(): Promise<void> {
   await db.disconnectAndClear();
+  localStorage.removeItem(CLE_PROPRIETAIRE);
+}
+
+const CLE_PROPRIETAIRE = 'quinca.donnees.utilisateur';
+
+/** Identifiant de l'utilisateur dont les données occupent la base locale. */
+export function proprietaireDonneesLocales(): string | null {
+  try {
+    return localStorage.getItem(CLE_PROPRIETAIRE);
+  } catch {
+    return null;
+  }
+}
+
+export function definirProprietaireDonneesLocales(utilisateurId: string): void {
+  localStorage.setItem(CLE_PROPRIETAIRE, utilisateurId);
 }

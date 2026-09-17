@@ -1,17 +1,22 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { LockClosedIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../auth/useAuth';
+import { useFileEnvoi } from '../../auth/useFileEnvoi';
 
 export default function LoginPage() {
-  const { session, login } = useAuth();
+  const { session, verrouille, login } = useAuth();
   const location = useLocation();
-  const [email, setEmail] = useState('');
+  const [emailSaisi, setEmailSaisi] = useState<string | null>(null);
+  // Poste verrouillé : l'email de la session est proposé tant que l'utilisateur n'en saisit pas un autre.
+  const email = emailSaisi ?? ((verrouille && session?.user.email) || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { enAttente, connecte } = useFileEnvoi();
 
   // Déjà connecté (ou session restaurée au démarrage) : on ne montre pas le formulaire.
-  if (session) {
+  if (session && !verrouille) {
     const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
     return <Navigate to={from} replace />;
   }
@@ -42,13 +47,25 @@ export default function LoginPage() {
           <p className="text-sm text-neutral-500 mt-1">Gestion Commerciale Multi-Filiales</p>
         </div>
 
+        {verrouille && session && (
+          <div className="mb-6 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+            <p className="flex items-center gap-2 font-medium"><LockClosedIcon className="w-4 h-4" /> Poste verrouillé — session de {session.user.email}</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              {enAttente > 0
+                ? `${enAttente} opération(s) en attente d’envoi${connecte ? ' — envoi en cours' : ' — partiront dès que le réseau sera disponible'}.`
+                : 'Toutes les opérations sont envoyées au serveur.'}
+              {' '}Un autre utilisateur ne peut prendre le poste qu’une fois la file vide.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmailSaisi(e.target.value)}
               className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="directeur@qcf.ci"
               required
@@ -78,7 +95,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-semibold rounded-lg transition-colors"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? 'Connexion...' : verrouille ? 'Déverrouiller' : 'Se connecter'}
           </button>
         </form>
 
