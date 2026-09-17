@@ -83,20 +83,28 @@ pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop taur
   `false`). Utiliser `useNotifier()` et `useConfirmation()`.
 - Les montants TTC encaissés sont arrondis au franc (`arrondirFcfa`) ; seuls les HT/TVA gardent 2 décimales.
 
-### Fonctionnement hors ligne
+### Fonctionnement hors ligne (postes partagés)
 
-- **Première connexion sur un poste : Internet obligatoire** (vérification du mot de passe par Supabase,
-  puis synchronisation initiale des données de la filiale).
-- Ensuite, l'app fonctionne sans réseau : lectures et écritures en SQLite local, file d'envoi rejouée
-  automatiquement au retour de la connexion. La session est persistée (`quinca.auth`) et réutilisée
-  même si le jeton d'accès est expiré ; il est renouvelé dès que le serveur redevient joignable.
-- **« Se déconnecter » verrouille le poste** : la session et la base locale sont conservées, la
-  synchronisation continue en arrière-plan (l'écran verrouillé affiche la file d'envoi). Rien n'est
-  jamais perdu. Le déverrouillage se fait par mot de passe — vérifié par Supabase en ligne, ou hors
-  ligne par une empreinte locale (PBKDF2, `quinca.empreinte`) mémorisée à la dernière connexion réussie.
-- **Changer d'utilisateur** sur un poste exige le réseau et une file d'envoi vide : la base locale est
-  alors effacée avant la synchronisation du nouvel utilisateur (les écritures du précédent ne partent
-  jamais sous un autre nom).
+- **Mise en service d'un poste : Internet obligatoire une fois** (connexion d'un utilisateur de la
+  filiale, synchronisation initiale). Ensuite le poste porte la base de **sa filiale** — commune à
+  tous ses utilisateurs — et fonctionne sans réseau : lectures et écritures en SQLite local, file
+  d'envoi rejouée automatiquement au retour de la connexion.
+- **« Se déconnecter » verrouille le poste** : session et base locale conservées, synchronisation en
+  arrière-plan (l'écran verrouillé affiche la filiale, le dernier utilisateur et la file d'envoi).
+  Rien n'est jamais perdu.
+- **N'importe quel utilisateur de la filiale déverrouille le poste, même hors ligne**, avec son mot de
+  passe : vérifié par Supabase en ligne ; hors ligne, par l'empreinte PBKDF2 (300 000 itérations,
+  jamais le mot de passe) que l'app publie dans `utilisateurs.empreinte_hors_ligne` à chaque
+  connexion en ligne et que PowerSync diffuse aux postes de la filiale. Condition : l'utilisateur
+  s'est connecté **en ligne au moins une fois** (sur n'importe quel poste) depuis cette version.
+  Un compte désactivé (`est_actif`) est refusé même hors ligne.
+- **Attribution** : chaque écriture porte l'`utilisateur_id` de celui qui travaille ; l'envoi au
+  serveur est signé par la session du poste (dernier utilisateur connecté en ligne), et l'audit
+  serveur attribue l'action à l'`utilisateur_id` de la ligne (repli sur la session).
+- **Changer de périmètre** (utilisateur d'une autre filiale ; le directeur voit tout et est toujours
+  accepté) exige le réseau et une file d'envoi vide : la base locale est alors remplacée.
+- Sécurité : les empreintes de la filiale sont présentes sur chaque poste → mots de passe robustes
+  et chiffrement disque des postes recommandés.
 
 ## État d'avancement
 

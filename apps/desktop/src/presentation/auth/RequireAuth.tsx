@@ -3,7 +3,7 @@ import { useAuth } from './useAuth';
 
 /** Protège un sous-arbre de routes : redirige vers /login sans session ou si le poste est verrouillé. */
 export default function RequireAuth() {
-  const { session, verrouille } = useAuth();
+  const { session, utilisateurId, verrouille } = useAuth();
   const location = useLocation();
 
   if (session === undefined) {
@@ -14,7 +14,7 @@ export default function RequireAuth() {
     );
   }
 
-  if (!session || verrouille) {
+  if (!session || !utilisateurId || verrouille) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 

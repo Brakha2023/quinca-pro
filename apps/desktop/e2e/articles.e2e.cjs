@@ -39,7 +39,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.goto(`${BASE_URL}/#/articles`);
   await page.reload({ waitUntil: 'networkidle' });
   await page.locator('main h1', { hasText: 'Catalogue' }).waitFor();
-  verifier((await page.textContent('aside')).includes('Awa Koné'), 'profil réel affiché dans la sidebar');
+  await page.locator('aside').locator('text=Awa Koné').waitFor();
+  verifier(true, 'profil réel affiché dans la sidebar');
   verifier((await page.locator('tbody tr').count()) === 2, 'articles listés en temps réel');
 
   await page.getByRole('button', { name: 'Nouvel article' }).click();

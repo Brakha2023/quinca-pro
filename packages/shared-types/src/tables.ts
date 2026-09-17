@@ -34,6 +34,8 @@ export const TABLES = {
     profil: 'text',
     filiale_id: 'text',
     est_actif: 'integer',
+    /** Empreinte PBKDF2 du mot de passe pour le déverrouillage hors ligne (jamais le mot de passe). */
+    empreinte_hors_ligne: 'text',
     ...COMMUNES_HORODATAGE,
   },
   depots: {

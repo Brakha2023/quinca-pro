@@ -50,7 +50,11 @@ export async function clearLocalData(): Promise<void> {
 
 const CLE_PROPRIETAIRE = 'quinca.donnees.utilisateur';
 
-/** Identifiant de l'utilisateur dont les données occupent la base locale. */
+/**
+ * Identifiant de l'utilisateur dont la session Supabase signe la synchronisation
+ * du poste (et dont le périmètre — sa filiale, ou tout pour un directeur —
+ * définit le contenu de la base locale).
+ */
 export function proprietaireDonneesLocales(): string | null {
   try {
     return localStorage.getItem(CLE_PROPRIETAIRE);

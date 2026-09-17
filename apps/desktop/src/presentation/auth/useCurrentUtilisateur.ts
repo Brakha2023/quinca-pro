@@ -12,12 +12,11 @@ export interface UtilisateurCourant {
 }
 
 /**
- * Profil métier de l'utilisateur connecté, lu dans la base locale
- * (la ligne `utilisateurs` est synchronisée par les sync rules).
+ * Profil métier de l'utilisateur qui travaille sur le poste, lu dans la base
+ * locale (la ligne `utilisateurs` est synchronisée par les sync rules).
  */
 export function useCurrentUtilisateur() {
-  const { session } = useAuth();
-  const userId = session?.user.id ?? null;
+  const { utilisateurId: userId } = useAuth();
 
   const { data, isLoading } = useQuery<UtilisateurCourant>(
     'SELECT id, email, nom, prenom, profil, filiale_id FROM utilisateurs WHERE id = ?',

@@ -2,21 +2,25 @@ import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { LockClosedIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../auth/useAuth';
+import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFileEnvoi } from '../../auth/useFileEnvoi';
+import { useFilialeCourante } from '../../auth/useFilialeCourante';
 
 export default function LoginPage() {
-  const { session, verrouille, login } = useAuth();
+  const { session, utilisateurId, verrouille, login } = useAuth();
   const location = useLocation();
+  const { utilisateur: dernier } = useCurrentUtilisateur();
+  const { filiale } = useFilialeCourante();
   const [emailSaisi, setEmailSaisi] = useState<string | null>(null);
-  // Poste verrouillé : l'email de la session est proposé tant que l'utilisateur n'en saisit pas un autre.
-  const email = emailSaisi ?? ((verrouille && session?.user.email) || '');
+  // Poste verrouillé : l'email du dernier utilisateur est proposé tant qu'un autre n'est pas saisi.
+  const email = emailSaisi ?? ((verrouille && dernier?.email) || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { enAttente, connecte } = useFileEnvoi();
 
   // Déjà connecté (ou session restaurée au démarrage) : on ne montre pas le formulaire.
-  if (session && !verrouille) {
+  if (session && utilisateurId && !verrouille) {
     const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
     return <Navigate to={from} replace />;
   }
@@ -49,12 +53,15 @@ export default function LoginPage() {
 
         {verrouille && session && (
           <div className="mb-6 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
-            <p className="flex items-center gap-2 font-medium"><LockClosedIcon className="w-4 h-4" /> Poste verrouillé — session de {session.user.email}</p>
+            <p className="flex items-center gap-2 font-medium">
+              <LockClosedIcon className="w-4 h-4" /> Poste verrouillé{filiale ? ` — ${filiale.nom}` : ''}
+            </p>
+            {dernier && <p className="mt-1 text-xs text-neutral-500">Dernier utilisateur : {`${dernier.prenom ?? ''} ${dernier.nom}`.trim()} ({dernier.email})</p>}
             <p className="mt-1 text-xs text-neutral-500">
               {enAttente > 0
                 ? `${enAttente} opération(s) en attente d’envoi${connecte ? ' — envoi en cours' : ' — partiront dès que le réseau sera disponible'}.`
                 : 'Toutes les opérations sont envoyées au serveur.'}
-              {' '}Un autre utilisateur ne peut prendre le poste qu’une fois la file vide.
+              {' '}Tout utilisateur de la filiale peut déverrouiller ce poste, même sans réseau.
             </p>
           </div>
         )}

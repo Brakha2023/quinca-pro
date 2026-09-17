@@ -43,7 +43,9 @@ async function simulerSession(page, { profil = 'GERANT', filialeId = 'filiale-te
   await page.evaluate(async ({ userId, session, profil, filialeId }) => {
     const { supabase } = await import('/src/infrastructure/supabase/client.ts');
     const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { definirUtilisateurCourantId } = await import('/src/infrastructure/auth/utilisateurCourant.ts');
     await db.waitForReady();
+    definirUtilisateurCourantId(userId);
     await db.execute("INSERT OR REPLACE INTO filiales (id, code, nom, type, est_active) VALUES (?, 'ABJ', 'Filiale Abidjan', 'FILIALE', 1)", [filialeId]);
     await db.execute(
       "INSERT OR REPLACE INTO utilisateurs (id, email, nom, prenom, profil, filiale_id, est_actif) VALUES (?, 'e2e@test.ci', 'Koné', 'Awa', ?, ?, 1)",

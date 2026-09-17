@@ -1,8 +1,9 @@
 /**
  * Verrouillage du poste et déverrouillage hors ligne (local-first) :
  * « Se déconnecter » conserve la session et la file d'envoi ; le poste se
- * déverrouille avec le mot de passe même sans serveur ; un autre utilisateur
- * ne peut prendre le poste tant que la file n'est pas vide.
+ * déverrouille avec le mot de passe même sans serveur, par n'importe quel
+ * utilisateur de la filiale (empreinte synchronisée dans sa fiche), et les
+ * écritures continuent de porter le nom de celui qui travaille.
  */
 const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./browser.cjs');
 
@@ -11,11 +12,19 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   const { filialeId } = await simulerSession(page);
   const MOT_DE_PASSE = 'Secret-e2e-2026';
 
-  // Empreinte locale (comme après une connexion réussie) + une écriture locale non envoyée.
+  // Empreintes synchronisées (comme après une connexion en ligne de chacun) + une écriture locale non envoyée.
   const enAttenteAvant = await page.evaluate(async ({ filialeId, mdp }) => {
-    const { memoriserEmpreinte } = await import('/src/infrastructure/auth/empreinteLocale.ts');
+    const { calculerEmpreinte } = await import('/src/infrastructure/auth/empreinteLocale.ts');
     const { db, countPendingUploads } = await import('/src/infrastructure/powersync/database.ts');
-    await memoriserEmpreinte('e2e@test.ci', mdp);
+    await db.execute('UPDATE utilisateurs SET empreinte_hors_ligne = ? WHERE email = ?', [await calculerEmpreinte(mdp), 'e2e@test.ci']);
+    await db.execute(
+      "INSERT OR REPLACE INTO utilisateurs (id, email, nom, prenom, profil, filiale_id, est_actif, empreinte_hors_ligne) VALUES ('bbbbbbbb-0000-0000-0000-00000000e2e1', 'fatou@test.ci', 'Diabaté', 'Fatou', 'CAISSIER', ?, 1, ?)",
+      [filialeId, await calculerEmpreinte('Fatou-2026')],
+    );
+    await db.execute(
+      "INSERT OR REPLACE INTO utilisateurs (id, email, nom, prenom, profil, filiale_id, est_actif, empreinte_hors_ligne) VALUES ('cccccccc-0000-0000-0000-00000000e2e2', 'parti@test.ci', 'Parti', 'Ancien', 'CAISSIER', ?, 0, ?)",
+      [filialeId, await calculerEmpreinte('Parti-2026')],
+    );
     await db.execute("INSERT INTO articles (id, code, designation, prix_achat, prix_vente, tva, unite, filiale_id, est_actif) VALUES ('art-verrou', 'VRR-1', 'Article hors ligne', 100, 150, 18, 'PIECE', ?, 1)", [filialeId]);
     return countPendingUploads();
   }, { filialeId, mdp: MOT_DE_PASSE });
@@ -28,7 +37,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.getByTitle('Verrouiller le poste').click();
   await page.getByRole('dialog', { name: 'Verrouiller le poste' }).getByRole('button', { name: 'Verrouiller' }).click();
   await page.locator('text=Poste verrouillé').waitFor();
-  verifier((await page.textContent('body')).includes('e2e@test.ci'), 'écran verrouillé : session conservée, utilisateur affiché');
+  await page.locator('text=/Dernier utilisateur : Awa Koné/').waitFor();
+  verifier((await page.textContent('body')).includes('Filiale Abidjan'), 'écran verrouillé : filiale et dernier utilisateur affichés');
   await page.locator(`text=/${enAttenteAvant} opération\\(s\\) en attente/`).waitFor();
   verifier(true, `file d’envoi affichée sur l’écran verrouillé (${enAttenteAvant} en attente)`);
 
@@ -39,16 +49,34 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   console.log('Déverrouillage hors ligne');
   // Hors ligne = serveurs injoignables ; le serveur Vite (ressources de l'app, embarquées en prod) reste accessible.
   await page.route((url) => !url.href.startsWith(BASE_URL), (route) => route.abort('internetdisconnected'));
+  await page.locator('input[type=email]').fill('e2e@test.ci');
   await page.locator('input[type=password]').fill('mauvais');
   await page.getByRole('button', { name: 'Déverrouiller' }).click();
-  await page.locator('text=/Serveur injoignable/').waitFor();
+  await page.locator('text=/Mot de passe incorrect/').waitFor();
   verifier(true, 'mauvais mot de passe hors ligne refusé');
 
-  await page.locator('input[type=email]').fill('autre@test.ci');
+  await page.locator('input[type=email]').fill('inconnu@test.ci');
   await page.locator('input[type=password]').fill(MOT_DE_PASSE);
   await page.getByRole('button', { name: 'Déverrouiller' }).click();
-  await page.locator('text=/attendent d’être envoyées/').waitFor();
-  verifier(true, 'changement d’utilisateur refusé tant que la file n’est pas vide');
+  await page.locator('text=/inconnu sur ce poste/').waitFor();
+  verifier(true, 'utilisateur inconnu sur le poste refusé hors ligne');
+
+  await page.locator('input[type=email]').fill('parti@test.ci');
+  await page.locator('input[type=password]').fill('Parti-2026');
+  await page.getByRole('button', { name: 'Déverrouiller' }).click();
+  await page.locator('text=/Compte désactivé/').waitFor();
+  verifier(true, 'compte désactivé refusé hors ligne');
+
+  await page.locator('input[type=email]').fill('fatou@test.ci');
+  await page.locator('input[type=password]').fill('Fatou-2026');
+  await page.getByRole('button', { name: 'Déverrouiller' }).click();
+  await page.locator('main h1', { hasText: 'Gestion du stock' }).waitFor();
+  await page.locator('aside').locator('text=Fatou Diabaté').waitFor();
+  verifier(true, 'une collègue de la filiale déverrouille le poste hors ligne et travaille sous son nom');
+  await page.getByTitle('Verrouiller le poste').click();
+  await page.getByRole('dialog', { name: 'Verrouiller le poste' }).getByRole('button', { name: 'Verrouiller' }).click();
+  await page.locator('text=/Dernier utilisateur : Fatou Diabaté/').waitFor();
+  verifier(true, 'écran verrouillé : dernier utilisateur = Fatou');
 
   await page.locator('input[type=email]').fill('e2e@test.ci');
   await page.locator('input[type=password]').fill(MOT_DE_PASSE);
