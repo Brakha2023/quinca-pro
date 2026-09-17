@@ -4,6 +4,11 @@ export function arrondirMontant(montant: number): number {
   return Math.round(montant * 100) / 100;
 }
 
+/** Montant encaissable : le franc CFA n'a pas de centimes, tout TTC payé est arrondi à l'unité. */
+export function arrondirFcfa(montant: number): number {
+  return Math.round(montant);
+}
+
 export function prixHtDepuisTtc(prixTtc: number, tauxTva: number): number {
   return arrondirMontant(prixTtc / (1 + tauxTva / 100));
 }

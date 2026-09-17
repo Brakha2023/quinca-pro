@@ -1,6 +1,10 @@
-import { arrondirMontant, prixHtDepuisTtc } from '../commun/prix';
+import { arrondirFcfa, arrondirMontant, prixHtDepuisTtc } from '../commun/prix';
 
-/** Ligne du ticket en cours. Les prix sont TTC (affichage caisse) ; le HT est dérivé. */
+/**
+ * Ligne du ticket en cours. Les prix sont TTC (affichage caisse) ; le HT est dérivé.
+ * Les totaux TTC sont arrondis au franc (pas de centimes en FCFA) pour que le
+ * montant affiché soit exactement celui exigé à l'encaissement.
+ */
 export interface LignePanier {
   article_id: string;
   code: string;
@@ -29,7 +33,7 @@ export interface TotauxPanier {
 
 export function calculerLigne(ligne: LignePanier): LigneCalculee {
   const facteurRemise = 1 - ligne.remise_percent / 100;
-  const total_ttc = arrondirMontant(ligne.prix_unitaire_ttc * ligne.quantite * facteurRemise);
+  const total_ttc = arrondirFcfa(ligne.prix_unitaire_ttc * ligne.quantite * facteurRemise);
   return {
     ...ligne,
     prix_unitaire_ht: prixHtDepuisTtc(ligne.prix_unitaire_ttc, ligne.tva_percent),
@@ -49,7 +53,7 @@ export function calculerTotaux(lignes: LignePanier[], remiseGlobalePercent = 0):
   const htApresRemisesLignes = calculees.reduce((s, l) => s + l.total_ht, 0);
   const facteurGlobal = 1 - Math.min(Math.max(remiseGlobalePercent, 0), 100) / 100;
 
-  const total_ttc = arrondirMontant(ttcApresRemisesLignes * facteurGlobal);
+  const total_ttc = arrondirFcfa(ttcApresRemisesLignes * facteurGlobal);
   const total_net_ht = arrondirMontant(htApresRemisesLignes * facteurGlobal);
   return {
     total_brut_ht: arrondirMontant(brutHt),

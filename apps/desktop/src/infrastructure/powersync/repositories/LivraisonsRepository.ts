@@ -36,6 +36,10 @@ export class LivraisonsRepository extends BaseRepository {
       const l = await tx.get<LivraisonRow>('SELECT * FROM livraisons WHERE id = ?', [id]);
       const courant = (l.statut ?? 'A_PREPARER') as StatutLivraison;
       if (!TRANSITIONS_LIVRAISON[courant].includes(statut)) throw new Error(`Passage ${courant} → ${statut} non autorisé`);
+      if (statut !== 'ANNULEE' && l.vente_id) {
+        const vente = await tx.getOptional<{ statut: string }>('SELECT statut FROM ventes WHERE id = ?', [l.vente_id]);
+        if (vente?.statut === 'ANNULEE') throw new Error('La vente associée est annulée : la livraison ne peut pas être réactivée');
+      }
       await this.patch(tx, 'livraisons', id, {
         statut,
         chauffeur: details.chauffeur ?? l.chauffeur,

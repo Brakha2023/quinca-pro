@@ -29,6 +29,16 @@ describe('panier', () => {
     expect(t.nombre_articles).toBe(3);
   });
 
+  it('arrondit les totaux TTC au franc (pas de centimes en FCFA)', () => {
+    const l = calculerLigne(ligne({ prix_unitaire_ttc: 999, remise_percent: 5 }));
+    expect(l.total_ttc).toBe(949); // 949,05 sans arrondi
+    const t = calculerTotaux([ligne({ prix_unitaire_ttc: 1250 })], 5);
+    expect(t.total_ttc).toBe(1188); // 1187,5
+    expect(Number.isInteger(t.total_tva + t.total_net_ht)).toBe(true);
+    const v = preparerVente({ lignes: [ligne({ prix_unitaire_ttc: 999, remise_percent: 5 })], remise_globale_percent: 0, client: null, livraison: null, notes: '', paiement: { mode_paiement: 'ESPECES', montant_percu: 949 } }, 'C01');
+    expect(v).toMatchObject({ monnaie: 0, reste_a_payer: 0, montant_encaisse: 949 });
+  });
+
   it('cumule les quantités d’un même article', () => {
     const p = ajouterAuPanier([ligne()], ligne({ quantite: 3 }));
     expect(p).toHaveLength(1);

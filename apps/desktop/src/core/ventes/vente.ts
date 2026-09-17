@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { MODES_PAIEMENT, type LigneVenteRow, type ModePaiement, type StatutVente, type VenteRow } from '@quinca/shared-types';
 import { peutVendreACredit, type Client } from '../clients';
-import { arrondirMontant } from '../commun/prix';
+import { arrondirFcfa } from '../commun/prix';
 import { genererNumeroPiece } from '../commun/numerotation';
 import { calculerTotaux, type LignePanier, type TotauxPanier } from './panier';
 
@@ -81,20 +81,20 @@ export function preparerVente(vente: VenteAEnregistrer, codeCaisse: string, date
   if (totaux.total_ttc <= 0) throw new VenteInvalideError('Le total de la vente doit être positif');
 
   const { mode_paiement } = vente.paiement;
-  let montantPercu = arrondirMontant(vente.paiement.montant_percu);
+  let montantPercu = arrondirFcfa(vente.paiement.montant_percu);
   let monnaie = 0;
 
   if (mode_paiement === 'CREDIT') {
     montantPercu = 0;
   } else if (mode_paiement === 'ESPECES') {
     if (montantPercu < totaux.total_ttc) throw new VenteInvalideError('Montant remis insuffisant');
-    monnaie = arrondirMontant(montantPercu - totaux.total_ttc);
+    monnaie = arrondirFcfa(montantPercu - totaux.total_ttc);
   } else if (montantPercu > totaux.total_ttc) {
     throw new VenteInvalideError('Le montant perçu dépasse le total');
   }
 
-  const montantEncaisse = arrondirMontant(montantPercu - monnaie);
-  const reste = arrondirMontant(totaux.total_ttc - montantEncaisse);
+  const montantEncaisse = arrondirFcfa(montantPercu - monnaie);
+  const reste = arrondirFcfa(totaux.total_ttc - montantEncaisse);
 
   if (reste > 0) {
     if (!vente.client) throw new VenteInvalideError('Un client en compte est requis pour une vente à crédit ou partielle');
