@@ -9,6 +9,9 @@ export interface FiltresClients {
   inclureInactifs?: boolean;
   /** Ne garder que les clients avec une créance > 0. */
   avecCreance?: boolean;
+  groupe?: string | null;
+  /** Ne garder que les clients avec une adresse e-mail (relances). */
+  avecEmail?: boolean;
 }
 
 export function clientsQuery(filialeId: string | null, filtres: FiltresClients = {}) {
@@ -16,12 +19,48 @@ export function clientsQuery(filialeId: string | null, filtres: FiltresClients =
   const params: Array<string | number> = [filialeId ?? ''];
   if (!filtres.inclureInactifs) conditions.push('est_actif = 1');
   if (filtres.avecCreance) conditions.push('solde_actuel > 0');
+  if (filtres.avecEmail) conditions.push("email IS NOT NULL AND email != ''");
+  if (filtres.groupe) { conditions.push('groupe = ?'); params.push(filtres.groupe); }
   const q = filtres.recherche?.trim();
   if (q) {
-    conditions.push('(code LIKE ? OR raison_sociale LIKE ? OR mobile LIKE ?)');
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    conditions.push('(code LIKE ? OR numero_compte LIKE ? OR raison_sociale LIKE ? OR mobile LIKE ? OR telephone LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
   return { sql: `SELECT * FROM clients WHERE ${conditions.join(' AND ')} ORDER BY raison_sociale`, params };
+}
+
+export const GROUPES_CLIENTS_QUERY = "SELECT DISTINCT groupe FROM clients WHERE filiale_id = ? AND groupe IS NOT NULL AND groupe != '' ORDER BY groupe";
+
+/** Factures (ventes) d'un client, les plus récentes d'abord. */
+export const FACTURES_CLIENT_QUERY = 'SELECT id, numero, date_vente, total_ttc, reste_a_payer, statut, mode_paiement FROM ventes WHERE client_id = ? ORDER BY date_vente DESC';
+
+export interface FiltresVersements {
+  clientId?: string | null;
+  dateDebut?: string | null;
+  dateFin?: string | null;
+  limite?: number;
+}
+
+/** Versements (règlements) de la filiale, tous clients, avec la vente réglée le cas échéant. */
+export function versementsQuery(filialeId: string | null, filtres: FiltresVersements = {}) {
+  const conditions = ['r.filiale_id = ?'];
+  const params: Array<string | number> = [filialeId ?? ''];
+  if (filtres.clientId) { conditions.push('r.client_id = ?'); params.push(filtres.clientId); }
+  if (filtres.dateDebut) { conditions.push('r.date_reglement >= ?'); params.push(new Date(`${filtres.dateDebut}T00:00:00`).toISOString()); }
+  if (filtres.dateFin) { conditions.push('r.date_reglement <= ?'); params.push(new Date(`${filtres.dateFin}T23:59:59.999`).toISOString()); }
+  params.push(filtres.limite ?? 500);
+  return {
+    sql: `SELECT r.*, c.raison_sociale AS client_nom, c.code AS client_code, v.numero AS vente_numero, ca.nom AS caisse_nom,
+                 u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom
+          FROM reglements_clients r
+          JOIN clients c ON c.id = r.client_id
+          LEFT JOIN ventes v ON v.id = r.vente_id
+          LEFT JOIN caisses ca ON ca.id = r.caisse_id
+          LEFT JOIN utilisateurs u ON u.id = r.utilisateur_id
+          WHERE ${conditions.join(' AND ')}
+          ORDER BY r.date_reglement DESC LIMIT ?`,
+    params,
+  };
 }
 
 export const REGLEMENTS_CLIENT_QUERY = `
@@ -53,6 +92,7 @@ export class ClientsRepository extends BaseRepository {
         form.solde_initial, form.solde_initial, form.plafond_credit, filialeId, now, now,
       ],
     );
+    await this.patch(this.db, 'clients', id, this.colonnesComplementaires(form));
     return id;
   }
 
@@ -75,8 +115,18 @@ export class ClientsRepository extends BaseRepository {
         solde_initial: form.solde_initial,
         solde_actuel: solde,
         plafond_credit: form.plafond_credit,
+        ...this.colonnesComplementaires(form),
       });
     });
+  }
+
+  private colonnesComplementaires(form: ClientForm) {
+    return {
+      groupe: form.groupe || null, civilite: form.civilite || null, numero_compte: form.numero_compte || null, telephone: form.telephone || null,
+      pays: form.pays || null, ville: form.ville || null, numero_rc: form.numero_rc || null, numero_cc: form.numero_cc || null,
+      date_effet_solde: form.date_effet_solde || null, remise_percent: form.remise_percent, prise_min_jour: form.prise_min_jour, prise_max_jour: form.prise_max_jour,
+      periode_reglement: form.periode_reglement || null, notes: form.notes || null,
+    };
   }
 
   async setActif(id: string, actif: boolean): Promise<void> {

@@ -91,7 +91,7 @@ export default function TicketPanel({ ctx, peutForcerStock }: Props) {
         <div className="border-t border-neutral-200 px-5 py-3 space-y-1.5 text-sm">
           <div className="flex items-center justify-between">
             <label className="text-neutral-600">Remise globale (%)</label>
-            <input type="number" min="0" max="100" value={remiseGlobale} onChange={(e) => setRemiseGlobale(Number(e.target.value))} className="w-20 text-right border border-neutral-200 rounded px-2 py-1 text-sm" />
+            <input type="number" min="0" max="100" value={remiseGlobale} onChange={(e) => setRemiseGlobale(Number(e.target.value))} data-testid="remise-globale" className="w-20 text-right border border-neutral-200 rounded px-2 py-1 text-sm" />
           </div>
           <div className="flex justify-between"><span className="text-neutral-600">Total HT</span><span className="font-mono">{formaterFcfa(totaux.total_net_ht)}</span></div>
           {totaux.total_remise > 0 && <div className="flex justify-between text-orange-600"><span>Remise</span><span className="font-mono">−{formaterFcfa(totaux.total_remise)}</span></div>}

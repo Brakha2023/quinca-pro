@@ -5,7 +5,8 @@ import Modal from '../../components/ui/Modal';
 import { formaterFcfa, formaterDate } from '../../hooks/useFormatage';
 import ClientFormModal from './ClientFormModal';
 import ReglementModal from './ReglementModal';
-import { useClient, useReglementsClient } from './hooks';
+import { LIBELLES_STATUT_VENTE } from '../../../core/ventes';
+import { useClient, useFacturesClient, useReglementsClient } from './hooks';
 
 export const STATUT_CREDIT_STYLE: Record<StatutCredit, { label: string; cls: string }> = {
   A_JOUR: { label: 'À jour', cls: 'bg-green-100 text-green-700' },
@@ -27,7 +28,10 @@ function Kpi({ label, value, tone = 'text-neutral-900' }: { label: string; value
 export default function ClientDetailsModal({ filialeId, clientId, onClose }: { filialeId: string; clientId: string; onClose: () => void }) {
   const client = useClient(clientId);
   const { reglements } = useReglementsClient(clientId);
+  const { factures } = useFacturesClient(clientId);
   const [modal, setModal] = useState<'modifier' | 'reglement' | null>(null);
+  const totalFactures = factures.filter((f) => f.statut !== 'ANNULEE').reduce((s, f) => s + f.total_ttc, 0);
+  const totalReglements = reglements.reduce((s, r) => s + r.montant, 0);
 
   if (!client) return null;
   const statut = STATUT_CREDIT_STYLE[statutCredit(client)];
@@ -62,7 +66,31 @@ export default function ClientDetailsModal({ filialeId, clientId, onClose }: { f
           </div>
 
           <section>
-            <h4 className="text-sm font-semibold text-neutral-800 mb-2">Règlements ({reglements.length})</h4>
+            <h4 className="text-sm font-semibold text-neutral-800 mb-2">Factures ({factures.length}) · <span className="font-mono">{formaterFcfa(totalFactures)}</span></h4>
+            {factures.length === 0 ? (
+              <p className="text-sm text-neutral-400">Aucune facture.</p>
+            ) : (
+              <table className="w-full text-sm" data-testid="factures-client">
+                <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
+                  <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° vente</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Reste à payer</th><th className="px-3 py-2 text-left">État</th></tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {factures.map((f) => (
+                    <tr key={f.id} className={f.statut === 'ANNULEE' ? 'opacity-50 line-through' : ''}>
+                      <td className="px-3 py-2">{formaterDate(f.date_vente)}</td>
+                      <td className="px-3 py-2 font-mono">{f.numero}</td>
+                      <td className="px-3 py-2 text-right font-mono">{formaterFcfa(f.total_ttc)}</td>
+                      <td className={`px-3 py-2 text-right font-mono ${f.reste_a_payer > 0 ? 'text-red-600 font-semibold' : 'text-neutral-500'}`}>{formaterFcfa(f.reste_a_payer)}</td>
+                      <td className="px-3 py-2 text-neutral-600">{LIBELLES_STATUT_VENTE[(f.statut ?? 'EN_ATTENTE') as keyof typeof LIBELLES_STATUT_VENTE] ?? f.statut}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section>
+            <h4 className="text-sm font-semibold text-neutral-800 mb-2">Règlements ({reglements.length}) · <span className="font-mono text-green-700">{formaterFcfa(totalReglements)}</span></h4>
             {reglements.length === 0 ? (
               <p className="text-sm text-neutral-400">Aucun règlement.</p>
             ) : (
@@ -86,7 +114,6 @@ export default function ClientDetailsModal({ filialeId, clientId, onClose }: { f
               </table>
             )}
           </section>
-          <p className="text-xs text-neutral-400">L'historique des ventes et factures apparaîtra ici avec le module Point de vente.</p>
         </div>
       </Modal>
 

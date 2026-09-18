@@ -41,6 +41,8 @@ streams:
       - SELECT * FROM ventes WHERE filiale_id IN mes_filiales
       - SELECT * FROM lignes_vente WHERE filiale_id IN mes_filiales
       - SELECT * FROM reglements_clients WHERE filiale_id IN mes_filiales
+      - SELECT * FROM proformas WHERE filiale_id IN mes_filiales
+      - SELECT * FROM lignes_proforma WHERE filiale_id IN mes_filiales
       - SELECT * FROM livraisons WHERE filiale_id IN mes_filiales
       - SELECT * FROM mouvements_stock WHERE filiale_id IN mes_filiales
       - SELECT * FROM productions WHERE filiale_id IN mes_filiales

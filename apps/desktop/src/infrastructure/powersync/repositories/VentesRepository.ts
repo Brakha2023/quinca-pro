@@ -14,6 +14,8 @@ export interface ContexteVente {
   depotId: string;
   /** Vente forcée malgré un stock insuffisant (réservé aux profils autorisés). */
   autoriserStockNegatif?: boolean;
+  /** Proforma facturée par cette vente : passe FACTUREE dans la même transaction. */
+  proformaId?: string | null;
 }
 
 export interface FiltresVentes {
@@ -127,6 +129,12 @@ export class VentesRepository extends BaseRepository {
 
       if (preparee.montant_encaisse > 0) {
         await this.encaisser(tx, ctx, preparee.montant_encaisse, preparee.numero, MODES_EN_CAISSE.has(preparee.mode_paiement), `Vente ${preparee.numero}`);
+      }
+
+      if (ctx.proformaId) {
+        const p = await tx.getOptional<{ statut: string }>('SELECT statut FROM proformas WHERE id = ?', [ctx.proformaId]);
+        if (p?.statut !== 'EN_COURS') throw new Error('Cette proforma a déjà été facturée ou annulée');
+        await this.patch(tx, 'proformas', ctx.proformaId, { statut: 'FACTUREE', vente_id: id });
       }
 
       if (vente.livraison) {

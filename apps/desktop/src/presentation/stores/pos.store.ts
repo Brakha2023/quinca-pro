@@ -10,6 +10,8 @@ interface POSState {
   remiseGlobale: number;
   familleId: string;
   recherche: string;
+  /** Proforma en cours de facturation (n° affiché, passe FACTUREE à l'encaissement). */
+  proforma: { id: string; numero: string } | null;
 
   setClient: (client: Client | null) => void;
   setRemiseGlobale: (remise: number) => void;
@@ -21,6 +23,8 @@ interface POSState {
   modifierRemiseLigne: (articleId: string, remise: number) => void;
   supprimerLigne: (articleId: string) => void;
   viderPanier: () => void;
+  /** Remplace le ticket par les lignes d'une proforma (client et remise compris). */
+  chargerProforma: (proforma: { id: string; numero: string }, lignes: LignePanier[], client: Client | null, remiseGlobale: number) => void;
 }
 
 /** État du ticket en cours (UI uniquement ; la persistance se fait à la validation). */
@@ -30,8 +34,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
   remiseGlobale: 0,
   familleId: '',
   recherche: '',
+  proforma: null,
 
-  setClient: (client) => set({ client }),
+  // Choisir un client en compte applique d'office sa remise commerciale (modifiable ensuite).
+  setClient: (client) => set({ client, remiseGlobale: client ? client.remise_percent : 0 }),
   setRemiseGlobale: (remise) => set({ remiseGlobale: Math.min(Math.max(remise, 0), 100) }),
   setFamilleId: (familleId) => set({ familleId }),
   setRecherche: (recherche) => set({ recherche }),
@@ -60,5 +66,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   supprimerLigne: (articleId) => set({ lignes: get().lignes.filter((l) => l.article_id !== articleId) }),
 
-  viderPanier: () => set({ lignes: [], client: null, remiseGlobale: 0 }),
+  viderPanier: () => set({ lignes: [], client: null, remiseGlobale: 0, proforma: null }),
+  chargerProforma: (proforma, lignes, client, remiseGlobale) => set({ proforma, lignes, client, remiseGlobale }),
 }));

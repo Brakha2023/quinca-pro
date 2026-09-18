@@ -50,3 +50,6 @@ export type ActionAudit = (typeof ACTIONS_AUDIT)[number];
 
 export const SENS_LIGNE_PRODUCTION = ['MATIERE', 'PRODUIT'] as const;
 export type SensLigneProduction = (typeof SENS_LIGNE_PRODUCTION)[number];
+
+export const STATUTS_PROFORMA = ['EN_COURS', 'FACTUREE', 'ANNULEE'] as const;
+export type StatutProforma = (typeof STATUTS_PROFORMA)[number];

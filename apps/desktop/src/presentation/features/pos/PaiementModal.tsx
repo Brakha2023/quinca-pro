@@ -41,7 +41,7 @@ export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose
   const confirmer = useConfirmation();
   const { utilisateur } = useCurrentUtilisateur();
   const { filiale } = useFilialeCourante();
-  const { lignes, client, remiseGlobale, viderPanier } = usePOSStore();
+  const { lignes, client, remiseGlobale, proforma, viderPanier } = usePOSStore();
   const totaux = useMemo(() => calculerTotaux(lignes, remiseGlobale), [lignes, remiseGlobale]);
 
   const [mode, setMode] = useState<ModePaiement>('ESPECES');
@@ -63,12 +63,12 @@ export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose
     setEnCours(true);
     try {
       const { preparee } = await repository.enregistrer(
-        { ...ctx, autoriserStockNegatif: forcerStock },
+        { ...ctx, autoriserStockNegatif: forcerStock, proformaId: proforma?.id ?? null },
         { lignes, remise_globale_percent: remiseGlobale, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' },
       );
       setTerminee({ preparee, lignes, client, date: new Date() });
       viderPanier();
-      notifier('succes', `Vente ${preparee.numero} enregistrée.`);
+      notifier('succes', `Vente ${preparee.numero} enregistrée${proforma ? ` (proforma ${proforma.numero} facturée)` : ''}.`);
     } catch (error) {
       if (error instanceof StockInsuffisantError) {
         const article = lignes.find((l) => l.article_id === error.articleId);

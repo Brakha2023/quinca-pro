@@ -1,3 +1,4 @@
+import { usePOSStore } from '../../stores/pos.store';
 import { useState } from 'react';
 import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
@@ -11,6 +12,7 @@ import { usePoste } from '../../features/pos/hooks';
 export default function POSPage() {
   const { filialeId, estVueConsolidee } = useFilialeCourante();
   const { utilisateur } = useCurrentUtilisateur();
+  const proforma = usePOSStore((s) => s.proforma);
   const poste = usePoste(filialeId);
   const [reglages, setReglages] = useState(false);
 
@@ -50,7 +52,9 @@ export default function POSPage() {
   return (
     <div className="h-full flex flex-col gap-3 min-h-0">
       <div className="flex items-center justify-between text-xs text-neutral-500 print:hidden">
-        <span>Caisse <strong className="text-neutral-700">{poste.caisse!.nom}</strong> · Dépôt <strong className="text-neutral-700">{poste.depot!.nom}</strong></span>
+        <span>Caisse <strong className="text-neutral-700">{poste.caisse!.nom}</strong> · Dépôt <strong className="text-neutral-700">{poste.depot!.nom}</strong>
+          {proforma && <span className="ml-3 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium" data-testid="bandeau-proforma">Facturation de la proforma {proforma.numero}</span>}
+        </span>
         <button onClick={() => setReglages(true)} className="flex items-center gap-1 hover:text-neutral-800"><Cog6ToothIcon className="w-4 h-4" /> Changer</button>
       </div>
       <div className="flex-1 flex gap-6 min-h-0">

@@ -8,7 +8,9 @@ const ligne = (over: Partial<LignePanier> = {}): LignePanier => ({
 });
 const client = (over: Partial<Client> = {}): Client => ({
   id: 'c', code: 'C', raison_sociale: 'C', mobile: null, email: null, adresse: null, contact: null,
-  solde_initial: 0, cumul_factures: 0, cumul_reglements: 0, solde_actuel: 0, plafond_credit: 100000, filiale_id: 'f', est_actif: true, ...over,
+  solde_initial: 0, cumul_factures: 0, cumul_reglements: 0, solde_actuel: 0, plafond_credit: 100000, filiale_id: 'f', est_actif: true,
+  groupe: null, civilite: null, numero_compte: null, telephone: null, pays: null, ville: null, numero_rc: null, numero_cc: null, date_effet_solde: null,
+  remise_percent: 0, prise_min_jour: 0, prise_max_jour: 0, periode_reglement: null, notes: null, ...over,
 });
 
 describe('panier', () => {

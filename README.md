@@ -139,6 +139,19 @@ rien n'est reçu) et **Relance fournisseur** (e-mail composé à partir des comm
 l'avoir éventuel, ouvert dans la messagerie du poste via le plugin Tauri `opener`).
 Les documents A4 passent par `DocumentImprimable` (aperçu plein écran, seule la zone d'impression sort).
 
+### Clients
+
+Sections (routes `/clients/<section>`, sous-menu latéral) : **Répertoire** (situation des comptes : solde
+initial, facture, règlement, solde, disponibilité, plafond ; totaux ; tableau imprimable), **Nouveau
+client** (fiche : groupe, civilité, n° compte, RC/CC, solde d'ouverture *dû* ou *avance* avec date d'effet,
+remise appliquée d'office aux tickets, plafond, période de règlement, prises min/max), **Proforma à
+facture** (devis sans stock ni caisse, imprimable, **facturé au point de vente** : le ticket est chargé
+avec client et remise, la vente passe la proforma FACTUREE dans la même transaction), **Compte client**
+(relevé : facture / règlement / disponibilité / solde cumulé, imprimable), **Historique des versements**
+(*bon payé* = règlement d'une vente, *avance payée* = acompte ; lettrage FIFO apport / utilisé /
+disponibilité par client ; reçu et historique imprimables) et **Relance clients** (débiteurs, e-mail
+composé à partir des factures impayées et du retard selon la période de règlement).
+
 ## Backlog technique connu
 
 - **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).

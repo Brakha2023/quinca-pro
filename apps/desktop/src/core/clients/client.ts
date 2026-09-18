@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import type { ClientRow } from '@quinca/shared-types';
 
+export const PERIODES_REGLEMENT_CLIENT = ['COMPTANT', 'J15', 'J30', 'J45', 'J60', 'FIN_DE_MOIS'] as const;
+export type PeriodeReglementClient = (typeof PERIODES_REGLEMENT_CLIENT)[number];
+export const LIBELLES_PERIODE_REGLEMENT_CLIENT: Record<PeriodeReglementClient, string> = {
+  COMPTANT: 'Comptant', J15: '15 jours', J30: '30 jours', J45: '45 jours', J60: '60 jours', FIN_DE_MOIS: 'Fin de mois',
+};
+/** Délai de paiement en jours ; fin de mois = 30 par convention. */
+export const JOURS_PERIODE_REGLEMENT: Record<PeriodeReglementClient, number> = { COMPTANT: 0, J15: 15, J30: 30, J45: 45, J60: 60, FIN_DE_MOIS: 30 };
+export const CIVILITES = ['M.', 'Mme', 'Mlle', 'Sté'] as const;
+
 export interface Client {
   id: string;
   code: string;
@@ -17,6 +26,21 @@ export interface Client {
   plafond_credit: number;
   filiale_id: string;
   est_actif: boolean;
+  groupe: string | null;
+  civilite: string | null;
+  numero_compte: string | null;
+  telephone: string | null;
+  pays: string | null;
+  ville: string | null;
+  numero_rc: string | null;
+  numero_cc: string | null;
+  date_effet_solde: string | null;
+  /** Remise commerciale appliquée d'office à ses tickets (%). */
+  remise_percent: number;
+  prise_min_jour: number;
+  prise_max_jour: number;
+  periode_reglement: PeriodeReglementClient | null;
+  notes: string | null;
 }
 
 export const clientFormSchema = z.object({
@@ -28,6 +52,20 @@ export const clientFormSchema = z.object({
   contact: z.string().trim().max(80).optional().default(''),
   solde_initial: z.coerce.number().default(0),
   plafond_credit: z.coerce.number().min(0, 'Plafond ≥ 0').default(0),
+  groupe: z.string().trim().max(60).optional().default(''),
+  civilite: z.string().trim().max(10).optional().default(''),
+  numero_compte: z.string().trim().max(30).optional().default(''),
+  telephone: z.string().trim().max(30).optional().default(''),
+  pays: z.string().trim().max(60).optional().default(''),
+  ville: z.string().trim().max(60).optional().default(''),
+  numero_rc: z.string().trim().max(40).optional().default(''),
+  numero_cc: z.string().trim().max(40).optional().default(''),
+  date_effet_solde: z.string().optional().default(''),
+  remise_percent: z.coerce.number().min(0, '0 à 100 %').max(100, '0 à 100 %').default(0),
+  prise_min_jour: z.coerce.number().min(0).default(0),
+  prise_max_jour: z.coerce.number().min(0).default(0),
+  periode_reglement: z.union([z.literal(''), z.enum(PERIODES_REGLEMENT_CLIENT)]).optional().default(''),
+  notes: z.string().trim().max(500).optional().default(''),
 });
 export type ClientForm = z.infer<typeof clientFormSchema>;
 export type ClientFormInput = z.input<typeof clientFormSchema>;
@@ -48,6 +86,10 @@ export function clientFromRow(row: ClientRow): Client {
     plafond_credit: row.plafond_credit ?? 0,
     filiale_id: row.filiale_id ?? '',
     est_actif: row.est_actif !== 0,
+    groupe: row.groupe, civilite: row.civilite, numero_compte: row.numero_compte, telephone: row.telephone, pays: row.pays, ville: row.ville,
+    numero_rc: row.numero_rc, numero_cc: row.numero_cc, date_effet_solde: row.date_effet_solde, remise_percent: row.remise_percent ?? 0,
+    prise_min_jour: row.prise_min_jour ?? 0, prise_max_jour: row.prise_max_jour ?? 0,
+    periode_reglement: (row.periode_reglement as PeriodeReglementClient | null) ?? null, notes: row.notes,
   };
 }
 
@@ -61,6 +103,9 @@ export function clientToFormInput(c: Client): ClientFormInput {
     contact: c.contact ?? '',
     solde_initial: c.solde_initial,
     plafond_credit: c.plafond_credit,
+    groupe: c.groupe ?? '', civilite: c.civilite ?? '', numero_compte: c.numero_compte ?? '', telephone: c.telephone ?? '', pays: c.pays ?? '', ville: c.ville ?? '',
+    numero_rc: c.numero_rc ?? '', numero_cc: c.numero_cc ?? '', date_effet_solde: c.date_effet_solde ?? '', remise_percent: c.remise_percent,
+    prise_min_jour: c.prise_min_jour, prise_max_jour: c.prise_max_jour, periode_reglement: c.periode_reglement ?? '', notes: c.notes ?? '',
   };
 }
 

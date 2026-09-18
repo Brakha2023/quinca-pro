@@ -27,6 +27,7 @@ function App() {
             <Route path="stock" element={<StockPage />} />
             <Route path="stock/:onglet" element={<StockPage />} />
             <Route path="clients" element={<ClientsPage />} />
+            <Route path="clients/:section" element={<ClientsPage />} />
             <Route path="fournisseurs" element={<FournisseursPage />} />
             <Route path="fournisseurs/:section" element={<FournisseursPage />} />
             <Route path="tresorerie" element={<TresoreriePage />} />
