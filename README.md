@@ -116,7 +116,7 @@ pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop taur
   Chaque écriture métier est une transaction SQLite locale rejouée vers Supabase ; les lectures sont temps réel.
 - **Phase 2 — desktop prod** : à faire (CSP Tauri, impression thermique, plugins Rust, auto-update, signature,
   build Windows testé).
-- **Phase 3 — pilotage avancé** : exports Excel, rapports périodiques, bons de commande fournisseurs, recherche accentuée.
+- **Phase 3 — pilotage avancé** : exports Excel, rapports périodiques, recherche accentuée.
 
 ### Production (module Stock)
 
@@ -144,6 +144,5 @@ Les documents A4 passent par `DocumentImprimable` (aperçu plein écran, seule l
 - **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).
   Prévu : colonne `cle_recherche` (minuscules sans accents) sur `articles`, `clients`, `fournisseurs`, calculée
   côté client à l'écriture et par trigger côté serveur, et utilisée par toutes les recherches.
-- **Bons de commande fournisseurs** (avant réception) : le schéma n'a pas de table de lignes de commande ;
-  aujourd'hui un achat est saisi à la réception (BL/facture). Prévu : table `lignes_commandes_fournisseurs`,
-  statuts BROUILLON → ENVOYEE → PARTIELLE/LIVREE avec réception partielle.
+- **Exports Excel** : les téléchargements navigateur (`<a download>`, blob) sont inertes dans la WebView de
+  Tauri ; prévu en phase 2 via les plugins `dialog` + `fs` (enregistrer sous…).
