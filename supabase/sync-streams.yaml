@@ -43,6 +43,8 @@ streams:
       - SELECT * FROM reglements_clients WHERE filiale_id IN mes_filiales
       - SELECT * FROM livraisons WHERE filiale_id IN mes_filiales
       - SELECT * FROM mouvements_stock WHERE filiale_id IN mes_filiales
+      - SELECT * FROM productions WHERE filiale_id IN mes_filiales
+      - SELECT * FROM lignes_production WHERE filiale_id IN mes_filiales
       - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales
       - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales
       - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales

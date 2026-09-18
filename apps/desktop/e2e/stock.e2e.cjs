@@ -38,6 +38,20 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     const inv = await stock.enregistrerInventaire(ctx, { depot_id: d1, reference: '', motif: '', lignes: [{ article_id: a1, quantite_comptee: 148 }, { article_id: a2, quantite_comptee: 10 }] });
     out.inventaire = inv.ecarts;
     out.apresInventaire = (await db.get('SELECT quantite FROM stocks WHERE article_id = ? AND depot_id = ?', [a1, d1])).quantite;
+    // Production : 2 sacs de ciment (matière, coût moyen 4500) → 20 briques + 2 perdues, à partir d'un produit sans stock.
+    const { ProductionsRepository } = await import('/src/infrastructure/powersync/repositories/ProductionsRepository.ts');
+    const a3 = await articles.create(F, articleFormSchema.parse({ code: 'BRQ-15', designation: 'Brique 15', prix_achat: 0, prix_vente: 600 }));
+    const productions = new ProductionsRepository(db);
+    const prod = await productions.enregistrer(ctx, { depot_id: d1, numero: '', equipe: 'Matin', date_debut: '2026-09-18T07:00', date_fin: '2026-09-18T11:30', commentaire: 'Test',
+      matieres: [{ article_id: a1, quantite: 2 }], produits: [{ article_id: a3, quantite_prevue: 22, quantite: 20, pertes: 2 }] });
+    out.production = { coutMatieres: prod.coutMatieres, numero: prod.numero };
+    out.brique = await db.get('SELECT quantite, cout_moyen FROM stocks WHERE article_id = ? AND depot_id = ?', [a3, d1]);
+    out.cimentApresProduction = (await db.get('SELECT quantite FROM stocks WHERE article_id = ? AND depot_id = ?', [a1, d1])).quantite;
+    out.lignesProduction = await db.getAll('SELECT sens, quantite, pertes, cout_unitaire FROM lignes_production WHERE production_id = ? ORDER BY sens', [prod.id]);
+    try { await productions.enregistrer(ctx, { depot_id: d2, numero: '', equipe: '', date_debut: '2026-09-18T07:00', date_fin: '', commentaire: '', matieres: [{ article_id: a2, quantite: 1 }], produits: [{ article_id: a3, quantite_prevue: 0, quantite: 1, pertes: 0 }] }); out.productionRefusee = false; }
+    catch (e) { out.productionRefusee = e.name === 'StockInsuffisantError'; }
+    out.productionsApresRefus = (await db.get('SELECT COUNT(*) AS n FROM productions')).n;
+
     out.mouvements = await db.getAll('SELECT type, quantite, quantite_avant, quantite_apres FROM mouvements_stock WHERE filiale_id = ? ORDER BY created_at', [F]);
     const q = stocksQuery(F, { alertesSeulement: true });
     out.alertes = (await db.getAll(q.sql, q.params)).map((l) => `${l.article_code}@${l.depot_code}:${l.quantite}`);
@@ -48,7 +62,12 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(r.sortieRefusee && r.stockVisApresRefus === 10, 'sortie > disponible refusée, stock intact');
   verifier(JSON.stringify(r.apresTransfert) === JSON.stringify([{ code: 'D1', quantite: 150, cout_moyen: 4500 }, { code: 'D2', quantite: 50, cout_moyen: 4500 }]), 'transfert D1→D2 au coût moyen');
   verifier(r.inventaire === 1 && r.apresInventaire === 148, 'inventaire : 1 écart régularisé (150 → 148)');
-  verifier(r.mouvements.length === 6, `6 mouvements journalisés (${r.mouvements.map((m) => m.type).join(', ')})`);
+  verifier(r.production.coutMatieres === 9000 && r.production.numero.startsWith('PRD-'), 'production : coût matières 2 × 4500 = 9000');
+  verifier(r.brique.quantite === 20 && r.brique.cout_moyen === 450, 'produit entré en stock : 20 briques à 450 (les 2 perdues renchérissent les bonnes)');
+  verifier(r.cimentApresProduction === 146, 'matière consommée : ciment 148 → 146');
+  verifier(r.lignesProduction.length === 2 && r.lignesProduction[1].pertes === 2 && r.lignesProduction[1].cout_unitaire === 450, 'lignes de production (matière + produit) tracées');
+  verifier(r.productionRefusee && r.productionsApresRefus === 1, 'production refusée si matière insuffisante, rien d’écrit');
+  verifier(r.mouvements.length === 8, `8 mouvements journalisés (${r.mouvements.map((m) => m.type).join(', ')})`);
   verifier(r.alertes.length === 0, 'aucune alerte (stocks au-dessus des minimums)');
 
   console.log('Interface');
@@ -56,9 +75,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.reload({ waitUntil: 'networkidle' });
   await page.locator('main h1', { hasText: 'Gestion du stock' }).waitFor();
   await page.locator('tbody tr', { hasText: 'CIM-50' }).first().waitFor();
-  verifier((await page.locator('tbody tr').count()) === 3, 'suivi : 3 lignes de stock (2 dépôts + vis)');
+  verifier((await page.locator('tbody tr').count()) === 4, 'suivi : 4 lignes de stock (ciment × 2 dépôts, vis, brique produite)');
 
-  await page.getByRole('button', { name: 'Entrée' }).click();
+  await page.locator('main').getByRole('link', { name: 'Entrée', exact: true }).click();
   await page.locator('input[placeholder^="Ajouter un article"]').fill('vis');
   await page.locator('ul li button', { hasText: 'VIS-50' }).click();
   await page.locator('tbody input[type=number]').first().fill('5');
@@ -66,11 +85,43 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('[aria-live]', { hasText: 'Entrée ENT-' }).waitFor();
   verifier(true, 'entrée saisie via l’UI');
 
-  await page.getByRole('button', { name: 'Mouvements' }).click();
-  await page.locator('tbody tr', { hasText: 'Entrée achat' }).first().waitFor();
-  verifier((await page.locator('tbody tr').count()) === 7, 'journal : 7 mouvements');
+  // Sous-menu Stock dans la barre latérale : les sections sont des routes.
+  const sousMenu = page.locator('[data-testid=sous-menu-stock]');
+  await sousMenu.waitFor();
+  verifier((await sousMenu.locator('a').count()) === 8, 'sous-menu Stock : 8 sections dans la barre latérale');
+  await sousMenu.getByRole('link', { name: 'Production' }).click();
+  await page.waitForURL(/#\/stock\/production$/);
+  await page.locator('main h2', { hasText: 'Production' }).waitFor();
+  verifier(true, 'navigation par le sous-menu vers /stock/production');
 
-  await page.getByRole('button', { name: 'Alertes' }).click();
+  await page.locator('[data-testid=production-matieres] input[placeholder^="Ajouter"]').fill('cim');
+  await page.locator('[data-testid=production-matieres] ul li button', { hasText: 'CIM-50' }).click();
+  await page.locator('[data-testid=production-matieres] tbody input[type=number]').fill('4');
+  await page.locator('[data-testid=production-produits] input[placeholder^="Ajouter"]').fill('brq');
+  await page.locator('[data-testid=production-produits] ul li button', { hasText: 'BRQ-15' }).click();
+  const champsProduit = page.locator('[data-testid=production-produits] tbody input[type=number]');
+  await champsProduit.nth(0).fill('40');
+  await champsProduit.nth(1).fill('36');
+  await champsProduit.nth(2).fill('4');
+  await page.locator('[data-testid=production-produits] tbody tr', { hasText: '-4' }).waitFor();
+  await page.locator('[data-testid=production-produits] tbody tr', { hasText: '500 F / PIECE' }).waitFor();
+  verifier(true, 'saisie : écart −4 et coût de revient 500 F (4 × 4500 / 36) calculés en direct');
+  await page.getByRole('button', { name: 'Enregistrer la production' }).click();
+  await page.locator('[aria-live]', { hasText: 'Production PRD-' }).waitFor();
+  await page.getByRole('button', { name: 'Historique' }).click();
+  await page.locator('tbody tr', { hasText: 'Brique 15' }).first().waitFor();
+  verifier((await page.locator('tbody tr').count()) === 2, 'historique : 2 productions');
+  await page.locator('tbody tr').first().getByTitle('Détail').click();
+  await page.getByRole('dialog').locator('td', { hasText: 'CIM-50' }).waitFor();
+  verifier(true, 'détail : matières et produits de la production');
+  await page.keyboard.press('Escape');
+
+  await sousMenu.getByRole('link', { name: 'Mouvements' }).click();
+  await page.locator('tbody tr', { hasText: 'Entrée achat' }).first().waitFor();
+  await page.locator('tbody tr', { hasText: 'Produit' }).first().waitFor();
+  verifier((await page.locator('tbody tr').count()) === 11, 'journal : 11 mouvements (dont 4 de production)');
+
+  await sousMenu.getByRole('link', { name: 'Alertes' }).click();
   await page.locator('text=Valeur du stock').waitFor();
   verifier(true, 'alertes affichées');
 

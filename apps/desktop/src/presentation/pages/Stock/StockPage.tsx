@@ -1,33 +1,21 @@
-import { useState, type ComponentType } from 'react';
-import {
-  ArrowDownTrayIcon, ArrowUpTrayIcon, ArrowsRightLeftIcon, BellIcon,
-  ClipboardDocumentCheckIcon, ClipboardDocumentListIcon, CubeIcon,
-} from '@heroicons/react/24/outline';
+import { Navigate, NavLink, useParams } from 'react-router-dom';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import AlertesPanel from '../../features/stock/AlertesPanel';
 import EntreeStockPanel from '../../features/stock/EntreeStockPanel';
 import InventairePanel from '../../features/stock/InventairePanel';
 import MouvementsPanel from '../../features/stock/MouvementsPanel';
+import ProductionPanel from '../../features/stock/ProductionPanel';
 import SortieStockPanel from '../../features/stock/SortieStockPanel';
 import SuiviStockPanel from '../../features/stock/SuiviStockPanel';
 import TransfertStockPanel from '../../features/stock/TransfertStockPanel';
+import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock, estOngletStock } from './onglets';
 
-type Onglet = 'suivi' | 'entree' | 'sortie' | 'transfert' | 'inventaire' | 'mouvements' | 'alertes';
-
-const ONGLETS: Array<{ id: Onglet; label: string; icon: ComponentType<{ className?: string }> }> = [
-  { id: 'suivi', label: 'Suivi de stock', icon: CubeIcon },
-  { id: 'entree', label: 'Entrée', icon: ArrowDownTrayIcon },
-  { id: 'sortie', label: 'Sortie / Casse', icon: ArrowUpTrayIcon },
-  { id: 'transfert', label: 'Transfert', icon: ArrowsRightLeftIcon },
-  { id: 'inventaire', label: 'Inventaire', icon: ClipboardDocumentCheckIcon },
-  { id: 'mouvements', label: 'Mouvements', icon: ClipboardDocumentListIcon },
-  { id: 'alertes', label: 'Alertes', icon: BellIcon },
-];
-
-/** Gestion du stock de la filiale courante : suivi, bons, inventaire, journal, alertes. */
+/** Gestion du stock de la filiale courante : suivi, bons, inventaire, production, journal, alertes. */
 export default function StockPage() {
   const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
-  const [onglet, setOnglet] = useState<Onglet>('suivi');
+  const { onglet } = useParams();
+
+  if (!estOngletStock(onglet)) return <Navigate to={cheminOngletStock(ONGLET_STOCK_DEFAUT)} replace />;
 
   return (
     <div className="space-y-6">
@@ -43,17 +31,19 @@ export default function StockPage() {
       ) : (
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex overflow-x-auto border-b border-neutral-200 bg-neutral-50 print:hidden">
-            {ONGLETS.map((o) => (
-              <button
+            {ONGLETS_STOCK.map((o) => (
+              <NavLink
                 key={o.id}
-                onClick={() => setOnglet(o.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  onglet === o.id ? 'border-primary-600 text-primary-700 bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-                }`}
+                to={cheminOngletStock(o.id)}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    isActive ? 'border-primary-600 text-primary-700 bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+                  }`
+                }
               >
                 <o.icon className="w-4 h-4" />
                 {o.label}
-              </button>
+              </NavLink>
             ))}
           </div>
           <div className="p-6">
@@ -62,6 +52,7 @@ export default function StockPage() {
             {onglet === 'sortie' && <SortieStockPanel filialeId={filialeId} />}
             {onglet === 'transfert' && <TransfertStockPanel filialeId={filialeId} />}
             {onglet === 'inventaire' && <InventairePanel filialeId={filialeId} />}
+            {onglet === 'production' && <ProductionPanel filialeId={filialeId} />}
             {onglet === 'mouvements' && <MouvementsPanel filialeId={filialeId} />}
             {onglet === 'alertes' && <AlertesPanel filialeId={filialeId} />}
           </div>

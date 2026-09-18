@@ -118,6 +118,15 @@ pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop taur
   build Windows testé).
 - **Phase 3 — pilotage avancé** : exports Excel, rapports périodiques, bons de commande fournisseurs, recherche accentuée.
 
+### Production (module Stock)
+
+Une production consomme des matières premières (sortie `SORTIE_PRODUCTION` au coût moyen du dépôt) et
+fait entrer les articles produits (`ENTREE_PRODUCTION`) au **coût de revient** : coût total des matières
+réparti au prorata de la valeur (prix d'achat de référence) ou des quantités, les pertes étant
+supportées par les unités bonnes. Pièce `productions` + `lignes_production` (MATIERE / PRODUIT :
+prévu, produit, pertes, coût), tout ou rien. Sections du module Stock = routes `/stock/<section>`
+(sous-menu de la barre latérale).
+
 ## Backlog technique connu
 
 - **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).

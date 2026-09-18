@@ -106,6 +106,32 @@ export const TABLES = {
     utilisateur_id: 'text',
     created_at: 'text',
   },
+  productions: {
+    numero: 'text',
+    depot_id: 'text',
+    filiale_id: 'text',
+    equipe: 'text',
+    date_debut: 'text',
+    date_fin: 'text',
+    cout_matieres: 'real',
+    commentaire: 'text',
+    utilisateur_id: 'text',
+    ...COMMUNES_HORODATAGE,
+  },
+  lignes_production: {
+    production_id: 'text',
+    filiale_id: 'text',
+    sens: 'text',
+    article_id: 'text',
+    code_article: 'text',
+    designation: 'text',
+    unite: 'text',
+    quantite_prevue: 'real',
+    quantite: 'real',
+    pertes: 'real',
+    cout_unitaire: 'real',
+    created_at: 'text',
+  },
   clients: {
     code: 'text',
     raison_sociale: 'text',
@@ -286,3 +312,5 @@ export type CommandeFournisseurRow = Row<'commandes_fournisseurs'>;
 export type ReglementFournisseurRow = Row<'reglements_fournisseurs'>;
 export type MouvementTresorerieRow = Row<'mouvements_tresorerie'>;
 export type AuditLogRow = Row<'audit_log'>;
+export type ProductionRow = Row<'productions'>;
+export type LigneProductionRow = Row<'lignes_production'>;

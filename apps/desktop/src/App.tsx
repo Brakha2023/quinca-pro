@@ -25,6 +25,7 @@ function App() {
             <Route path="pos" element={<POSPage />} />
             <Route path="articles" element={<ArticlesPage />} />
             <Route path="stock" element={<StockPage />} />
+            <Route path="stock/:onglet" element={<StockPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="fournisseurs" element={<FournisseursPage />} />
             <Route path="tresorerie" element={<TresoreriePage />} />

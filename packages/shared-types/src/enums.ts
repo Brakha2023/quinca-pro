@@ -19,6 +19,8 @@ export const TYPES_MOUVEMENT_STOCK = [
   'AJUSTEMENT',
   'RETOUR_CLIENT',
   'CASSE',
+  'SORTIE_PRODUCTION',
+  'ENTREE_PRODUCTION',
 ] as const;
 export type TypeMouvementStock = (typeof TYPES_MOUVEMENT_STOCK)[number];
 
@@ -45,3 +47,6 @@ export type TypeMouvementTresorerie = (typeof TYPES_MOUVEMENT_TRESORERIE)[number
 
 export const ACTIONS_AUDIT = ['INSERT', 'UPDATE', 'DELETE'] as const;
 export type ActionAudit = (typeof ACTIONS_AUDIT)[number];
+
+export const SENS_LIGNE_PRODUCTION = ['MATIERE', 'PRODUIT'] as const;
+export type SensLigneProduction = (typeof SENS_LIGNE_PRODUCTION)[number];

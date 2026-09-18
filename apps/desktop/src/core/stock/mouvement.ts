@@ -72,6 +72,8 @@ export const SENS_MOUVEMENT: Record<TypeMouvementStock, 1 | -1 | 0> = {
   SORTIE_DESTOCKAGE: -1,
   TRANSFERT_SORTIE: -1,
   CASSE: -1,
+  SORTIE_PRODUCTION: -1,
+  ENTREE_PRODUCTION: 1,
   AJUSTEMENT: 1, // signe porté par la quantité (peut être négative)
   INVENTAIRE: 0,
 };
@@ -84,6 +86,8 @@ export const LIBELLES_MOUVEMENT: Record<TypeMouvementStock, string> = {
   SORTIE_DESTOCKAGE: 'Déstockage',
   TRANSFERT_SORTIE: 'Transfert (sortie)',
   CASSE: 'Casse / perte',
+  SORTIE_PRODUCTION: 'Consommé en production',
+  ENTREE_PRODUCTION: 'Produit',
   AJUSTEMENT: 'Ajustement',
   INVENTAIRE: 'Inventaire',
 };

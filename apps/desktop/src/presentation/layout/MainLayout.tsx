@@ -3,8 +3,9 @@ import { Outlet, useLocation, NavLink } from 'react-router-dom';
 import {
   ShoppingCartIcon, CubeIcon, UserIcon,
   TruckIcon, BanknotesIcon, ChartBarIcon, Bars3Icon, XMarkIcon, UserGroupIcon,
-  CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon
+  CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon
 } from '@heroicons/react/24/outline';
+import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/Stock/onglets';
 import FilialeSelector from '../components/FilialeSelector';
 import SyncStatusBadge from '../components/layout/SyncStatusBadge';
 import { useAuth } from '../auth/useAuth';
@@ -26,6 +27,8 @@ interface MenuItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Sous-menu : `href` du parent est la première section ; le parent est actif sur tout son préfixe. */
+  children?: Array<{ name: string; href: string; icon: React.ComponentType<{ className?: string }> }>;
 }
 
 interface MenuSection {
@@ -46,7 +49,12 @@ const menuSections: MenuSection[] = [
       { name: 'Point de Vente', href: '/pos', icon: ShoppingCartIcon },
       { name: 'Ventes', href: '/ventes', icon: CreditCardIcon },
       { name: 'Catalogue', href: '/articles', icon: CubeTransparentIcon },
-      { name: 'Stock', href: '/stock', icon: CubeIcon },
+      {
+        name: 'Stock',
+        href: cheminOngletStock(ONGLET_STOCK_DEFAUT),
+        icon: CubeIcon,
+        children: ONGLETS_STOCK.map((o) => ({ name: o.label, href: cheminOngletStock(o.id), icon: o.icon })),
+      },
     ],
   },
   {
@@ -69,6 +77,7 @@ const menuSections: MenuSection[] = [
 
 export default function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [deplies, setDeplies] = useState<Set<string>>(new Set());
   const location = useLocation();
   const { session, logout } = useAuth();
   const confirmer = useConfirmation();
@@ -85,11 +94,17 @@ export default function MainLayout() {
 
   const getCurrentPageName = () => {
     for (const section of menuSections) {
-      const item = section.items.find(i => i.href === location.pathname);
-      if (item) return item.name;
+      for (const item of section.items) {
+        const enfant = item.children?.find((c) => c.href === location.pathname);
+        if (enfant) return `${item.name} · ${enfant.name}`;
+        if (item.href === location.pathname) return item.name;
+      }
     }
     return 'QuincaPro';
   };
+
+  /** Un parent à sous-menu est actif sur tout le préfixe de ses enfants (ex. `/stock/…`). */
+  const estParentActif = (item: MenuItem) => Boolean(item.children && location.pathname.startsWith(item.href.split('/').slice(0, 2).join('/')));
 
   return (
     <div className="flex h-screen bg-neutral-50">
@@ -131,23 +146,54 @@ export default function MainLayout() {
                 </p>
               )}
               <div className="space-y-1">
-                {section.items.map((item) => (
-                  <NavLink
-                    key={item.name}
-                    to={item.href}
-                    title={!isSidebarOpen ? item.name : ''}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                        isActive 
-                          ? 'bg-primary-700 text-white border-l-4 border-orange-400' 
-                          : 'text-primary-100 hover:bg-primary-800 hover:text-white'
-                      } ${!isSidebarOpen ? 'justify-center' : ''}`
-                    }
-                  >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {isSidebarOpen && <span>{item.name}</span>}
-                  </NavLink>
-                ))}
+                {section.items.map((item) => {
+                  const parentActif = estParentActif(item);
+                  const actif = parentActif || location.pathname === item.href;
+                  const deplie = Boolean(item.children) && isSidebarOpen && (parentActif || deplies.has(item.name));
+                  const basculer = () => setDeplies((d) => { const n = new Set(d); if (deplie) n.delete(item.name); else n.add(item.name); return n; });
+                  return (
+                    <div key={item.name}>
+                      <div
+                        className={`flex items-center rounded-lg transition-colors ${
+                          actif ? 'bg-primary-700 text-white border-l-4 border-orange-400' : 'text-primary-100 hover:bg-primary-800 hover:text-white'
+                        }`}
+                      >
+                        <NavLink
+                          to={item.href}
+                          title={!isSidebarOpen ? item.name : ''}
+                          onClick={() => item.children && setDeplies((d) => new Set(d).add(item.name))}
+                          className={`flex-1 flex items-center gap-3 px-3 py-2.5 text-sm font-medium ${!isSidebarOpen ? 'justify-center' : ''}`}
+                        >
+                          <item.icon className="w-5 h-5 flex-shrink-0" />
+                          {isSidebarOpen && <span>{item.name}</span>}
+                        </NavLink>
+                        {isSidebarOpen && item.children && (
+                          <button type="button" aria-label={deplie ? `Replier ${item.name}` : `Déplier ${item.name}`} onClick={basculer} className="p-1.5 mr-1.5 rounded hover:bg-primary-600">
+                            <ChevronDownIcon className={`w-4 h-4 transition-transform ${deplie ? 'rotate-180' : ''}`} />
+                          </button>
+                        )}
+                      </div>
+                      {deplie && (
+                        <div className="mt-1 ml-4 pl-3 border-l border-primary-700 space-y-0.5" data-testid={`sous-menu-${item.name.toLowerCase()}`}>
+                          {item.children!.map((c) => (
+                            <NavLink
+                              key={c.href}
+                              to={c.href}
+                              className={({ isActive }) =>
+                                `flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors ${
+                                  isActive ? 'text-white font-medium bg-primary-800' : 'text-primary-200 hover:bg-primary-800 hover:text-white'
+                                }`
+                              }
+                            >
+                              <c.icon className="w-4 h-4 flex-shrink-0" />
+                              <span>{c.name}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
