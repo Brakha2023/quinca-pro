@@ -37,3 +37,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 supabase/backups/
+
+# Build Windows (compilation croisée)
+apps/desktop/dist-windows/
+apps/desktop/.build-windows/

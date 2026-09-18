@@ -69,7 +69,12 @@ E2E_EMAIL=… E2E_PASSWORD=… pnpm --filter @quinca/desktop e2e:sync   # aller-
 pnpm check-types       # tsc sur tout le monorepo
 pnpm lint              # eslint
 pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop tauri build` pour l'installeur
+apps/desktop/scripts/windows/build.sh   # installeur Windows (NSIS x64) depuis macOS/Linux, via Docker → apps/desktop/dist-windows/
 ```
+
+L'installeur Windows est produit par compilation croisée (`cargo-xwin` + NSIS dans un conteneur Debian,
+caches dans des volumes Docker) ; il n'est pas signé (avertissement SmartScreen). Recette à dérouler sur
+un PC Windows : `apps/desktop/scripts/windows/CHECKLIST-WINDOWS.md`.
 
 ## Conventions
 
