@@ -51,6 +51,10 @@ streams:
       - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales
       - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales
       - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales
+      - SELECT * FROM employes WHERE filiale_id IN mes_filiales
+      - SELECT * FROM pointages WHERE filiale_id IN mes_filiales
+      - SELECT * FROM avances_salaire WHERE filiale_id IN mes_filiales
+      - SELECT * FROM paies WHERE filiale_id IN mes_filiales
 
   # Journal d'audit : en dernier.
   audit:

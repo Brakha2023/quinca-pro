@@ -29,7 +29,7 @@ export const CATEGORIES_DEPENSE = ['TRANSPORT', 'FOURNITURES', 'LOYER', 'SALAIRE
 
 export const LIBELLES_CATEGORIE: Record<string, string> = {
   VENTE: 'Vente', REGLEMENT_CLIENT: 'Règlement client', ANNULATION_VENTE: 'Annulation de vente', REGLEMENT_FOURNISSEUR: 'Règlement fournisseur',
-  TRANSFERT_CAISSE: 'Transfert entre caisses', APPORT: 'Apport de fonds', REMBOURSEMENT: 'Remboursement', AUTRE_RECETTE: 'Autre recette',
+  TRANSFERT_CAISSE: 'Transfert entre caisses', AVANCE_SALAIRE: 'Avance sur salaire', APPORT: 'Apport de fonds', REMBOURSEMENT: 'Remboursement', AUTRE_RECETTE: 'Autre recette',
   TRANSPORT: 'Transport', FOURNITURES: 'Fournitures', LOYER: 'Loyer', SALAIRE: 'Salaires', ELECTRICITE_EAU: 'Électricité / eau', ENTRETIEN: 'Entretien', REPAS: 'Repas', AUTRE_DEPENSE: 'Autre dépense',
 };
 

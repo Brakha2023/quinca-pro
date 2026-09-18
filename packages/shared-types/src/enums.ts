@@ -53,3 +53,15 @@ export type SensLigneProduction = (typeof SENS_LIGNE_PRODUCTION)[number];
 
 export const STATUTS_PROFORMA = ['EN_COURS', 'FACTUREE', 'ANNULEE'] as const;
 export type StatutProforma = (typeof STATUTS_PROFORMA)[number];
+
+export const SEXES = ['M', 'F'] as const;
+export type Sexe = (typeof SEXES)[number];
+
+export const TYPES_CONTRAT = ['CDI', 'CDD', 'STAGE', 'JOURNALIER', 'PRESTATAIRE'] as const;
+export type TypeContrat = (typeof TYPES_CONTRAT)[number];
+
+export const STATUTS_POINTAGE = ['PRESENT', 'ABSENT', 'JUSTIFIE'] as const;
+export type StatutPointage = (typeof STATUTS_POINTAGE)[number];
+
+export const STATUTS_PAIE = ['CALCULEE', 'PAYEE'] as const;
+export type StatutPaie = (typeof STATUTS_PAIE)[number];

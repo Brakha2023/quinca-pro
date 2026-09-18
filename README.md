@@ -152,6 +152,19 @@ avec client et remise, la vente passe la proforma FACTUREE dans la même transac
 disponibilité par client ; reçu et historique imprimables) et **Relance clients** (débiteurs, e-mail
 composé à partir des factures impayées et du retard selon la période de règlement).
 
+### Employés
+
+Sections (routes `/employes/<section>`, sous-menu latéral) : **Effectif** (liste, fiche, liste imprimable),
+**Nouveau employé** (matricule auto `EMP-XXXXX`, identité, sexe, téléphone, fonction, dates, type de
+contrat, salaire de base ou taux journalier, statut, **photo** réduite à 320 px et **contrat joint**
+PDF/image ≤ 1 Mo — stockés en base sous forme de data URL pour rester disponibles hors ligne),
+**Pointage** (présent / absent / justifié par jour, un seul pointage par employé et par jour, « tous
+présents », feuille de présence du mois), **Paie / salaire** (génération du mois depuis les pointages :
+1/26 du salaire retenu par absence non justifiée, journaliers payés aux jours présents ; primes et
+retenues ; **avances sur salaire** sorties de caisse et retenues sur la paie ; paiement individuel ou
+groupé en caisse, catégorie SALAIRE ; une paie payée n'est plus recalculée) et **Paiement de salaire**
+(fiche d'émargement sans / avec montants, bulletins de paie).
+
 ## Backlog technique connu
 
 - **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).
