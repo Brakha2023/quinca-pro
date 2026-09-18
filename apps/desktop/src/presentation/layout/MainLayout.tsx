@@ -6,6 +6,7 @@ import {
   CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/Stock/onglets';
+import { SECTIONS_FOURNISSEURS, SECTION_FOURNISSEURS_DEFAUT, cheminFournisseurs } from '../pages/Fournisseurs/onglets';
 import FilialeSelector from '../components/FilialeSelector';
 import SyncStatusBadge from '../components/layout/SyncStatusBadge';
 import { useAuth } from '../auth/useAuth';
@@ -61,7 +62,12 @@ const menuSections: MenuSection[] = [
     title: 'Tiers & Finances',
     items: [
       { name: 'Clients', href: '/clients', icon: UserIcon },
-      { name: 'Fournisseurs', href: '/fournisseurs', icon: UserGroupIcon },
+      {
+        name: 'Fournisseurs',
+        href: cheminFournisseurs(SECTION_FOURNISSEURS_DEFAUT),
+        icon: UserGroupIcon,
+        children: SECTIONS_FOURNISSEURS.map((s) => ({ name: s.label, href: cheminFournisseurs(s.id), icon: s.icon })),
+      },
       { name: 'Trésorerie', href: '/tresorerie', icon: BanknotesIcon },
       { name: 'Livraisons', href: '/livraisons', icon: TruckIcon },
     ],

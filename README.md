@@ -127,6 +127,18 @@ supportées par les unités bonnes. Pièce `productions` + `lignes_production` (
 prévu, produit, pertes, coût), tout ou rien. Sections du module Stock = routes `/stock/<section>`
 (sous-menu de la barre latérale).
 
+### Fournisseurs
+
+Sections (routes `/fournisseurs/<section>`, sous-menu latéral) : **Répertoire** (situation des comptes,
+balance générale imprimable), **Nouveau fournisseur** (fiche à onglets : identification et contact,
+conditions de règlement et de commande, banque, notes), **Compte fournisseur** (relevé : solde initial,
+débits = factures/réceptions, crédits = règlements, solde cumulé ; imprimable), **Historique des
+règlements** (filtres, totaux par mode, imprimable), **Bons de commande** (création avec remise/TVA,
+bon imprimable, réception partielle ou totale au prix de commande → stock + dette, annulation tant que
+rien n'est reçu) et **Relance fournisseur** (e-mail composé à partir des commandes en attente et de
+l'avoir éventuel, ouvert dans la messagerie du poste via le plugin Tauri `opener`).
+Les documents A4 passent par `DocumentImprimable` (aperçu plein écran, seule la zone d'impression sort).
+
 ## Backlog technique connu
 
 - **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).

@@ -1,8 +1,12 @@
 import type { Transaction } from '@powersync/web';
-import type { CaisseRow, CommandeFournisseurRow, FournisseurRow } from '@quinca/shared-types';
+import type { ArticleRow, CaisseRow, CommandeFournisseurRow, FournisseurRow, LigneCommandeFournisseurRow } from '@quinca/shared-types';
 import { TYPES_EN_CAISSE } from '../../../core/clients';
 import { genererCodeTiers, genererNumeroPiece } from '../../../core/commun/numerotation';
-import { calculerDette, totauxAchat, type Achat, type FournisseurForm, type ReglementFournisseurForm } from '../../../core/fournisseurs';
+import { arrondirMontant } from '../../../core/commun/prix';
+import {
+  calculerDette, ligneCommandeFromRow, statutApresReception, totauxAchat, totauxCommande, valoriserReception,
+  type Achat, type BonCommande, type FournisseurForm, type Reception, type ReglementFournisseurForm,
+} from '../../../core/fournisseurs';
 import { fusionnerLignes } from '../../../core/stock';
 import { BaseRepository } from './BaseRepository';
 import { StockRepository } from './StockRepository';
@@ -19,7 +23,7 @@ export function fournisseursQuery(filialeId: string | null, filtres: FiltresFour
   if (!filtres.inclureInactifs) conditions.push('est_actif = 1');
   if (filtres.avecDette) conditions.push('solde_actuel > 0');
   const q = filtres.recherche?.trim();
-  if (q) { conditions.push('(code LIKE ? OR raison_sociale LIKE ? OR telephone LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
+  if (q) { conditions.push('(code LIKE ? OR numero_compte LIKE ? OR raison_sociale LIKE ? OR telephone LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`); }
   return { sql: `SELECT * FROM fournisseurs WHERE ${conditions.join(' AND ')} ORDER BY raison_sociale`, params };
 }
 
@@ -27,6 +31,65 @@ export const ACHATS_FOURNISSEUR_QUERY = 'SELECT * FROM commandes_fournisseurs WH
 export const REGLEMENTS_FOURNISSEUR_QUERY = `
   SELECT r.*, c.nom AS caisse_nom FROM reglements_fournisseurs r LEFT JOIN caisses c ON c.id = r.caisse_id
   WHERE r.fournisseur_id = ? ORDER BY r.date_reglement DESC`;
+export const LIGNES_COMMANDE_QUERY = 'SELECT * FROM lignes_commande_fournisseur WHERE commande_id = ? ORDER BY created_at';
+
+export interface FiltresCommandes {
+  fournisseurId?: string | null;
+  /** Bons de commande ouverts (envoyés ou partiellement reçus). */
+  ouvertesSeulement?: boolean;
+  recherche?: string;
+  limite?: number;
+}
+
+export function commandesQuery(filialeId: string | null, filtres: FiltresCommandes = {}) {
+  const conditions = ['c.filiale_id = ?'];
+  const params: Array<string | number> = [filialeId ?? ''];
+  if (filtres.fournisseurId) { conditions.push('c.fournisseur_id = ?'); params.push(filtres.fournisseurId); }
+  if (filtres.ouvertesSeulement) conditions.push("c.statut IN ('ENVOYEE', 'PARTIELLE')");
+  const q = filtres.recherche?.trim();
+  if (q) { conditions.push('(c.numero LIKE ? OR f.raison_sociale LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  params.push(filtres.limite ?? 300);
+  return {
+    sql: `SELECT c.*, f.raison_sociale AS fournisseur_nom, d.nom AS depot_nom, u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom,
+                 (SELECT COUNT(*) FROM lignes_commande_fournisseur l WHERE l.commande_id = c.id) AS nombre_lignes
+          FROM commandes_fournisseurs c
+          JOIN fournisseurs f ON f.id = c.fournisseur_id
+          LEFT JOIN depots d ON d.id = c.depot_id
+          LEFT JOIN utilisateurs u ON u.id = c.utilisateur_id
+          WHERE ${conditions.join(' AND ')}
+          ORDER BY c.date_commande DESC LIMIT ?`,
+    params,
+  };
+}
+
+export interface FiltresReglementsFournisseurs {
+  fournisseurId?: string | null;
+  dateDebut?: string | null;
+  dateFin?: string | null;
+  limite?: number;
+}
+
+/** Historique des règlements de la filiale (tous fournisseurs). */
+export function reglementsFournisseursQuery(filialeId: string | null, filtres: FiltresReglementsFournisseurs = {}) {
+  const conditions = ['r.filiale_id = ?'];
+  const params: Array<string | number> = [filialeId ?? ''];
+  if (filtres.fournisseurId) { conditions.push('r.fournisseur_id = ?'); params.push(filtres.fournisseurId); }
+  if (filtres.dateDebut) { conditions.push('r.date_reglement >= ?'); params.push(new Date(`${filtres.dateDebut}T00:00:00`).toISOString()); }
+  if (filtres.dateFin) { conditions.push('r.date_reglement <= ?'); params.push(new Date(`${filtres.dateFin}T23:59:59.999`).toISOString()); }
+  params.push(filtres.limite ?? 500);
+  return {
+    sql: `SELECT r.*, f.raison_sociale AS fournisseur_nom, f.code AS fournisseur_code, c.nom AS caisse_nom, cmd.numero AS commande_numero,
+                 u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom
+          FROM reglements_fournisseurs r
+          JOIN fournisseurs f ON f.id = r.fournisseur_id
+          LEFT JOIN caisses c ON c.id = r.caisse_id
+          LEFT JOIN commandes_fournisseurs cmd ON cmd.id = r.commande_id
+          LEFT JOIN utilisateurs u ON u.id = r.utilisateur_id
+          WHERE ${conditions.join(' AND ')}
+          ORDER BY r.date_reglement DESC LIMIT ?`,
+    params,
+  };
+}
 
 export interface ContexteFournisseur {
   filialeId: string;
@@ -44,6 +107,7 @@ export class FournisseursRepository extends BaseRepository {
       [id, form.code || genererCodeTiers('FOU'), form.numero_compte || null, form.raison_sociale, form.famille || null, form.type_article || null,
        form.telephone || null, form.email || null, form.adresse || null, form.solde_initial, form.solde_initial, form.plafond_credit, filialeId, now, now],
     );
+    await this.patch(this.db, 'fournisseurs', id, this.colonnesComplementaires(form));
     return id;
   }
 
@@ -55,8 +119,18 @@ export class FournisseursRepository extends BaseRepository {
         type_article: form.type_article || null, telephone: form.telephone || null, email: form.email || null, adresse: form.adresse || null,
         solde_initial: form.solde_initial, plafond_credit: form.plafond_credit,
         solde_actuel: calculerDette({ solde_initial: form.solde_initial, cumul_factures: row.cumul_factures ?? 0, cumul_reglements: row.cumul_reglements ?? 0 }),
+        ...this.colonnesComplementaires(form),
       });
     });
+  }
+
+  private colonnesComplementaires(form: FournisseurForm) {
+    return {
+      mobile: form.mobile || null, numero_rc: form.numero_rc || null, numero_cc: form.numero_cc || null, interlocuteur: form.interlocuteur || null,
+      mobile_interlocuteur: form.mobile_interlocuteur || null, date_effet_solde: form.date_effet_solde || null, periode_reglement: form.periode_reglement || null,
+      delai_echeance_jours: form.delai_echeance_jours, avance_confirmation_percent: form.avance_confirmation_percent, pourcentage_echeance: form.pourcentage_echeance,
+      banque: form.banque || null, numero_compte_bancaire: form.numero_compte_bancaire || null, notes: form.notes || null,
+    };
   }
 
   async setActif(id: string, actif: boolean): Promise<void> {
@@ -79,17 +153,90 @@ export class FournisseursRepository extends BaseRepository {
       const now = this.maintenant();
       const t = totauxAchat(achat);
       await tx.execute(
-        `INSERT INTO commandes_fournisseurs (id, numero, fournisseur_id, date_commande, type, statut, total_ht, total_tva, total_ttc, montant_paye, reste_a_payer, notes, filiale_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 'COMMANDE', 'LIVREE', ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
-        [id, numero, achat.fournisseur_id, now, t.total_ht, t.total_tva, t.total_ttc, t.total_ttc, achat.notes || null, ctx.filialeId, now, now],
+        `INSERT INTO commandes_fournisseurs (id, numero, fournisseur_id, date_commande, type, statut, total_ht, total_tva, total_ttc, total_recu_ttc, montant_paye, reste_a_payer,
+                                             remise_percent, tva_percent, depot_id, date_reception, notes, utilisateur_id, filiale_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'COMMANDE', 'LIVREE', ?, ?, ?, ?, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, numero, achat.fournisseur_id, now, t.total_ht, t.total_tva, t.total_ttc, t.total_ttc, t.total_ttc, achat.tva_percent, achat.depot_id, now, achat.notes || null, ctx.utilisateurId, ctx.filialeId, now, now],
       );
       const stock = new StockRepository(this.db);
       for (const ligne of fusionnerLignes(achat.lignes)) {
         await stock.appliquerDansTransaction(tx, ctx, achat.depot_id, 'ENTREE_ACHAT', { article_id: ligne.article_id, quantite: ligne.quantite, cout_unitaire: ligne.cout_unitaire }, numero, `Achat ${numero}`);
+        const a = await tx.get<ArticleRow>('SELECT code, designation, unite FROM articles WHERE id = ?', [ligne.article_id]);
+        await this.insererLigneCommande(tx, id, ctx.filialeId, a, ligne.article_id, ligne.quantite, ligne.quantite, ligne.cout_unitaire, now);
       }
       await this.mouvementerDette(tx, achat.fournisseur_id, t.total_ttc, 0);
       return { id, numero };
     });
+  }
+
+  /** Bon de commande : pièce + lignes, statut ENVOYEE. Ni stock ni dette avant réception. */
+  creerBonCommande(ctx: ContexteFournisseur, bon: BonCommande): Promise<{ id: string; numero: string }> {
+    return this.db.writeTransaction(async (tx) => {
+      const id = this.nouvelId();
+      const numero = bon.numero || genererNumeroPiece('BC');
+      const now = this.maintenant();
+      const lignes = fusionnerLignes(bon.lignes);
+      const t = totauxCommande({ remise_percent: bon.remise_percent, tva_percent: bon.tva_percent, lignes });
+      await tx.execute(
+        `INSERT INTO commandes_fournisseurs (id, numero, fournisseur_id, date_commande, type, statut, total_ht, total_tva, total_ttc, total_recu_ttc, montant_paye, reste_a_payer,
+                                             remise_percent, tva_percent, depot_id, date_livraison_prevue, notes, utilisateur_id, filiale_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'BON_COMMANDE', 'ENVOYEE', ?, ?, ?, 0, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, numero, bon.fournisseur_id, now, t.net_ht, t.tva, t.net_a_payer, bon.remise_percent, bon.tva_percent, bon.depot_id,
+         bon.date_livraison_prevue ? new Date(bon.date_livraison_prevue).toISOString() : null, bon.notes || null, ctx.utilisateurId, ctx.filialeId, now, now],
+      );
+      for (const l of lignes) {
+        const a = await tx.get<ArticleRow>('SELECT code, designation, unite FROM articles WHERE id = ?', [l.article_id]);
+        await this.insererLigneCommande(tx, id, ctx.filialeId, a, l.article_id, l.quantite, 0, l.prix_unitaire_ht, now);
+      }
+      return { id, numero };
+    });
+  }
+
+  /**
+   * Réception d'un bon de commande (totale ou partielle) : entrée en stock des
+   * quantités reçues au prix de commande remisé + TVA, dette fournisseur pour
+   * la valeur reçue, statut PARTIELLE ou LIVREE. Tout ou rien.
+   */
+  receptionner(ctx: ContexteFournisseur, commandeId: string, reception: Reception): Promise<{ total_ttc: number; statut: string }> {
+    return this.db.writeTransaction(async (tx) => {
+      const c = await tx.get<CommandeFournisseurRow>('SELECT * FROM commandes_fournisseurs WHERE id = ?', [commandeId]);
+      if (c.statut !== 'ENVOYEE' && c.statut !== 'PARTIELLE') throw new Error('Cette commande ne peut plus être réceptionnée');
+      const lignes = (await tx.getAll<LigneCommandeFournisseurRow>(LIGNES_COMMANDE_QUERY, [commandeId])).map(ligneCommandeFromRow);
+      const v = valoriserReception({ remise_percent: c.remise_percent ?? 0, tva_percent: c.tva_percent ?? 0 }, lignes, reception);
+      const now = this.maintenant();
+      const reference = reception.reference || c.numero || '';
+      const stock = new StockRepository(this.db);
+      for (const d of v.lignes) {
+        await stock.appliquerDansTransaction(tx, ctx, reception.depot_id, 'ENTREE_ACHAT', { article_id: d.ligne.article_id, quantite: d.quantite_recue, cout_unitaire: d.cout_unitaire }, reference, `Réception ${c.numero}`);
+        // Pas de colonne updated_at sur les lignes : mise à jour directe.
+        await tx.execute('UPDATE lignes_commande_fournisseur SET quantite_recue = ? WHERE id = ?', [d.ligne.quantite_recue + d.quantite_recue, d.ligne.id]);
+      }
+      const recues = lignes.map((l) => ({ quantite: l.quantite, quantite_recue: l.quantite_recue + (v.lignes.find((d) => d.ligne.id === l.id)?.quantite_recue ?? 0) }));
+      const statut = statutApresReception(recues);
+      const totalRecu = arrondirMontant((c.total_recu_ttc ?? 0) + v.total_ttc);
+      await this.patch(tx, 'commandes_fournisseurs', commandeId, {
+        statut, total_recu_ttc: totalRecu, reste_a_payer: Math.max(totalRecu - (c.montant_paye ?? 0), 0), date_reception: now, depot_id: reception.depot_id,
+      });
+      await this.mouvementerDette(tx, c.fournisseur_id ?? '', v.total_ttc, 0);
+      return { total_ttc: v.total_ttc, statut };
+    });
+  }
+
+  /** Annulation d'un bon de commande non réceptionné. */
+  async annulerCommande(id: string): Promise<void> {
+    await this.db.writeTransaction(async (tx) => {
+      const c = await tx.get<CommandeFournisseurRow>('SELECT statut FROM commandes_fournisseurs WHERE id = ?', [id]);
+      if (c.statut !== 'ENVOYEE' && c.statut !== 'BROUILLON') throw new Error('Seul un bon de commande non réceptionné peut être annulé');
+      await this.patch(tx, 'commandes_fournisseurs', id, { statut: 'ANNULEE' });
+    });
+  }
+
+  private async insererLigneCommande(tx: Transaction, commandeId: string, filialeId: string, a: Pick<ArticleRow, 'code' | 'designation' | 'unite'>, articleId: string, quantite: number, quantiteRecue: number, prixHt: number, now: string): Promise<void> {
+    await tx.execute(
+      `INSERT INTO lignes_commande_fournisseur (id, commande_id, filiale_id, article_id, code_article, designation, unite, quantite, quantite_recue, prix_unitaire_ht, total_ht, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [this.nouvelId(), commandeId, filialeId, articleId, a.code ?? '', a.designation ?? '', a.unite ?? null, quantite, quantiteRecue, prixHt, arrondirMontant(quantite * prixHt), now],
+    );
   }
 
   /** Paiement d'un fournisseur (acompte ou solde d'un achat) : pièce, dette, dépense en caisse. */

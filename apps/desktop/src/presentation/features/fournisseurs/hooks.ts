@@ -1,8 +1,11 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
-import type { CommandeFournisseurRow, FournisseurRow, ReglementFournisseurRow } from '@quinca/shared-types';
-import { commandeFromRow, fournisseurFromRow, reglementFournisseurFromRow } from '../../../core/fournisseurs';
-import { ACHATS_FOURNISSEUR_QUERY, REGLEMENTS_FOURNISSEUR_QUERY, fournisseursQuery, type FiltresFournisseurs } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
+import type { CommandeFournisseurRow, FournisseurRow, LigneCommandeFournisseurRow, ReglementFournisseurRow } from '@quinca/shared-types';
+import { commandeFromRow, fournisseurFromRow, ligneCommandeFromRow, reglementFournisseurFromRow } from '../../../core/fournisseurs';
+import {
+  ACHATS_FOURNISSEUR_QUERY, LIGNES_COMMANDE_QUERY, REGLEMENTS_FOURNISSEUR_QUERY, commandesQuery, fournisseursQuery, reglementsFournisseursQuery,
+  type FiltresCommandes, type FiltresFournisseurs, type FiltresReglementsFournisseurs,
+} from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 
 export function useFournisseurs(filialeId: string | null, filtres: FiltresFournisseurs = {}) {
   const { sql, params } = useMemo(
@@ -28,4 +31,46 @@ export function useAchatsFournisseur(id: string | null) {
 export function useReglementsFournisseur(id: string | null) {
   const { data } = useQuery<ReglementFournisseurRow & { caisse_nom: string | null }>(REGLEMENTS_FOURNISSEUR_QUERY, [id ?? '']);
   return useMemo(() => data.map((r) => ({ ...reglementFournisseurFromRow(r), caisse_nom: r.caisse_nom })), [data]);
+}
+
+export interface CommandeVueRow extends CommandeFournisseurRow {
+  fournisseur_nom: string | null;
+  depot_nom: string | null;
+  utilisateur_nom: string | null;
+  utilisateur_prenom: string | null;
+  nombre_lignes: number;
+}
+
+export function useCommandes(filialeId: string | null, filtres: FiltresCommandes = {}) {
+  const { sql, params } = useMemo(
+    () => commandesQuery(filialeId, filtres),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
+    [filialeId, filtres.fournisseurId, filtres.ouvertesSeulement, filtres.recherche, filtres.limite],
+  );
+  const { data, isLoading } = useQuery<CommandeVueRow>(sql, params);
+  return { commandes: data, isLoading };
+}
+
+export function useLignesCommande(commandeId: string | null) {
+  const { data } = useQuery<LigneCommandeFournisseurRow>(LIGNES_COMMANDE_QUERY, [commandeId ?? '']);
+  return useMemo(() => data.map(ligneCommandeFromRow), [data]);
+}
+
+export interface ReglementFournisseurVueRow extends ReglementFournisseurRow {
+  fournisseur_nom: string | null;
+  fournisseur_code: string | null;
+  caisse_nom: string | null;
+  commande_numero: string | null;
+  utilisateur_nom: string | null;
+  utilisateur_prenom: string | null;
+}
+
+export function useReglementsFournisseurs(filialeId: string | null, filtres: FiltresReglementsFournisseurs = {}) {
+  const { sql, params } = useMemo(
+    () => reglementsFournisseursQuery(filialeId, filtres),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
+    [filialeId, filtres.fournisseurId, filtres.dateDebut, filtres.dateFin, filtres.limite],
+  );
+  const { data, isLoading } = useQuery<ReglementFournisseurVueRow>(sql, params);
+  return { reglements: data, isLoading };
 }

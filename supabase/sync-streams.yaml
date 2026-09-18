@@ -46,6 +46,7 @@ streams:
       - SELECT * FROM productions WHERE filiale_id IN mes_filiales
       - SELECT * FROM lignes_production WHERE filiale_id IN mes_filiales
       - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales
+      - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales
       - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales
       - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales
 

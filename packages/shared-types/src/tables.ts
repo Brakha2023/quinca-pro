@@ -151,6 +151,19 @@ export const TABLES = {
   fournisseurs: {
     code: 'text',
     numero_compte: 'text',
+    mobile: 'text',
+    numero_rc: 'text',
+    numero_cc: 'text',
+    interlocuteur: 'text',
+    mobile_interlocuteur: 'text',
+    date_effet_solde: 'text',
+    periode_reglement: 'text',
+    delai_echeance_jours: 'integer',
+    avance_confirmation_percent: 'real',
+    pourcentage_echeance: 'real',
+    banque: 'text',
+    numero_compte_bancaire: 'text',
+    notes: 'text',
     raison_sociale: 'text',
     famille: 'text',
     type_article: 'text',
@@ -241,7 +254,26 @@ export const TABLES = {
     date_livraison_prevue: 'text',
     notes: 'text',
     filiale_id: 'text',
+    depot_id: 'text',
+    remise_percent: 'real',
+    tva_percent: 'real',
+    total_recu_ttc: 'real',
+    date_reception: 'text',
+    utilisateur_id: 'text',
     ...COMMUNES_HORODATAGE,
+  },
+  lignes_commande_fournisseur: {
+    commande_id: 'text',
+    filiale_id: 'text',
+    article_id: 'text',
+    code_article: 'text',
+    designation: 'text',
+    unite: 'text',
+    quantite: 'real',
+    quantite_recue: 'real',
+    prix_unitaire_ht: 'real',
+    total_ht: 'real',
+    created_at: 'text',
   },
   reglements_fournisseurs: {
     numero: 'text',
@@ -314,3 +346,4 @@ export type MouvementTresorerieRow = Row<'mouvements_tresorerie'>;
 export type AuditLogRow = Row<'audit_log'>;
 export type ProductionRow = Row<'productions'>;
 export type LigneProductionRow = Row<'lignes_production'>;
+export type LigneCommandeFournisseurRow = Row<'lignes_commande_fournisseur'>;

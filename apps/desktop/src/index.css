@@ -26,3 +26,33 @@
   .ticket-total td { font-weight: bold; font-size: 13px; border-top: 1px solid #000; padding-top: 3px; }
   .ticket-pied { text-align: center; margin-top: 6px; }
 }
+
+/* Documents A4 (bon de commande, balance, relevé…) : aperçu à l'écran, seuls imprimés. */
+.document { font: 12px/1.4 Arial, Helvetica, sans-serif; color: #000; background: #fff; max-width: 190mm; margin: 0 auto; padding: 8mm; }
+.document-entete { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+.document-logo { font: bold 26px Georgia, serif; border: 3px double #000; border-radius: 8px; padding: 4px 14px; }
+.document-societe { text-align: right; }
+.document-societe p { margin: 0; }
+.document-societe-nom { font-weight: bold; font-size: 14px; }
+.document-titre { text-align: center; font-size: 15px; font-weight: bold; text-transform: uppercase; background: #eee; border: 1px solid #000; padding: 6px; margin: 14px 0; }
+.document table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.document th, .document td { border: 1px solid #000; padding: 3px 6px; }
+.document th { background: #eee; font-size: 11px; text-transform: uppercase; }
+.document .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.document .document-bloc { border: 1px solid #000; padding: 6px; }
+.document .document-cartouches { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; margin: 8px 0; }
+.document .document-totaux { margin-left: auto; width: 60mm; }
+.document .document-totaux td:last-child { font-weight: bold; }
+.document .document-signature { width: 70mm; height: 30mm; }
+/* Aperçu avant impression : plein écran à l'écran, seul le document à l'impression. */
+#zone-impression.apercu-impression { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60; background: rgba(23, 23, 23, .75); overflow: auto; padding: 0 0 24px; }
+.apercu-barre { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: #171717; color: #fff; font: 500 14px system-ui, sans-serif; }
+.apercu-barre > div { display: flex; gap: 8px; }
+.apercu-bouton { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; background: #404040; color: #fff; font-size: 13px; }
+.apercu-bouton-primaire { background: #2563eb; }
+.apercu-impression .document { margin-top: 20px; box-shadow: 0 4px 24px rgba(0,0,0,.4); width: 190mm; min-height: 270mm; }
+@media print {
+  #zone-impression.apercu-impression { position: static; display: block; background: none; padding: 0; overflow: visible; }
+  .apercu-barre { display: none; }
+  .apercu-impression .document { margin: 0; box-shadow: none; width: auto; min-height: 0; max-width: none; padding: 0; }
+}
