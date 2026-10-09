@@ -32,6 +32,7 @@ function App() {
             <Route path="fournisseurs" element={<FournisseursPage />} />
             <Route path="fournisseurs/:section" element={<FournisseursPage />} />
             <Route path="tresorerie" element={<TresoreriePage />} />
+            <Route path="tresorerie/:section" element={<TresoreriePage />} />
             <Route path="livraisons" element={<LivraisonsPage />} />
             <Route path="ventes" element={<VentesPage />} />
             <Route path="employes" element={<EmployesPage />} />

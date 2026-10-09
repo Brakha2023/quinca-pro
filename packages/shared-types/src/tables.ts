@@ -345,6 +345,21 @@ export const TABLES = {
     date_operation: 'text',
     created_at: 'text',
   },
+  transferts_filiales: {
+    numero: 'text',
+    filiale_source_id: 'text',
+    filiale_destination_id: 'text',
+    caisse_source_id: 'text',
+    caisse_destination_id: 'text',
+    montant: 'real',
+    motif: 'text',
+    statut: 'text',
+    date_envoi: 'text',
+    date_reception: 'text',
+    utilisateur_envoi_id: 'text',
+    utilisateur_reception_id: 'text',
+    ...COMMUNES_HORODATAGE,
+  },
   employes: {
     matricule: 'text',
     nom: 'text',
@@ -457,6 +472,7 @@ export type LigneProductionRow = Row<'lignes_production'>;
 export type LigneCommandeFournisseurRow = Row<'lignes_commande_fournisseur'>;
 export type ProformaRow = Row<'proformas'>;
 export type LigneProformaRow = Row<'lignes_proforma'>;
+export type TransfertFilialeRow = Row<'transferts_filiales'>;
 export type EmployeRow = Row<'employes'>;
 export type PointageRow = Row<'pointages'>;
 export type AvanceSalaireRow = Row<'avances_salaire'>;

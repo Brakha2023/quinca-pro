@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
-import type { CaisseRow, MouvementTresorerieRow } from '@quinca/shared-types';
-import { caisseFromRow } from '../../../core/tresorerie';
-import { CAISSES_QUERY, mouvementsTresorerieQuery, type FiltresTresorerie } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
+import type { CaisseRow, MouvementTresorerieRow, TransfertFilialeRow } from '@quinca/shared-types';
+import { caisseFromRow, soldeOuverture, type MouvementJournal } from '../../../core/tresorerie';
+import {
+  CAISSES_QUERY, TRANSFERTS_FILIALES_QUERY, mouvementsDepuisQuery, mouvementsTresorerieQuery, type FiltresTresorerie,
+} from '../../../infrastructure/powersync/repositories/TresorerieRepository';
 
 export function useCaissesToutes(filialeId: string | null) {
   const { data } = useQuery<CaisseRow>(CAISSES_QUERY, [filialeId ?? '']);
@@ -23,4 +25,30 @@ export function useMouvementsTresorerie(filialeId: string | null, filtres: Filtr
   );
   const { data, isLoading } = useQuery<MouvementTresorerieVue>(sql, params);
   return { mouvements: data, isLoading };
+}
+
+/**
+ * Solde d'ouverture de la période : le solde actuel des caisses retenues,
+ * duquel on retire tout ce qui a bougé depuis le début de la période.
+ */
+export function useSoldeOuverture(filialeId: string | null, caisseId: string | null, dateDebut: string) {
+  const caisses = useCaissesToutes(filialeId);
+  const { sql, params } = useMemo(() => mouvementsDepuisQuery(filialeId, caisseId, dateDebut), [filialeId, caisseId, dateDebut]);
+  const { data } = useQuery<MouvementJournal & { id: string }>(sql, params);
+  const soldeActuel = useMemo(
+    () => caisses.filter((c) => !caisseId || c.id === caisseId).reduce((s, c) => s + c.solde_actuel, 0),
+    [caisses, caisseId],
+  );
+  return { soldeActuel, ouverture: useMemo(() => soldeOuverture(soldeActuel, data), [soldeActuel, data]) };
+}
+
+export interface TransfertFilialeVue extends TransfertFilialeRow {
+  filiale_source_nom: string | null;
+  filiale_destination_nom: string | null;
+  caisse_source_nom: string | null;
+}
+
+export function useTransfertsFiliales(filialeId: string | null) {
+  const { data, isLoading } = useQuery<TransfertFilialeVue>(TRANSFERTS_FILIALES_QUERY, [filialeId ?? '', filialeId ?? '']);
+  return { transferts: data, isLoading };
 }

@@ -8,7 +8,7 @@ export async function ouvrirLien(url: string): Promise<void> {
     await openUrl(url);
     return;
   }
-  window.open(url, '_blank', 'noopener');
+  window.open(url, '_blank', 'noopener'); // tauri-ok : repli navigateur, la branche Tauri passe par plugin-opener
 }
 
 export function lienMailto(destinataire: string, objet: string, corps: string): string {

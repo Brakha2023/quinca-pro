@@ -1,7 +1,10 @@
 import type { Transaction } from '@powersync/web';
-import type { CaisseRow } from '@quinca/shared-types';
+import type { CaisseRow, TransfertFilialeRow } from '@quinca/shared-types';
 import { genererNumeroPiece } from '../../../core/commun/numerotation';
-import type { CaisseForm, OperationForm, TransfertCaisseForm } from '../../../core/tresorerie';
+import {
+  CATEGORIE_RETRAIT, CATEGORIE_TRANSFERT_FILIALE, CATEGORIE_VERSEMENT,
+  type CaisseForm, type OperationForm, type RetraitForm, type TransfertCaisseForm, type TransfertFilialeForm, type VersementForm,
+} from '../../../core/tresorerie';
 import { BaseRepository } from './BaseRepository';
 
 export const CAISSES_QUERY = 'SELECT * FROM caisses WHERE filiale_id = ? ORDER BY est_active DESC, nom';
@@ -29,6 +32,24 @@ export function mouvementsTresorerieQuery(filialeId: string | null, filtres: Fil
     params,
   };
 }
+
+/** Mouvements d'une caisse depuis un instant donné : sert à remonter au solde d'ouverture. */
+export function mouvementsDepuisQuery(filialeId: string | null, caisseId: string | null, debut: string) {
+  const conditions = ['filiale_id = ?', 'date_operation >= ?'];
+  const params: Array<string | number> = [filialeId ?? '', new Date(`${debut}T00:00:00`).toISOString()];
+  if (caisseId) { conditions.push('caisse_id = ?'); params.push(caisseId); }
+  return { sql: `SELECT id, type, montant, date_operation FROM mouvements_tresorerie WHERE ${conditions.join(' AND ')}`, params };
+}
+
+/** Transferts inter-filiales où la filiale est expéditrice ou destinataire. */
+export const TRANSFERTS_FILIALES_QUERY = `
+  SELECT t.*, fs.nom AS filiale_source_nom, fd.nom AS filiale_destination_nom, c.nom AS caisse_source_nom
+  FROM transferts_filiales t
+  LEFT JOIN filiales fs ON fs.id = t.filiale_source_id
+  LEFT JOIN filiales fd ON fd.id = t.filiale_destination_id
+  LEFT JOIN caisses c ON c.id = t.caisse_source_id
+  WHERE t.filiale_source_id = ? OR t.filiale_destination_id = ?
+  ORDER BY t.date_envoi DESC LIMIT 200`;
 
 export interface ContexteTresorerie {
   filialeId: string;
@@ -77,6 +98,82 @@ export class TresorerieRepository extends BaseRepository {
       await this.mouvementer(tx, ctx, t.caisse_source_id, 'DEPENSE', 'TRANSFERT_CAISSE', t.montant, `Vers ${dest.nom ?? ''}${t.motif ? ` — ${t.motif}` : ''}`, numero);
       await this.mouvementer(tx, ctx, t.caisse_destination_id, 'RECETTE', 'TRANSFERT_CAISSE', t.montant, `Depuis ${source.nom ?? ''}${t.motif ? ` — ${t.motif}` : ''}`, numero);
       return numero;
+    });
+  }
+
+  /**
+   * Versement encaissé au guichet d'un remettant qui n'a pas de compte
+   * client. Un versement de client en compte passe, lui, par
+   * `ClientsRepository.enregistrerReglement` pour mettre le compte à jour.
+   */
+  enregistrerVersement(ctx: ContexteTresorerie, v: VersementForm): Promise<string> {
+    return this.db.writeTransaction(async (tx) => {
+      const numero = genererNumeroPiece('VER');
+      const description = [v.remettant, v.designation].filter(Boolean).join(' — ');
+      await this.mouvementer(tx, ctx, v.caisse_id, 'RECETTE', CATEGORIE_VERSEMENT, v.montant, description || null, v.reference || numero);
+      return numero;
+    });
+  }
+
+  /** Retrait d'espèces : sortie de caisse au profit d'un bénéficiaire nommé. */
+  enregistrerRetrait(ctx: ContexteTresorerie, r: RetraitForm): Promise<string> {
+    return this.db.writeTransaction(async (tx) => {
+      const numero = genererNumeroPiece('RET');
+      const description = [r.beneficiaire, r.motif].filter(Boolean).join(' — ');
+      await this.mouvementer(tx, ctx, r.caisse_id, 'DEPENSE', CATEGORIE_RETRAIT, r.montant, description || null, r.reference || numero);
+      return numero;
+    });
+  }
+
+  /**
+   * Envoi d'espèces vers une autre filiale : les fonds sortent tout de suite
+   * de la caisse source et le transfert part « EN_TRANSIT ». La caisse
+   * d'arrivée est choisie par la filiale destinataire à la réception.
+   */
+  envoyerVersFiliale(ctx: ContexteTresorerie, t: TransfertFilialeForm): Promise<string> {
+    return this.db.writeTransaction(async (tx) => {
+      const numero = genererNumeroPiece('TRF');
+      const now = this.maintenant();
+      const destination = await tx.get<{ nom: string | null }>('SELECT nom FROM filiales WHERE id = ?', [t.filiale_destination_id]);
+      await tx.execute(
+        `INSERT INTO transferts_filiales (id, numero, filiale_source_id, filiale_destination_id, caisse_source_id, caisse_destination_id,
+           montant, motif, statut, date_envoi, date_reception, utilisateur_envoi_id, utilisateur_reception_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, ?, 'EN_TRANSIT', ?, NULL, ?, NULL, ?, ?)`,
+        [this.nouvelId(), numero, ctx.filialeId, t.filiale_destination_id, t.caisse_source_id, t.montant, t.motif || null, now, ctx.utilisateurId, now, now],
+      );
+      await this.mouvementer(tx, ctx, t.caisse_source_id, 'DEPENSE', CATEGORIE_TRANSFERT_FILIALE, t.montant, `Vers ${destination?.nom ?? 'filiale'}${t.motif ? ` — ${t.motif}` : ''}`, numero);
+      return numero;
+    });
+  }
+
+  /** Réception par la filiale destinataire : les fonds entrent dans la caisse choisie. */
+  recevoirTransfert(ctx: ContexteTresorerie, transfertId: string, caisseDestinationId: string): Promise<void> {
+    return this.db.writeTransaction(async (tx) => {
+      const transfert = await tx.get<TransfertFilialeRow>('SELECT * FROM transferts_filiales WHERE id = ?', [transfertId]);
+      if (transfert.statut !== 'EN_TRANSIT') throw new Error('Ce transfert a déjà été traité.');
+      if (transfert.filiale_destination_id !== ctx.filialeId) throw new Error('Seule la filiale destinataire peut encaisser ce transfert.');
+      const source = await tx.get<{ nom: string | null }>('SELECT nom FROM filiales WHERE id = ?', [transfert.filiale_source_id ?? '']);
+      await this.patch(tx, 'transferts_filiales', transfertId, {
+        statut: 'RECU', caisse_destination_id: caisseDestinationId, date_reception: this.maintenant(), utilisateur_reception_id: ctx.utilisateurId,
+      });
+      await this.mouvementer(tx, ctx, caisseDestinationId, 'RECETTE', CATEGORIE_TRANSFERT_FILIALE, transfert.montant ?? 0,
+        `Depuis ${source?.nom ?? 'filiale'}${transfert.motif ? ` — ${transfert.motif}` : ''}`, transfert.numero ?? '');
+    });
+  }
+
+  /** Annulation par l'expéditeur tant que les fonds ne sont pas arrivés : la caisse source est recréditée. */
+  annulerTransfert(ctx: ContexteTresorerie, transfertId: string, motif: string): Promise<void> {
+    return this.db.writeTransaction(async (tx) => {
+      const transfert = await tx.get<TransfertFilialeRow>('SELECT * FROM transferts_filiales WHERE id = ?', [transfertId]);
+      if (transfert.statut !== 'EN_TRANSIT') throw new Error('Ce transfert a déjà été traité.');
+      if (transfert.filiale_source_id !== ctx.filialeId) throw new Error('Seule la filiale expéditrice peut annuler ce transfert.');
+      // Le motif d'origine reste lisible : la raison de l'annulation s'y ajoute.
+      await this.patch(tx, 'transferts_filiales', transfertId, {
+        statut: 'ANNULE',
+        motif: [transfert.motif, motif && `Annulé : ${motif}`].filter(Boolean).join(' — ') || null,
+      });
+      await this.mouvementer(tx, ctx, transfert.caisse_source_id ?? '', 'RECETTE', CATEGORIE_TRANSFERT_FILIALE, transfert.montant ?? 0,
+        `Annulation du transfert ${transfert.numero ?? ''}${motif ? ` — ${motif}` : ''}`, transfert.numero ?? '');
     });
   }
 

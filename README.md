@@ -170,6 +170,35 @@ retenues ; **avances sur salaire** sorties de caisse et retenues sur la paie ; p
 groupé en caisse, catégorie SALAIRE ; une paie payée n'est plus recalculée) et **Paiement de salaire**
 (fiche d'émargement sans / avec montants, bulletins de paie).
 
+### Trésorerie
+
+Sections (routes `/tresorerie/<section>`, sous-menu latéral) :
+
+- **Liste des caisses** : cartes des caisses avec leur solde, création / modification / désactivation
+  (une caisse non vide ne se désactive pas), puis **mouvement de caisse** filtré par caisse et par
+  période — **solde d'ouverture** (déduit du solde actuel en remontant les mouvements de la période),
+  recettes, dépenses, **solde de clôture** et **solde actuel**, journal chronologique avec solde courant
+  après chaque opération, et **journal de caisse imprimable** (A4, période, soldes, totaux, double
+  signature).
+- **Versement** : encaissement au guichet. Si le remettant est un client en compte, le versement passe
+  par son compte (créance et cumuls mis à jour, comme dans le module Clients) ; sinon c'est une recette
+  de caisse `VERSEMENT`. Reçu imprimé aussitôt.
+- **Retrait** : sortie d'espèces au profit d'un bénéficiaire nommé (`RETRAIT`). Au-delà du solde, une
+  confirmation prévient que la caisse passera en négatif.
+- **Entrée en caisse** : apport, remboursement ou autre recette, avec déposant et pièce justificative.
+- **Transfert inter caisse** : entre deux caisses de la filiale, une sortie et une entrée portant la
+  même référence.
+- **Transfert inter filiale** : les fonds sortent de la caisse de départ dès l'envoi et le transfert
+  reste **en transit** ; la filiale destinataire l'**encaisse** à l'arrivée dans la caisse de son choix.
+  L'expéditeur peut l'**annuler** tant qu'il n'est pas arrivé (la caisse source est recréditée, le motif
+  d'origine est conservé). La ligne est visible des deux côtés (`transferts_filiales`).
+- **Dépense** : catégories de dépense, bénéficiaire, référence, pièce de dépense imprimable.
+
+Le **reçu de caisse** (versement, retrait, entrée, dépense) reprend le modèle du reçu QCF : cartouche du
+tiers, date, code reçu, montant encadré en FCFA, désignation, observation, double signature et opérateur.
+Il ajoute le **montant en toutes lettres** (ce qui fait foi en cas de rature) et un **code-barres Code 39**
+de la pièce, dessiné en SVG sans police ni bibliothèque.
+
 ## Backlog technique connu
 
 - **Recherche accentuée** : `LIKE` SQLite n'est insensible à la casse que pour l'ASCII (« koné » ne trouve pas « KONÉ »).

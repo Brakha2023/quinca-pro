@@ -9,6 +9,7 @@ import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/
 import { SECTIONS_FOURNISSEURS, SECTION_FOURNISSEURS_DEFAUT, cheminFournisseurs } from '../pages/Fournisseurs/onglets';
 import { SECTIONS_CLIENTS, SECTION_CLIENTS_DEFAUT, cheminClients } from '../pages/Clients/onglets';
 import { SECTIONS_EMPLOYES, SECTION_EMPLOYES_DEFAUT, cheminEmployes } from '../pages/Employes/onglets';
+import { SECTIONS_TRESORERIE, SECTION_TRESORERIE_DEFAUT, cheminTresorerie } from '../pages/Tresorerie/onglets';
 import FilialeSelector from '../components/FilialeSelector';
 import SyncStatusBadge from '../components/layout/SyncStatusBadge';
 import { useAuth } from '../auth/useAuth';
@@ -75,7 +76,12 @@ const menuSections: MenuSection[] = [
         icon: UserGroupIcon,
         children: SECTIONS_FOURNISSEURS.map((s) => ({ name: s.label, href: cheminFournisseurs(s.id), icon: s.icon })),
       },
-      { name: 'Trésorerie', href: '/tresorerie', icon: BanknotesIcon },
+      {
+        name: 'Trésorerie',
+        href: cheminTresorerie(SECTION_TRESORERIE_DEFAUT),
+        icon: BanknotesIcon,
+        children: SECTIONS_TRESORERIE.map((s) => ({ name: s.label, href: cheminTresorerie(s.id), icon: s.icon })),
+      },
       { name: 'Livraisons', href: '/livraisons', icon: TruckIcon },
     ],
   },

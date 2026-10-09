@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CaisseRow, MouvementTresorerieRow, TypeMouvementTresorerie } from '@quinca/shared-types';
+import { TYPES_REGLEMENT, type CaisseRow, type MouvementTresorerieRow, type StatutTransfertFiliale, type TransfertFilialeRow, type TypeMouvementTresorerie } from '@quinca/shared-types';
 
 export interface Caisse {
   id: string;
@@ -27,9 +27,14 @@ export function caisseFromRow(row: CaisseRow): Caisse {
 export const CATEGORIES_RECETTE = ['APPORT', 'REMBOURSEMENT', 'AUTRE_RECETTE'] as const;
 export const CATEGORIES_DEPENSE = ['TRANSPORT', 'FOURNITURES', 'LOYER', 'SALAIRE', 'ELECTRICITE_EAU', 'ENTRETIEN', 'REPAS', 'AUTRE_DEPENSE'] as const;
 
+/** Catégories propres aux sections du module (jamais saisies à la main dans « Dépense »). */
+export const CATEGORIE_VERSEMENT = 'VERSEMENT';
+export const CATEGORIE_RETRAIT = 'RETRAIT';
+export const CATEGORIE_TRANSFERT_FILIALE = 'TRANSFERT_FILIALE';
+
 export const LIBELLES_CATEGORIE: Record<string, string> = {
   VENTE: 'Vente', REGLEMENT_CLIENT: 'Règlement client', ANNULATION_VENTE: 'Annulation de vente', REGLEMENT_FOURNISSEUR: 'Règlement fournisseur',
-  TRANSFERT_CAISSE: 'Transfert entre caisses', AVANCE_SALAIRE: 'Avance sur salaire', APPORT: 'Apport de fonds', REMBOURSEMENT: 'Remboursement', AUTRE_RECETTE: 'Autre recette',
+  TRANSFERT_CAISSE: 'Transfert entre caisses', TRANSFERT_FILIALE: 'Transfert inter-filiale', VERSEMENT: 'Versement', RETRAIT: 'Retrait d’espèces', AVANCE_SALAIRE: 'Avance sur salaire', APPORT: 'Apport de fonds', REMBOURSEMENT: 'Remboursement', AUTRE_RECETTE: 'Autre recette',
   TRANSPORT: 'Transport', FOURNITURES: 'Fournitures', LOYER: 'Loyer', SALAIRE: 'Salaires', ELECTRICITE_EAU: 'Électricité / eau', ENTRETIEN: 'Entretien', REPAS: 'Repas', AUTRE_DEPENSE: 'Autre dépense',
 };
 
@@ -38,6 +43,8 @@ export const operationSchema = z.object({
   type: z.enum(['RECETTE', 'DEPENSE']),
   categorie: z.string().min(1, 'Catégorie obligatoire'),
   montant: z.coerce.number().positive('Montant > 0'),
+  /** Qui dépose ou encaisse : repris en tête de la description et sur le reçu. */
+  tiers: z.string().trim().max(80).optional().default(''),
   description: z.string().trim().max(200).optional().default(''),
   reference: z.string().trim().max(60).optional().default(''),
 });
@@ -72,4 +79,83 @@ export function mouvementTresorerieFromRow(row: MouvementTresorerieRow): Mouveme
     id: row.id, type: (row.type ?? 'RECETTE') as TypeMouvementTresorerie, categorie: row.categorie ?? '', montant: row.montant ?? 0, description: row.description,
     reference: row.reference, caisse_id: row.caisse_id ?? '', utilisateur_id: row.utilisateur_id, date_operation: row.date_operation ?? '',
   };
+}
+
+/** Versement encaissé au guichet : un client en compte, ou un remettant libre nommé à la main. */
+export const versementSchema = z.object({
+  caisse_id: z.string().min(1, 'Caisse obligatoire'),
+  client_id: z.string().optional().default(''),
+  remettant: z.string().trim().max(80).optional().default(''),
+  montant: z.coerce.number().positive('Montant > 0'),
+  type_reglement: z.enum(TYPES_REGLEMENT).default('ESPECES'),
+  designation: z.string().trim().max(120).optional().default(''),
+  observation: z.string().trim().max(200).optional().default(''),
+  reference: z.string().trim().max(60).optional().default(''),
+}).refine((v) => Boolean(v.client_id) || v.remettant.length > 0, {
+  message: 'Choisissez un client ou nommez le remettant',
+  path: ['remettant'],
+});
+export type VersementForm = z.infer<typeof versementSchema>;
+export type VersementFormInput = z.input<typeof versementSchema>;
+
+/** Retrait d'espèces de la caisse (remise au gérant, dépôt en banque…). */
+export const retraitSchema = z.object({
+  caisse_id: z.string().min(1, 'Caisse obligatoire'),
+  beneficiaire: z.string().trim().min(1, 'Bénéficiaire obligatoire').max(80),
+  montant: z.coerce.number().positive('Montant > 0'),
+  motif: z.string().trim().max(200).optional().default(''),
+  reference: z.string().trim().max(60).optional().default(''),
+});
+export type RetraitForm = z.infer<typeof retraitSchema>;
+export type RetraitFormInput = z.input<typeof retraitSchema>;
+
+/** Envoi d'espèces vers une autre filiale : la caisse d'arrivée est choisie à la réception. */
+export const transfertFilialeSchema = z.object({
+  caisse_source_id: z.string().min(1, 'Caisse obligatoire'),
+  filiale_destination_id: z.string().min(1, 'Filiale destinataire obligatoire'),
+  montant: z.coerce.number().positive('Montant > 0'),
+  motif: z.string().trim().max(200).optional().default(''),
+});
+export type TransfertFilialeForm = z.infer<typeof transfertFilialeSchema>;
+export type TransfertFilialeFormInput = z.input<typeof transfertFilialeSchema>;
+
+export interface TransfertFiliale {
+  id: string;
+  numero: string;
+  filiale_source_id: string;
+  filiale_destination_id: string;
+  caisse_source_id: string;
+  caisse_destination_id: string | null;
+  montant: number;
+  motif: string | null;
+  statut: StatutTransfertFiliale;
+  date_envoi: string;
+  date_reception: string | null;
+}
+
+export function transfertFilialeFromRow(row: TransfertFilialeRow): TransfertFiliale {
+  return {
+    id: row.id, numero: row.numero ?? '', filiale_source_id: row.filiale_source_id ?? '', filiale_destination_id: row.filiale_destination_id ?? '',
+    caisse_source_id: row.caisse_source_id ?? '', caisse_destination_id: row.caisse_destination_id, montant: row.montant ?? 0, motif: row.motif,
+    statut: (row.statut ?? 'EN_TRANSIT') as StatutTransfertFiliale, date_envoi: row.date_envoi ?? '', date_reception: row.date_reception,
+  };
+}
+
+export const LIBELLES_STATUT_TRANSFERT: Record<StatutTransfertFiliale, string> = {
+  EN_TRANSIT: 'En transit',
+  RECU: 'Reçu',
+  ANNULE: 'Annulé',
+};
+
+/** Un transfert ne se reçoit ou ne s'annule que tant qu'il est en transit. */
+export const transfertModifiable = (t: Pick<TransfertFiliale, 'statut'>): boolean => t.statut === 'EN_TRANSIT';
+
+/**
+ * Qui peut agir sur un transfert : l'expéditeur peut l'annuler tant qu'il
+ * n'est pas arrivé, le destinataire peut l'encaisser.
+ */
+export function roleFiliale(t: Pick<TransfertFiliale, 'filiale_source_id' | 'filiale_destination_id'>, filialeId: string): 'EXPEDITEUR' | 'DESTINATAIRE' | 'TIERS' {
+  if (t.filiale_source_id === filialeId) return 'EXPEDITEUR';
+  if (t.filiale_destination_id === filialeId) return 'DESTINATAIRE';
+  return 'TIERS';
 }

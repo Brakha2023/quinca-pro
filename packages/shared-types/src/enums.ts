@@ -45,6 +45,9 @@ export type StatutCommandeFournisseur = (typeof STATUTS_COMMANDE_FOURNISSEUR)[nu
 export const TYPES_MOUVEMENT_TRESORERIE = ['RECETTE', 'DEPENSE'] as const;
 export type TypeMouvementTresorerie = (typeof TYPES_MOUVEMENT_TRESORERIE)[number];
 
+export const STATUTS_TRANSFERT_FILIALE = ['EN_TRANSIT', 'RECU', 'ANNULE'] as const;
+export type StatutTransfertFiliale = (typeof STATUTS_TRANSFERT_FILIALE)[number];
+
 export const ACTIONS_AUDIT = ['INSERT', 'UPDATE', 'DELETE'] as const;
 export type ActionAudit = (typeof ACTIONS_AUDIT)[number];
 

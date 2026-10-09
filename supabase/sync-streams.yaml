@@ -24,7 +24,12 @@ streams:
     queries:
       - SELECT * FROM utilisateurs WHERE id = auth.user_id()
       - SELECT * FROM utilisateurs WHERE filiale_id IN mes_filiales
-      - SELECT * FROM filiales WHERE id IN mes_filiales
+      # Annuaire des filiales : toutes les filiales actives, pas seulement les
+      # siennes. Le transfert inter-filiale a besoin de nommer la destination,
+      # et la table ne contient rien de confidentiel (RLS : lecture ouverte aux
+      # utilisateurs authentifiés). Le sélecteur de périmètre reste, lui,
+      # réservé au directeur.
+      - SELECT * FROM filiales WHERE est_active = true
       - SELECT * FROM depots WHERE filiale_id IN mes_filiales
       - SELECT * FROM caisses WHERE filiale_id IN mes_filiales
       - SELECT * FROM familles_articles WHERE filiale_id IN mes_filiales
@@ -51,6 +56,10 @@ streams:
       - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales
       - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales
       - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales
+      # Transfert inter-filiale : visible des deux côtés (l'expéditeur suit son
+      # envoi, le destinataire encaisse à l'arrivée).
+      - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales
+      - SELECT * FROM transferts_filiales WHERE filiale_destination_id IN mes_filiales
       - SELECT * FROM employes WHERE filiale_id IN mes_filiales
       - SELECT * FROM pointages WHERE filiale_id IN mes_filiales
       - SELECT * FROM avances_salaire WHERE filiale_id IN mes_filiales
