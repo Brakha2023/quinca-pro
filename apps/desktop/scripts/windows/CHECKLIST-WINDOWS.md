@@ -17,12 +17,25 @@ SmartScreen affiche « Windows a protégé votre ordinateur » → *Informations
 ## Différences WebView2 à vérifier (ce qui marche différemment de macOS)
 
 - [ ] **Impression** (`window.print`) : ticket 80 mm (POS), documents A4 (bon de commande, balance, relevés, émargements, bulletins) → la boîte d'impression Windows s'ouvre, aperçu correct, marges.
+- [ ] **Les deux formats du point de vente** : après une vente, *Ticket* sort en 80 mm sur la thermique et *Facture A4* en pleine page sur la bureautique. Vérifier que le format par défaut du poste (Réglages du poste de vente) est bien le bouton principal, et que passer de l'un à l'autre n'imprime pas le mauvais document.
+- [ ] **Facture A4** : cartouches facture et client lisibles, lignes non coupées, montant en toutes lettres, cases de règlement cochées, rien qui déborde de la page.
+- [ ] **Réimpression** : Ventes → détail d'un ticket → *Facture A4* ; une vente annulée doit sortir avec le bandeau « FACTURE ANNULÉE ».
+- [ ] **Code-barres** : passer une douchette sur le code-barres d'une facture, d'un reçu de caisse et d'une fiche article — le code lu doit être exactement celui imprimé en clair dessous.
 - [ ] **Relance par e-mail** (clients / fournisseurs) : « Envoyer par e-mail » ouvre le client de messagerie par défaut (Outlook, Mail…) avec objet et corps pré-remplis. Si aucun client mail n'est configuré : le bouton « Copier » doit fonctionner.
 - [ ] **Copier** dans le presse-papiers (relances) puis coller dans Bloc-notes.
 - [ ] **Pièces jointes employés** : sélection d'une photo et d'un contrat PDF via la boîte de dialogue Windows ; contrat consultable dans l'app (PDF affiché dans la fiche).
+- [ ] **Import du catalogue** : Catalogue → *Importer Excel* ouvre la boîte de dialogue Windows ; charger un export `ETAT_LISTEARTICLE.xls` → le nombre d'articles importés correspond au fichier (le **premier** article de la feuille compris) et les lignes rejetées sont expliquées.
 - [ ] **Recherche** : accents (« koné ») — même limite qu'ailleurs (ASCII seulement), à noter, pas un bug Windows.
 - [ ] **Raccourcis POS** : F2 (recherche), F10 (nouvelle vente), F11 (encaisser) — vérifier qu'ils ne sont pas interceptés par Windows.
 - [ ] **Boîtes de confirmation** (annulation de vente, validation de journée, désactivations) : modales de l'app, jamais de dialogue système.
+
+## Modules récents (à passer une fois sur Windows)
+
+- [ ] **Trésorerie → Liste des caisses** : filtre par caisse et par période, solde d'ouverture / clôture / actuel cohérents, *Imprimer* sort le journal de caisse A4.
+- [ ] **Versement / Retrait / Entrée / Dépense** : le reçu s'imprime, le montant en toutes lettres correspond aux chiffres.
+- [ ] **Transfert inter filiale** : envoi depuis une filiale, réception depuis l'autre poste (demande deux postes ou deux comptes) ; l'annulation en transit recrédite bien la caisse.
+- [ ] **Fiche article** : bouton *Détail* → stock par dépôt, activité commerciale, *Imprimer la fiche*.
+- [ ] **Entrée de stock avec fournisseur** : choisir un fournisseur, valider, puis le retrouver dans Stock → Mouvements (colonne et filtre *Fournisseur*). Vérifier que la ligne remonte bien dans Supabase (c'est la colonne ajoutée le plus récemment).
 
 ## Hors ligne (le point clé)
 
