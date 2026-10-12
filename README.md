@@ -65,6 +65,8 @@ pnpm --filter @quinca/desktop dev   # Vite seul, dans le navigateur (http://loca
 
 pnpm --filter @quinca/desktop e2e        # scénarios locaux (Chromium headless, sans backend) — nécessite un Vite lancé ;
                                          # E2E_BASE_URL=http://localhost:1421 pour ne pas gêner `pnpm desktop` sur 1420
+                                         # dont `revue` : toutes les requêtes SQL s'exécutent, tous les écrans se rendent
+                                         # sur une base vide, et la vue consolidée est contrôlée en profil directeur
 E2E_EMAIL=… E2E_PASSWORD=… pnpm --filter @quinca/desktop e2e:sync   # aller-retour réel Supabase/PowerSync
 pnpm check-types       # tsc sur tout le monorepo
 pnpm lint              # eslint
