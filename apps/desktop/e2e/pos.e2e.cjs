@@ -140,6 +140,17 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.getByRole('dialog').locator('td', { hasText: 'Ciment' }).waitFor();
   verifier(true, 'détail du ticket avec ses lignes');
 
+  // Réédition de la facture d'une vente déjà enregistrée.
+  await page.evaluate(() => { window.__impressions = []; window.print = () => window.__impressions.push('ok'); });
+  await page.getByTestId('reimprimer-facture-a4').click();
+  const reedition = page.locator('#zone-impression.facture');
+  await reedition.waitFor({ state: 'attached' });
+  const papierRee = await texteDe(reedition);
+  verifier(papierRee.includes('Ciment 50kg') && papierRee.includes('Dépôt principal'), 'réédition : lignes et dépôt de la vente stockée');
+  verifier((await reedition.locator('[data-testid=facture-net]').textContent()).replace(/\s+/g, ' ') === '11 800', 'réédition : mêmes montants que l’originale');
+  verifier((await reedition.locator('[data-testid=facture-mention]').count()) === 0, 'réédition : aucune mention sur une vente valide');
+  verifier((await page.evaluate(() => window.__impressions.length)) === 1, 'réédition : document envoyé à l’impression');
+
   // Annulation depuis l'interface : motif obligatoire, puis bouton rouge (sans confirm() natif, absent sous Tauri).
   const enAttenteAvant = await page.locator('tbody tr', { hasText: 'En attente' }).count();
   await page.getByRole('dialog').getByRole('button', { name: 'Annuler cette vente' }).click();
@@ -147,6 +158,13 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.getByRole('dialog').getByRole('button', { name: "Confirmer l'annulation" }).click();
   await page.locator('tbody tr').first().locator('text=Annulée').waitFor();
   verifier((await page.locator('tbody tr', { hasText: 'En attente' }).count()) === enAttenteAvant - 1, 'annulation UI : le ticket passe en Annulée');
+
+  await page.locator('tbody tr').first().getByTitle('Détail').click();
+  await page.evaluate(() => { window.print = () => {}; });
+  await page.getByTestId('reimprimer-facture-a4').click();
+  await page.locator('#zone-impression.facture [data-testid=facture-mention]').waitFor({ state: 'attached' });
+  verifier((await page.locator('[data-testid=facture-mention]').textContent()) === 'FACTURE ANNULÉE', 'réédition : une vente annulée ne ressort pas muette');
+  await page.keyboard.press('Escape');
 
   // Seconde vente rapide, puis validation de journée via la boîte de confirmation applicative.
   await page.goto(`${BASE_URL}/#/pos`);

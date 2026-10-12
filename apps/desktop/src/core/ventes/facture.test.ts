@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculerTotaux, type LignePanier } from './panier';
 import { preparerVente } from './vente';
-import { avoirClient, estFormatImpression, lignesFacture, recapFacture } from './facture';
+import { avoirClient, estFormatImpression, lignesFacture, lignesFactureDepuisVente, recapFacture, recapVenteEnregistree } from './facture';
 
 const ligne = (over: Partial<LignePanier> = {}): LignePanier => ({
   article_id: 'a1',
@@ -80,5 +80,31 @@ describe('estFormatImpression', () => {
     expect(estFormatImpression('A4')).toBe(true);
     expect(estFormatImpression('TICKET')).toBe(true);
     expect(estFormatImpression('PDF')).toBe(false);
+  });
+});
+
+describe('réédition depuis une vente enregistrée', () => {
+  const stockee = { total_brut_ht: 20000, total_remise: 2000, total_net_ht: 18000, total_tva: 0, total_ttc: 18000, montant_percu: 20000, monnaie: 2000, reste_a_payer: 0 };
+
+  it('reprend les totaux stockés et déduit le rendu de monnaie', () => {
+    expect(recapVenteEnregistree(stockee)).toEqual({
+      montant_paye: 18000, reste_a_payer: 0, avoir: 0,
+      brut_ht: 20000, remise: 2000, net_ht: 18000, tva: 0, net_a_payer: 18000, comptant: true,
+    });
+  });
+
+  it('marque en crédit une vente qui laisse un reste', () => {
+    expect(recapVenteEnregistree({ ...stockee, montant_percu: 0, monnaie: 0, reste_a_payer: 18000 }).comptant).toBe(false);
+  });
+
+  it('tolère une vente aux colonnes nulles', () => {
+    expect(recapVenteEnregistree({ total_brut_ht: null, total_remise: null, total_net_ht: null, total_tva: null, total_ttc: null, montant_percu: null, monnaie: null, reste_a_payer: null }).net_a_payer).toBe(0);
+  });
+
+  it('ne recalcule pas les montants : la facture rééditée porte ceux de l’originale', () => {
+    const lignes = [{ id: 'l1', vente_id: 'v1', article_id: 'a1', code_article: 'SS20', designation: 'SIPHON', quantite: 10, prix_unitaire_ht: 2000, prix_unitaire_ttc: 2000, remise_percent: 10, tva_percent: 0, total_ht: 18000, total_ttc: 18000, depot_id: 'd1' }];
+    expect(lignesFactureDepuisVente(lignes, (id) => (id === 'd1' ? 'DEPOT' : '—'))).toEqual([
+      { code: 'SS20', designation: 'SIPHON', quantite: 10, prix_unitaire_ht: 2000, remise: 2000, total_ht: 18000, tva: 0, depot: 'DEPOT' },
+    ]);
   });
 });

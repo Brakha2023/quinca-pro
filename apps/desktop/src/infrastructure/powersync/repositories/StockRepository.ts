@@ -83,6 +83,7 @@ export function stocksParArticleQuery(filialeId: string | null) {
 export interface FiltresMouvements {
   depotId?: string | null;
   articleId?: string | null;
+  fournisseurId?: string | null;
   type?: TypeMouvementStock | null;
   reference?: string | null;
   limite?: number;
@@ -93,16 +94,18 @@ export function mouvementsQuery(filialeId: string | null, filtres: FiltresMouvem
   const params: Array<string | number> = [filialeId ?? ''];
   if (filtres.depotId) { conditions.push('m.depot_id = ?'); params.push(filtres.depotId); }
   if (filtres.articleId) { conditions.push('m.article_id = ?'); params.push(filtres.articleId); }
+  if (filtres.fournisseurId) { conditions.push('m.fournisseur_id = ?'); params.push(filtres.fournisseurId); }
   if (filtres.type) { conditions.push('m.type = ?'); params.push(filtres.type); }
   if (filtres.reference) { conditions.push('m.reference = ?'); params.push(filtres.reference); }
   params.push(filtres.limite ?? 200);
   return {
     sql: `SELECT m.*, a.code AS article_code, a.designation AS article_designation, d.nom AS depot_nom,
-                 u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom
+                 u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom, f.raison_sociale AS fournisseur_nom
           FROM mouvements_stock m
           JOIN articles a ON a.id = m.article_id
           JOIN depots d ON d.id = m.depot_id
           LEFT JOIN utilisateurs u ON u.id = m.utilisateur_id
+          LEFT JOIN fournisseurs f ON f.id = m.fournisseur_id
           WHERE ${conditions.join(' AND ')}
           ORDER BY m.created_at DESC
           LIMIT ?`,
@@ -119,6 +122,8 @@ export interface LigneAAppliquer {
 export interface OptionsMouvement {
   /** Autorise une sortie au-delà du disponible (stock négatif assumé, ex. vente forcée par un gérant). */
   autoriserNegatif?: boolean;
+  /** Fournisseur ayant livré la marchandise (entrées d'achat). */
+  fournisseurId?: string | null;
 }
 
 /**
@@ -136,7 +141,7 @@ export class StockRepository extends BaseRepository {
           article_id: ligne.article_id,
           quantite: ligne.quantite,
           cout_unitaire: ligne.cout_unitaire === '' ? null : ligne.cout_unitaire,
-        }, reference, entree.motif || null);
+        }, reference, entree.motif || null, { fournisseurId: entree.fournisseur_id });
       }
       return reference;
     });
@@ -253,13 +258,13 @@ export class StockRepository extends BaseRepository {
     }
 
     await tx.execute(
-      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, motif, utilisateur_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, motif, fournisseur_id, utilisateur_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         this.nouvelId(), ligne.article_id, depotId, ctx.filialeId, type,
         Math.abs(resultat.quantite), resultat.quantite_avant, resultat.quantite_apres,
         ligne.cout_unitaire ?? (type === 'TRANSFERT_ENTREE' ? resultat.cout_moyen : null),
-        reference, motif, ctx.utilisateurId, now,
+        reference, motif, options.fournisseurId ?? null, ctx.utilisateurId, now,
       ],
     );
   }

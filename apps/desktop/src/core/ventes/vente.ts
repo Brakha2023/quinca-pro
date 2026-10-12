@@ -172,6 +172,8 @@ export interface LigneVente {
   tva_percent: number;
   total_ht: number;
   total_ttc: number;
+  /** Dépôt d'où la marchandise est sortie, repris sur la facture. */
+  depot_id: string | null;
 }
 
 export function ligneVenteFromRow(row: LigneVenteRow): LigneVente {
@@ -188,5 +190,6 @@ export function ligneVenteFromRow(row: LigneVenteRow): LigneVente {
     tva_percent: row.tva_percent ?? 0,
     total_ht: row.total_ht ?? 0,
     total_ttc: row.total_ttc ?? 0,
+    depot_id: row.depot_id,
   };
 }

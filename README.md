@@ -133,6 +133,8 @@ lignes en HT (code, désignation, quantité, prix unitaire, remise en montant, t
 cachet/signature, récapitulatif (payé, reste à payer, avoir / brut HT, remise, net HT, TVA, net à payer),
 montant en toutes lettres et conditions de règlement cochées. Le format habituel du poste se règle dans
 *Réglages du poste de vente* (il devient le bouton principal) ; l'autre reste à un clic.
+La même facture se réédite depuis **Ventes → détail d'un ticket → Facture A4**, avec les montants
+d'origine (jamais recalculés) ; une vente annulée ressort barrée d'un bandeau « FACTURE ANNULÉE ».
 
 ### Catalogue
 
@@ -151,6 +153,13 @@ minimum / surstock), activité commerciale sur 30 jours, 3 mois ou 12 mois (quan
 d'affaires, dernier prix pratiqué, écoulement moyen, couverture du stock) et derniers mouvements.
 Le bouton *Imprimer la fiche* en sort un rapport A4 — identification, tarifs, stock par dépôt, ventes
 mois par mois, mouvements, code-barres Code 39 de l'article.
+
+### Entrées en stock
+
+Une entrée d'achat porte son **fournisseur** (colonne `mouvements_stock.fournisseur_id`) : le journal
+des mouvements l'affiche et se filtre par fournisseur. Le champ est facultatif et disparaît sur un
+retour client, qui ne vient d'aucun fournisseur. **Il n'engage aucune dette** : une dette fournisseur
+naît d'un bon de commande réceptionné (module Fournisseurs), pas d'une entrée libre.
 
 ### Production (module Stock)
 

@@ -1,19 +1,31 @@
 import { createPortal } from 'react-dom';
 import { montantEnLettresFcfa } from '../../../core/commun/montantEnLettres';
-import { LIBELLES_MODE_PAIEMENT, lignesFacture, recapFacture, type LignePanier, type VentePreparee } from '../../../core/ventes';
-import type { Client } from '../../../core/clients';
+import { LIBELLES_MODE_PAIEMENT, type LigneFacture, type RecapFacture } from '../../../core/ventes';
 import type { ModePaiement } from '@quinca/shared-types';
 import CodeBarres from '../../components/print/CodeBarres';
 
+/** Identité du client telle qu'elle s'imprime dans le cartouche. */
+export interface ClientFacture {
+  raison_sociale: string;
+  numero_rc?: string | null;
+  numero_cc?: string | null;
+  adresse?: string | null;
+  contact?: string | null;
+  mobile?: string | null;
+}
+
 interface Props {
-  preparee: VentePreparee;
-  lignes: LignePanier[];
-  client: Client | null;
-  avoir: number;
-  filiale: { nom: string; adresse?: string | null; telephone?: string | null };
-  depot: string;
-  vendeur: string;
+  numero: string;
   date: Date;
+  vendeur: string;
+  client: ClientFacture | null;
+  lignes: LigneFacture[];
+  recap: RecapFacture;
+  modePaiement: ModePaiement;
+  filiale: { nom: string; adresse?: string | null; telephone?: string | null };
+  /** Bandeau en tête du document, ex. « FACTURE ANNULÉE » : une facture annulée
+   *  ne doit pas pouvoir ressortir muette de l'imprimante. */
+  mention?: string;
 }
 
 /** Montant à deux décimales, sans devise (la facture annonce « en FCFA » une fois). */
@@ -35,14 +47,13 @@ function Case({ coche, libelle }: { coche: boolean; libelle: string }) {
 
 /**
  * Facture A4 d'une vente, rendue dans la zone d'impression (seule imprimée).
+ * Les montants arrivent déjà calculés : la même mise en page sert à la vente
+ * qui vient d'être encaissée et à la réédition d'une facture plus ancienne.
  * Reprend la mise en page attendue par la maison : cartouches facture / client,
  * lignes en HT, cachet, récapitulatif des montants, montant en toutes lettres
  * et conditions de règlement.
  */
-export default function FactureVente({ preparee, lignes, client, avoir, filiale, depot, vendeur, date }: Props) {
-  const detail = lignesFacture(lignes, depot);
-  const recap = recapFacture(preparee, avoir);
-
+export default function FactureVente({ numero, date, vendeur, client, lignes, recap, modePaiement, filiale, mention }: Props) {
   return createPortal(
     <div id="zone-impression" className="document facture">
       <header className="facture-entete">
@@ -54,6 +65,8 @@ export default function FactureVente({ preparee, lignes, client, avoir, filiale,
         <div className="facture-entete-vide">{filiale.adresse}</div>
       </header>
 
+      {mention && <p className="facture-mention" data-testid="facture-mention">{mention}</p>}
+
       <div className="facture-haut">
         <div className="facture-haut-gauche">
           <table className="facture-identite">
@@ -62,7 +75,7 @@ export default function FactureVente({ preparee, lignes, client, avoir, filiale,
             </thead>
             <tbody>
               <tr>
-                <td data-testid="facture-numero">{preparee.numero}</td>
+                <td data-testid="facture-numero">{numero}</td>
                 <td>{date.toLocaleDateString('fr-FR')}</td>
                 <td>{date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</td>
               </tr>
@@ -72,7 +85,7 @@ export default function FactureVente({ preparee, lignes, client, avoir, filiale,
             <tbody><tr><th>OP. Saisie</th><td>{vendeur || '—'}</td></tr></tbody>
           </table>
         </div>
-        <CodeBarres valeur={preparee.numero} avecTexte={false} />
+        <CodeBarres valeur={numero} avecTexte={false} />
         <table className="facture-client">
           <thead><tr><th colSpan={2}>CLIENT</th></tr></thead>
           <tbody>
@@ -90,7 +103,7 @@ export default function FactureVente({ preparee, lignes, client, avoir, filiale,
           <tr><th>CODE/RÉF</th><th>DÉSIGNATION</th><th>QTE</th><th>PRIX U. HT</th><th>REMISE</th><th>TOTAL HT</th><th>TVA</th><th>DÉPÔT</th></tr>
         </thead>
         <tbody>
-          {detail.map((l) => (
+          {lignes.map((l) => (
             <tr key={l.code}>
               <td>{l.code}</td>
               <td>{l.designation}</td>
@@ -139,7 +152,7 @@ export default function FactureVente({ preparee, lignes, client, avoir, filiale,
 
       <div className="facture-reglement">
         <em>Conditions de règlement :</em>
-        {MODES_COCHES.map((m) => <Case key={m} coche={preparee.mode_paiement === m} libelle={LIBELLES_MODE_PAIEMENT[m]} />)}
+        {MODES_COCHES.map((m) => <Case key={m} coche={modePaiement === m} libelle={LIBELLES_MODE_PAIEMENT[m]} />)}
         <span className="facture-reglement-nature">
           <Case coche={recap.comptant} libelle="COMPTANT" />
           <Case coche={!recap.comptant} libelle="CRÉDIT" />

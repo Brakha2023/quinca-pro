@@ -28,6 +28,7 @@ export interface MouvementVue extends MouvementStockRow {
   depot_nom: string | null;
   utilisateur_nom: string | null;
   utilisateur_prenom: string | null;
+  fournisseur_nom: string | null;
 }
 
 export function useStocks(filialeId: string | null, filtres: FiltresStock = {}) {
@@ -50,7 +51,7 @@ export function useMouvements(filialeId: string | null, filtres: FiltresMouvemen
   const { sql, params } = useMemo(
     () => mouvementsQuery(filialeId, filtres),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
-    [filialeId, filtres.depotId, filtres.articleId, filtres.type, filtres.reference, filtres.limite],
+    [filialeId, filtres.depotId, filtres.articleId, filtres.fournisseurId, filtres.type, filtres.reference, filtres.limite],
   );
   const { data, isLoading } = useQuery<MouvementVue>(sql, params);
   return { mouvements: data, isLoading };

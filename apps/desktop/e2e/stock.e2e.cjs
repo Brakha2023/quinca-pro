@@ -23,7 +23,12 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     const ctx = { filialeId: F, utilisateurId: U };
     const out = {};
 
-    await stock.enregistrerEntree(ctx, { depot_id: d1, type: 'ENTREE_ACHAT', reference: '', motif: 'BL 1', lignes: [{ article_id: a1, quantite: 100, cout_unitaire: 4000 }, { article_id: a2, quantite: 10, cout_unitaire: 2500 }] });
+    // Provenance : le fournisseur est porté par le mouvement, plus par le motif.
+    const { FournisseursRepository } = await import('/src/infrastructure/powersync/repositories/FournisseursRepository.ts');
+    const { fournisseurFormSchema } = await import('/src/core/fournisseurs/index.ts');
+    const fId = await new FournisseursRepository(db).create(F, fournisseurFormSchema.parse({ raison_sociale: 'SOCIMAT CI' }));
+
+    await stock.enregistrerEntree(ctx, { depot_id: d1, type: 'ENTREE_ACHAT', fournisseur_id: fId, reference: '', motif: 'BL 1', lignes: [{ article_id: a1, quantite: 100, cout_unitaire: 4000 }, { article_id: a2, quantite: 10, cout_unitaire: 2500 }] });
     await stock.enregistrerEntree(ctx, { depot_id: d1, type: 'ENTREE_ACHAT', reference: 'BL-2', motif: '', lignes: [{ article_id: a1, quantite: 100, cout_unitaire: 5000 }] });
     const s1 = await db.get('SELECT quantite, cout_moyen FROM stocks WHERE article_id = ? AND depot_id = ?', [a1, d1]);
     out.apresEntrees = s1; // 200 @ 4500
@@ -35,6 +40,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     await stock.transferer(ctx, { depot_source_id: d1, depot_destination_id: d2, reference: '', motif: '', lignes: [{ article_id: a1, quantite: 50 }] });
     out.apresTransfert = await db.getAll('SELECT d.code, s.quantite, s.cout_moyen FROM stocks s JOIN depots d ON d.id = s.depot_id WHERE s.article_id = ? ORDER BY d.code', [a1]);
 
+    const { mouvementsQuery } = await import('/src/infrastructure/powersync/repositories/StockRepository.ts');
+    const qf = mouvementsQuery(F, { fournisseurId: fId });
+    out.mouvementsFournisseur = (await db.getAll(qf.sql, qf.params)).map((m) => `${m.type}:${m.fournisseur_nom}`);
     const inv = await stock.enregistrerInventaire(ctx, { depot_id: d1, reference: '', motif: '', lignes: [{ article_id: a1, quantite_comptee: 148 }, { article_id: a2, quantite_comptee: 10 }] });
     out.inventaire = inv.ecarts;
     out.apresInventaire = (await db.get('SELECT quantite FROM stocks WHERE article_id = ? AND depot_id = ?', [a1, d1])).quantite;
@@ -55,10 +63,17 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     out.mouvements = await db.getAll('SELECT type, quantite, quantite_avant, quantite_apres FROM mouvements_stock WHERE filiale_id = ? ORDER BY created_at', [F]);
     const q = stocksQuery(F, { alertesSeulement: true });
     out.alertes = (await db.getAll(q.sql, q.params)).map((l) => `${l.article_code}@${l.depot_code}:${l.quantite}`);
+
+    // Un retour client ne vient d'aucun fournisseur, même si l'écran en proposait un.
+    const { entreeStockSchema } = await import('/src/core/stock/index.ts');
+    await stock.enregistrerEntree(ctx, entreeStockSchema.parse({ depot_id: d1, type: 'RETOUR_CLIENT', fournisseur_id: fId, lignes: [{ article_id: a2, quantite: 1 }] }));
+    out.retourSansFournisseur = (await db.get("SELECT fournisseur_id FROM mouvements_stock WHERE type = 'RETOUR_CLIENT'")).fournisseur_id;
     return out;
   }, { F: filialeId, U: userId });
 
   verifier(r.apresEntrees.quantite === 200 && r.apresEntrees.cout_moyen === 4500, 'entrées cumulées, coût moyen pondéré 4500');
+  verifier(r.mouvementsFournisseur.length === 2 && r.mouvementsFournisseur.every((m) => m === 'ENTREE_ACHAT:SOCIMAT CI'), 'entrée : fournisseur enregistré sur chaque ligne et journal filtrable par fournisseur');
+  verifier(r.retourSansFournisseur === null, 'retour client : aucune provenance fournisseur retenue');
   verifier(r.sortieRefusee && r.stockVisApresRefus === 10, 'sortie > disponible refusée, stock intact');
   verifier(JSON.stringify(r.apresTransfert) === JSON.stringify([{ code: 'D1', quantite: 150, cout_moyen: 4500 }, { code: 'D2', quantite: 50, cout_moyen: 4500 }]), 'transfert D1→D2 au coût moyen');
   verifier(r.inventaire === 1 && r.apresInventaire === 148, 'inventaire : 1 écart régularisé (150 → 148)');
@@ -78,12 +93,24 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier((await page.locator('tbody tr').count()) === 4, 'suivi : 4 lignes de stock (ciment × 2 dépôts, vis, brique produite)');
 
   await page.locator('main').getByRole('link', { name: 'Entrée', exact: true }).click();
+  await page.locator('[data-testid=select-fournisseur]').selectOption({ index: 1 });
   await page.locator('input[placeholder^="Ajouter un article"]').fill('vis');
   await page.locator('ul li button', { hasText: 'VIS-50' }).click();
   await page.locator('tbody input[type=number]').first().fill('5');
   await page.getByRole('button', { name: "Valider l'entrée" }).click();
   await page.locator('[aria-live]', { hasText: 'Entrée ENT-' }).waitFor();
-  verifier(true, 'entrée saisie via l’UI');
+  verifier(true, 'entrée saisie via l’UI, fournisseur choisi');
+
+  // Le champ fournisseur disparaît quand l'entrée n'est pas un achat.
+  await page.locator('main select').nth(1).selectOption('RETOUR_CLIENT');
+  await page.locator('[data-testid=select-fournisseur]').waitFor({ state: 'detached' });
+  verifier(true, 'retour client : pas de fournisseur à saisir');
+
+  await page.locator('main').getByRole('link', { name: 'Mouvements', exact: true }).click();
+  await page.locator('[data-testid=filtre-fournisseur]').selectOption({ label: 'SOCIMAT CI' });
+  await page.locator('tbody tr').first().waitFor();
+  const provenances = await page.locator('[data-testid=mouvement-fournisseur]').allTextContents();
+  verifier(provenances.length === 3 && provenances.every((t) => t === 'SOCIMAT CI'), `journal : filtre par fournisseur, provenance affichée (${provenances.join(', ') || 'aucune ligne'})`);
 
   // Sous-menu Stock dans la barre latérale : les sections sont des routes.
   const sousMenu = page.locator('[data-testid=sous-menu-stock]');
@@ -119,7 +146,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await sousMenu.getByRole('link', { name: 'Mouvements' }).click();
   await page.locator('tbody tr', { hasText: 'Entrée achat' }).first().waitFor();
   await page.locator('tbody tr', { hasText: 'Produit' }).first().waitFor();
-  verifier((await page.locator('tbody tr').count()) === 11, 'journal : 11 mouvements (dont 4 de production)');
+  verifier((await page.locator('tbody tr').count()) === 12, 'journal : 12 mouvements (dont 4 de production et 1 retour client)');
 
   await sousMenu.getByRole('link', { name: 'Alertes' }).click();
   await page.locator('text=Valeur du stock').waitFor();

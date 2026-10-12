@@ -9,6 +9,8 @@ import {
   VenteInvalideError,
   avoirClient,
   calculerTotaux,
+  lignesFacture,
+  recapFacture,
   preparerVente,
   type FormatImpression,
   type LignePanier,
@@ -143,14 +145,14 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
           />
         ) : (
           <FactureVente
-            preparee={p}
-            lignes={terminee.lignes}
-            client={terminee.client}
-            avoir={terminee.avoir}
-            filiale={infosFiliale}
-            depot={depot}
-            vendeur={vendeur}
+            numero={p.numero}
             date={terminee.date}
+            vendeur={vendeur}
+            client={terminee.client}
+            lignes={lignesFacture(terminee.lignes, depot)}
+            recap={recapFacture(p, terminee.avoir)}
+            modePaiement={p.mode_paiement}
+            filiale={infosFiliale}
           />
         )}
       </Modal>

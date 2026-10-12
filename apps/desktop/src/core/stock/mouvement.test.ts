@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { StockInsuffisantError, appliquerMouvement, calculerCoutMoyenPondere, genererNumeroBon, statutStock } from './mouvement';
-import { fusionnerLignes } from './documents';
+import { entreeStockSchema, fusionnerLignes } from './documents';
 
 describe('appliquerMouvement', () => {
   it('entrée : augmente la quantité et recalcule le coût moyen pondéré', () => {
@@ -69,5 +69,22 @@ describe('fusionnerLignes', () => {
       { article_id: 'a', quantite: 3 },
     ]);
     expect(r).toEqual([{ article_id: 'a', quantite: 5 }, { article_id: 'b', quantite: 1 }]);
+  });
+});
+
+describe('entreeStockSchema : provenance', () => {
+  const base = { depot_id: 'd1', lignes: [{ article_id: 'a1', quantite: 5 }] };
+
+  it("retient le fournisseur d'une entrée d'achat", () => {
+    expect(entreeStockSchema.parse({ ...base, type: 'ENTREE_ACHAT', fournisseur_id: 'f1' }).fournisseur_id).toBe('f1');
+  });
+
+  it('efface le fournisseur sur un retour client', () => {
+    expect(entreeStockSchema.parse({ ...base, type: 'RETOUR_CLIENT', fournisseur_id: 'f1' }).fournisseur_id).toBeNull();
+  });
+
+  it('accepte une entrée sans fournisseur', () => {
+    expect(entreeStockSchema.parse({ ...base, type: 'ENTREE_ACHAT' }).fournisseur_id).toBeNull();
+    expect(entreeStockSchema.parse({ ...base, type: 'ENTREE_ACHAT', fournisseur_id: '' }).fournisseur_id).toBeNull();
   });
 });

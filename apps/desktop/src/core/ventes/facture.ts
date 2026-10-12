@@ -1,6 +1,6 @@
-import { arrondirMontant, prixHtDepuisTtc } from '../commun/prix';
+import { arrondirFcfa, arrondirMontant, prixHtDepuisTtc } from '../commun/prix';
 import { calculerLigne, type LignePanier } from './panier';
-import type { VentePreparee } from './vente';
+import type { LigneVente, VentePreparee } from './vente';
 
 /** Sortie papier d'une vente : ticket de caisse 80 mm ou facture A4. */
 export type FormatImpression = 'TICKET' | 'A4';
@@ -79,4 +79,50 @@ export function recapFacture(preparee: VentePreparee, avoir = 0): RecapFacture {
 /** Avance du client : un solde négatif est un acompte à son crédit. */
 export function avoirClient(client: { solde_actuel: number } | null): number {
   return client && client.solde_actuel < 0 ? Math.abs(client.solde_actuel) : 0;
+}
+
+/** Vente déjà enregistrée, telle qu'on la relit pour rééditer sa facture. */
+export interface VenteEnregistree {
+  total_brut_ht: number | null;
+  total_remise: number | null;
+  total_net_ht: number | null;
+  total_tva: number | null;
+  total_ttc: number | null;
+  montant_percu: number | null;
+  monnaie: number | null;
+  reste_a_payer: number | null;
+}
+
+/** Même pied de facture, reconstruit depuis la vente stockée (réimpression). */
+export function recapVenteEnregistree(vente: VenteEnregistree, avoir = 0): RecapFacture {
+  const reste = vente.reste_a_payer ?? 0;
+  return {
+    montant_paye: arrondirFcfa((vente.montant_percu ?? 0) - (vente.monnaie ?? 0)),
+    reste_a_payer: reste,
+    avoir,
+    brut_ht: vente.total_brut_ht ?? 0,
+    remise: vente.total_remise ?? 0,
+    net_ht: vente.total_net_ht ?? 0,
+    tva: vente.total_tva ?? 0,
+    net_a_payer: vente.total_ttc ?? 0,
+    comptant: reste === 0,
+  };
+}
+
+/**
+ * Lignes de facture d'une vente stockée. Les montants ne sont pas recalculés :
+ * une facture rééditée doit porter les mêmes chiffres que l'originale, même si
+ * le tarif de l'article a changé depuis.
+ */
+export function lignesFactureDepuisVente(lignes: LigneVente[], nomDepot: (id: string | null) => string): LigneFacture[] {
+  return lignes.map((l) => ({
+    code: l.code_article,
+    designation: l.designation,
+    quantite: l.quantite,
+    prix_unitaire_ht: l.prix_unitaire_ht,
+    remise: arrondirMontant(l.prix_unitaire_ht * l.quantite - l.total_ht),
+    total_ht: l.total_ht,
+    tva: arrondirMontant(l.total_ttc - l.total_ht),
+    depot: nomDepot(l.depot_id),
+  }));
 }

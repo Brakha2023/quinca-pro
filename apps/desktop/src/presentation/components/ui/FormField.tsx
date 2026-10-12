@@ -4,12 +4,14 @@ interface FormFieldProps {
   label: string;
   erreur?: string;
   obligatoire?: boolean;
+  /** Précision sous le contrôle (ce que le champ engage, ou n'engage pas). */
+  aide?: string;
   children: ReactNode;
   className?: string;
 }
 
 /** Libellé + contrôle + message d'erreur, mise en forme homogène des formulaires. */
-export default function FormField({ label, erreur, obligatoire, children, className = '' }: FormFieldProps) {
+export default function FormField({ label, erreur, obligatoire, aide, children, className = '' }: FormFieldProps) {
   return (
     <div className={className}>
       <label className="block text-xs font-medium text-neutral-700 mb-1">
@@ -17,6 +19,7 @@ export default function FormField({ label, erreur, obligatoire, children, classN
         {obligatoire && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
+      {aide && !erreur && <p className="text-xs text-neutral-500 mt-1">{aide}</p>}
       {erreur && <p className="text-xs text-red-600 mt-1">{erreur}</p>}
     </div>
   );

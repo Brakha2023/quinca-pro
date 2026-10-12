@@ -13,12 +13,21 @@ const enteteBase = {
   motif: z.string().trim().max(200).optional().default(''),
 };
 
-export const entreeStockSchema = z.object({
-  depot_id: z.string().min(1, 'Dépôt obligatoire'),
-  type: z.enum(['ENTREE_ACHAT', 'RETOUR_CLIENT']).default('ENTREE_ACHAT'),
-  ...enteteBase,
-  lignes: z.array(ligneBonSchema).min(1, 'Au moins une ligne'),
-});
+export const entreeStockSchema = z
+  .object({
+    depot_id: z.string().min(1, 'Dépôt obligatoire'),
+    type: z.enum(['ENTREE_ACHAT', 'RETOUR_CLIENT']).default('ENTREE_ACHAT'),
+    /** Fournisseur ayant livré : facultatif, et sans objet sur un retour client. */
+    fournisseur_id: z.string().nullable().optional().default(null),
+    ...enteteBase,
+    lignes: z.array(ligneBonSchema).min(1, 'Au moins une ligne'),
+  })
+  // Un retour client ne vient pas d'un fournisseur : la provenance est effacée
+  // plutôt que refusée, le type pouvant changer après la saisie.
+  .transform((entree) => ({
+    ...entree,
+    fournisseur_id: entree.type === 'ENTREE_ACHAT' ? entree.fournisseur_id || null : null,
+  }));
 export type EntreeStock = z.infer<typeof entreeStockSchema>;
 
 export const sortieStockSchema = z.object({

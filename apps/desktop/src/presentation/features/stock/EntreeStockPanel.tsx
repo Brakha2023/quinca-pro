@@ -5,6 +5,7 @@ import FormField, { inputClass } from '../../components/ui/FormField';
 import { useRepository } from '../../hooks/useRepository';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
+import SelectFournisseur from '../fournisseurs/SelectFournisseur';
 import { CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire } from './EnteteBon';
 import LignesBonEditor, { type LigneBonUI } from './LignesBonEditor';
 import { useContexteMouvement } from './useContexteMouvement';
@@ -17,17 +18,18 @@ export default function EntreeStockPanel({ filialeId }: { filialeId: string }) {
 
   const [depotId, setDepotId] = useState('');
   const [type, setType] = useState<'ENTREE_ACHAT' | 'RETOUR_CLIENT'>('ENTREE_ACHAT');
+  const [fournisseurId, setFournisseurId] = useState('');
   const [reference, setReference] = useState('');
   const [motif, setMotif] = useState('');
   const [lignes, setLignes] = useState<LigneBonUI[]>([]);
   const [enCours, setEnCours] = useState(false);
   const depotEffectif = depotId || depots[0]?.id || '';
 
-  const reinitialiser = () => { setLignes([]); setReference(''); setMotif(''); };
+  const reinitialiser = () => { setLignes([]); setReference(''); setMotif(''); setFournisseurId(''); };
 
   const valider = async () => {
     const parsed = entreeStockSchema.safeParse({
-      depot_id: depotEffectif, type, reference, motif,
+      depot_id: depotEffectif, type, fournisseur_id: fournisseurId, reference, motif,
       lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, cout_unitaire: l.cout_unitaire })),
     });
     if (!parsed.success) { notifier('erreur', parsed.error.issues[0].message); return; }
@@ -62,7 +64,16 @@ export default function EntreeStockPanel({ filialeId }: { filialeId: string }) {
             <option value="RETOUR_CLIENT">Retour client</option>
           </select>
         </FormField>
-        <ChampsReferenceMotif reference={reference} motif={motif} onReference={setReference} onMotif={setMotif} placeholderMotif="Fournisseur, n° BL…" />
+        {type === 'ENTREE_ACHAT' && (
+          <SelectFournisseur
+            filialeId={filialeId}
+            value={fournisseurId}
+            onChange={setFournisseurId}
+            obligatoire={false}
+            aide="Provenance de la marchandise. N'engage aucune dette : une dette fournisseur naît d'un bon de commande réceptionné."
+          />
+        )}
+        <ChampsReferenceMotif reference={reference} motif={motif} onReference={setReference} onMotif={setMotif} placeholderMotif="N° BL, commentaire…" />
       </div>
       <LignesBonEditor filialeId={filialeId} depotId={depotEffectif} lignes={lignes} onChange={setLignes} avecCout />
     </CarteBon>

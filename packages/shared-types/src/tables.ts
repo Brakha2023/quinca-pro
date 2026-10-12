@@ -96,6 +96,8 @@ export const TABLES = {
     article_id: 'text',
     depot_id: 'text',
     filiale_id: 'text',
+    /** Fournisseur ayant livré la marchandise (entrées d'achat). */
+    fournisseur_id: 'text',
     type: 'text',
     quantite: 'real',
     quantite_avant: 'real',
