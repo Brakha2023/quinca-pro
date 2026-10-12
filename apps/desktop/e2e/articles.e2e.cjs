@@ -154,6 +154,9 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   await page.locator('[data-testid="detail-ROB-01"]').click();
   const fiche = page.locator('[role=dialog][aria-label="Robinet"]');
   await fiche.waitFor();
+  // Les lignes arrivent de PowerSync après l'ouverture : on attend la donnée, pas le rendu.
+  await fiche.locator('[data-testid=stock-article] tbody tr').first().waitFor();
+  await fiche.locator('[data-testid=mouvements-article] tbody tr').first().waitFor();
   verifier((await fiche.textContent()).includes('Magasin central'), 'fiche : stock par dépôt affiché');
   verifier(await texteContient(fiche, '85 000 F'), 'fiche : valeur du stock');
   verifier(await texteContient(fiche, '4 000 F · 47 %'), 'fiche : marge unitaire et taux');

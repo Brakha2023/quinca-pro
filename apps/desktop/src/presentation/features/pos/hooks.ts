@@ -42,7 +42,7 @@ export function useCatalogue(filialeId: string | null, depotId: string | null, f
 
 /** Réglages du poste pour la filiale courante, résolus avec les lignes caisse/dépôt. */
 export function usePoste(filialeId: string | null) {
-  const { parFiliale, definir } = usePosteStore();
+  const { parFiliale, definir, format, definirFormat } = usePosteStore();
   const { data: caisses } = useQuery<CaisseRow>(CAISSES_ACTIVES_QUERY, [filialeId ?? '']);
   const { data: depots } = useQuery<DepotRow>(DEPOTS_ACTIFS_QUERY, [filialeId ?? '']);
   const reglages = filialeId ? parFiliale[filialeId] : undefined;
@@ -54,6 +54,8 @@ export function usePoste(filialeId: string | null) {
     caisse,
     depot,
     estConfigure: Boolean(caisse && depot),
+    format,
     definir: (caisseId: string, depotId: string) => filialeId && definir(filialeId, { caisseId, depotId }),
+    definirFormat,
   };
 }

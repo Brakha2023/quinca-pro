@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react';
-import { CheckCircleIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { flushSync } from 'react-dom';
+import { CheckCircleIcon, DocumentTextIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { MODES_PAIEMENT, type ModePaiement } from '@quinca/shared-types';
 import { disponibiliteCredit } from '../../../core/clients';
 import { StockInsuffisantError } from '../../../core/stock';
 import {
   LIBELLES_MODE_PAIEMENT,
   VenteInvalideError,
+  avoirClient,
   calculerTotaux,
   preparerVente,
+  type FormatImpression,
   type LignePanier,
   type LivraisonDemande,
   type VentePreparee,
@@ -22,10 +25,15 @@ import { formaterFcfa } from '../../hooks/useFormatage';
 import { useConfirmation } from '../../confirmation/useConfirmation';
 import { useNotifier } from '../../notifications/useNotifier';
 import { usePOSStore } from '../../stores/pos.store';
+import FactureVente from './FactureVente';
 import TicketImprimable from './TicketImprimable';
 
 interface Props {
   ctx: ContexteVente;
+  /** Nom du dépôt de vente, imprimé sur la facture A4. */
+  depot: string;
+  /** Sortie papier par défaut du poste : bouton principal après la vente. */
+  format: FormatImpression;
   livraison: LivraisonDemande | null;
   peutForcerStock: boolean;
   onClose: () => void;
@@ -35,7 +43,7 @@ interface Props {
 const COUPURES = [500, 1000, 2000, 5000, 10000];
 
 /** Paiement puis confirmation : la vente est enregistrée en une transaction locale, le ticket peut être imprimé. */
-export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose, onTerminee }: Props) {
+export default function PaiementModal({ ctx, depot, format, livraison, peutForcerStock, onClose, onTerminee }: Props) {
   const repository = useRepository(VentesRepository);
   const notifier = useNotifier();
   const confirmer = useConfirmation();
@@ -47,7 +55,17 @@ export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose
   const [mode, setMode] = useState<ModePaiement>('ESPECES');
   const [montantPercu, setMontantPercu] = useState<number>(totaux.total_ttc);
   const [enCours, setEnCours] = useState(false);
-  const [terminee, setTerminee] = useState<{ preparee: VentePreparee; lignes: LignePanier[]; client: Client | null; date: Date } | null>(null);
+  const [terminee, setTerminee] = useState<{ preparee: VentePreparee; lignes: LignePanier[]; client: Client | null; avoir: number; date: Date } | null>(null);
+  const [sortie, setSortie] = useState<FormatImpression>(format);
+
+  /**
+   * Imprime dans le format demandé. Le document doit être dans le DOM avant
+   * d'ouvrir la boîte d'impression du système, d'où le rendu forcé.
+   */
+  const imprimer = (choisi: FormatImpression) => {
+    flushSync(() => setSortie(choisi));
+    window.print();
+  };
 
   const modesDisponibles = MODES_PAIEMENT.filter((m) => m !== 'CREDIT' || (client && client.plafond_credit > 0));
 
@@ -66,7 +84,7 @@ export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose
         { ...ctx, autoriserStockNegatif: forcerStock, proformaId: proforma?.id ?? null },
         { lignes, remise_globale_percent: remiseGlobale, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' },
       );
-      setTerminee({ preparee, lignes, client, date: new Date() });
+      setTerminee({ preparee, lignes, client, avoir: avoirClient(client), date: new Date() });
       viderPanier();
       notifier('succes', `Vente ${preparee.numero} enregistrée${proforma ? ` (proforma ${proforma.numero} facturée)` : ''}.`);
     } catch (error) {
@@ -90,10 +108,17 @@ export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose
 
   if (terminee) {
     const p = terminee.preparee;
+    const infosFiliale = { nom: filiale?.nom ?? 'QuincaPro', adresse: filiale?.adresse, telephone: filiale?.telephone };
+    const vendeur = utilisateur ? `${utilisateur.prenom ?? ''} ${utilisateur.nom}`.trim() : '';
     return (
       <Modal titre="Vente enregistrée" largeur="max-w-md" onClose={onTerminee} pied={
         <>
-          <button type="button" onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-4 h-4" /> Imprimer le ticket</button>
+          <button type="button" onClick={() => imprimer('TICKET')} className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg ${format === 'TICKET' ? 'bg-neutral-800 hover:bg-neutral-900 text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'}`} data-testid="imprimer-ticket">
+            <PrinterIcon className="w-4 h-4" /> Ticket
+          </button>
+          <button type="button" onClick={() => imprimer('A4')} className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg ${format === 'A4' ? 'bg-neutral-800 hover:bg-neutral-900 text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'}`} data-testid="imprimer-facture-a4">
+            <DocumentTextIcon className="w-4 h-4" /> Facture A4
+          </button>
           <button type="button" onClick={onTerminee} autoFocus className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg">Nouvelle vente (F10)</button>
         </>
       }>
@@ -106,15 +131,28 @@ export default function PaiementModal({ ctx, livraison, peutForcerStock, onClose
           {p.reste_a_payer > 0 && <p className="text-sm text-orange-700">Reste dû par le client : <span className="font-mono font-semibold">{formaterFcfa(p.reste_a_payer)}</span></p>}
           {livraison && <p className="text-xs text-neutral-500">Bon de livraison créé pour le {livraison.date_livraison_prevue}.</p>}
         </div>
-        <TicketImprimable
-          preparee={p}
-          lignes={terminee.lignes}
-          client={terminee.client}
-          filiale={{ nom: filiale?.nom ?? 'QuincaPro', adresse: filiale?.adresse, telephone: filiale?.telephone }}
-          caisse={ctx.caisseCode}
-          vendeur={utilisateur ? `${utilisateur.prenom ?? ''} ${utilisateur.nom}`.trim() : ''}
-          date={terminee.date}
-        />
+        {sortie === 'TICKET' ? (
+          <TicketImprimable
+            preparee={p}
+            lignes={terminee.lignes}
+            client={terminee.client}
+            filiale={infosFiliale}
+            caisse={ctx.caisseCode}
+            vendeur={vendeur}
+            date={terminee.date}
+          />
+        ) : (
+          <FactureVente
+            preparee={p}
+            lignes={terminee.lignes}
+            client={terminee.client}
+            avoir={terminee.avoir}
+            filiale={infosFiliale}
+            depot={depot}
+            vendeur={vendeur}
+            date={terminee.date}
+          />
+        )}
       </Modal>
     );
   }

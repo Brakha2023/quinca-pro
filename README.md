@@ -123,6 +123,17 @@ un PC Windows : `apps/desktop/scripts/windows/CHECKLIST-WINDOWS.md`.
   build Windows testé).
 - **Phase 3 — pilotage avancé** : exports Excel, rapports périodiques, recherche accentuée.
 
+### Point de vente
+
+Vente au comptoir ou à crédit (F2 recherche, F11 encaisse, F10 vide le panier), livraison optionnelle,
+facturation d'une proforma. **Après chaque vente, la sortie papier se choisit** : *Ticket* 80 mm pour
+l'imprimante thermique de caisse, ou *Facture A4* pour l'imprimante bureautique — cartouches facture
+(n°, date, heure, opérateur de saisie) et client (RC, CC, adresse, contact), code-barres du numéro,
+lignes en HT (code, désignation, quantité, prix unitaire, remise en montant, total, TVA, dépôt), cadre
+cachet/signature, récapitulatif (payé, reste à payer, avoir / brut HT, remise, net HT, TVA, net à payer),
+montant en toutes lettres et conditions de règlement cochées. Le format habituel du poste se règle dans
+*Réglages du poste de vente* (il devient le bouton principal) ; l'autre reste à un clic.
+
 ### Catalogue
 
 Onglets **Articles**, **Familles**, **Dépôts**.

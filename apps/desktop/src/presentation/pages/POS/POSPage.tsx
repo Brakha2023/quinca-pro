@@ -33,7 +33,8 @@ export default function POSPage() {
           depots={poste.depots}
           caisseId={poste.caisse?.id}
           depotId={poste.depot?.id}
-          onValider={(c, d) => { poste.definir(c, d); setReglages(false); }}
+          format={poste.format}
+          onValider={(c, d, f) => { poste.definir(c, d); poste.definirFormat(f); setReglages(false); }}
           onClose={poste.estConfigure ? () => setReglages(false) : undefined}
         />
       </>
@@ -62,7 +63,7 @@ export default function POSPage() {
           <CataloguePanel filialeId={filialeId} depotId={ctx.depotId} />
         </div>
         <div className="w-96 flex-shrink-0 min-h-0">
-          <TicketPanel ctx={ctx} peutForcerStock={peutForcerStock} />
+          <TicketPanel ctx={ctx} peutForcerStock={peutForcerStock} depot={poste.depot!.nom ?? ''} format={poste.format} />
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DocumentTextIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import type { TypeMouvementStock } from '@quinca/shared-types';
 import {
@@ -48,9 +48,11 @@ export default function ArticleDetailsModal({ filialeId, articleId, filiale, onC
   const { famillesParId } = useFamilles(filialeId);
   const { lignes: stock, totaux } = useStockArticle(articleId);
   const jours = PERIODES_FICHE.find((p) => p.id === periode)?.jours ?? 90;
-  const debut = debutPeriode(jours);
+  // Bornes figées : recalculées à chaque rendu, elles relanceraient la requête en boucle.
+  const debut = useMemo(() => debutPeriode(jours), [jours]);
+  const debutAnnee = useMemo(() => debutPeriode(365), []);
   const { ventes } = useVentesArticle(articleId, debut);
-  const ventesMensuelles = useVentesMensuellesArticle(articleId, debutPeriode(365));
+  const ventesMensuelles = useVentesMensuellesArticle(articleId, debutAnnee);
   const { mouvements } = useMouvementsArticle(filialeId, articleId);
 
   if (!article) return null;

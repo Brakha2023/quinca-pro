@@ -1,6 +1,9 @@
 // Scénario Point de vente : vente atomique sur la base locale, puis parcours UI (F2, encaissement, ticket).
 const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./browser.cjs');
 
+/** Texte d'un conteneur, espaces insécables des montants normalisés. */
+const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g, ' ');
+
 (async () => {
   const { browser, page, erreurs } = await ouvrirNavigateur();
   const { filialeId, userId } = await simulerSession(page);
@@ -82,6 +85,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.goto(`${BASE_URL}/#/pos`);
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByRole('dialog', { name: 'Réglages du poste de vente' }).waitFor();
+  verifier((await page.getByTestId('format-impression').inputValue()) === 'TICKET', 'poste : impression par défaut en ticket');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await page.locator('input[type=search]').waitFor();
   verifier(true, 'poste configuré (caisse + dépôt mémorisés)');
@@ -101,7 +105,30 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.getByRole('button', { name: 'Valider la vente' }).click();
   await page.getByRole('dialog', { name: 'Vente enregistrée' }).waitFor();
   verifier((await page.textContent('[role=dialog]')).includes('Rendu'), 'encaissement espèces avec rendu monnaie');
-  verifier((await page.locator('#zone-impression.ticket').count()) === 1, 'ticket imprimable rendu');
+  verifier((await page.locator('#zone-impression.ticket').count()) === 1, 'ticket imprimable rendu (format du poste)');
+
+  // L'impression système est remplacée par un témoin : en test, aucune boîte d'impression ne doit s'ouvrir.
+  await page.evaluate(() => { window.__impressions = []; window.print = () => window.__impressions.push(document.querySelector('#zone-impression')?.className ?? ''); });
+  await page.getByTestId('imprimer-facture-a4').click();
+  const facture = page.locator('#zone-impression.facture');
+  await facture.waitFor({ state: 'attached' });
+  const papier = await texteDe(facture);
+  verifier(/^C01-\d{8}-[A-Z2-9]{4}$/.test(await facture.locator('[data-testid=facture-numero]').textContent()), 'facture A4 : numéro de la vente');
+  verifier(papier.includes('CLIENT DIVERS'), 'facture A4 : cartouche client (vente au comptoir)');
+  verifier(papier.includes('CIM-50') && papier.includes('Ciment 50kg') && papier.includes('Dépôt principal'), 'facture A4 : ligne, désignation et dépôt');
+  verifier(papier.includes('5 000,00') && papier.includes('10 000,00') && papier.includes('1 800,00'), 'facture A4 : prix unitaire HT, total HT et TVA de la ligne');
+  verifier((await facture.locator('[data-testid=facture-net]').textContent()).replace(/\s+/g, ' ') === '11 800', 'facture A4 : net à payer');
+  verifier((await facture.locator('[data-testid=facture-paye]').textContent()).replace(/\s+/g, ' ') === '11 800', 'facture A4 : montant payé hors rendu de monnaie');
+  verifier((await facture.locator('[data-testid=facture-lettres]').textContent()) === 'onze mille huit cents francs CFA', 'facture A4 : montant en toutes lettres');
+  verifier(papier.includes('COMPTANT ✓') || papier.includes('COMPTANT✓'), 'facture A4 : règlement comptant coché');
+  verifier((await facture.locator('svg.code-barres rect').count()) > 20, 'facture A4 : code-barres de la facture');
+  verifier((await page.locator('#zone-impression.ticket').count()) === 0, 'un seul document à la fois dans la zone d’impression');
+
+  await page.getByTestId('imprimer-ticket').click();
+  await page.locator('#zone-impression.ticket').waitFor({ state: 'attached' });
+  const impressions = await page.evaluate(() => window.__impressions);
+  verifier(impressions.length === 2 && impressions[0].includes('facture') && impressions[1].includes('ticket'), 'les deux formats partent bien à l’impression');
+
   await page.keyboard.press('Escape');
   await page.locator('text=Panier vide').waitFor();
   verifier(true, 'panier vidé après la vente');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MinusIcon, PlusIcon, TrashIcon, TruckIcon, UserIcon } from '@heroicons/react/24/outline';
-import { calculerLigne, calculerTotaux, type LivraisonDemande } from '../../../core/ventes';
+import { calculerLigne, calculerTotaux, type FormatImpression, type LivraisonDemande } from '../../../core/ventes';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { usePOSStore } from '../../stores/pos.store';
 import ClientSelector from './ClientSelector';
@@ -10,11 +10,14 @@ import type { ContexteVente } from '../../../infrastructure/powersync/repositori
 
 interface Props {
   ctx: ContexteVente;
+  /** Nom du dépôt de vente, imprimé sur la facture A4. */
+  depot: string;
+  format: FormatImpression;
   peutForcerStock: boolean;
 }
 
 /** Ticket en cours : lignes, client, remise, totaux, livraison, validation (F11) et nouvelle vente (F10). */
-export default function TicketPanel({ ctx, peutForcerStock }: Props) {
+export default function TicketPanel({ ctx, depot, format, peutForcerStock }: Props) {
   const { lignes, client, remiseGlobale, setRemiseGlobale, modifierQuantite, modifierRemiseLigne, supprimerLigne, viderPanier } = usePOSStore();
   const [modal, setModal] = useState<'client' | 'livraison' | 'paiement' | null>(null);
   const [livraison, setLivraison] = useState<LivraisonDemande | null>(null);
@@ -115,7 +118,7 @@ export default function TicketPanel({ ctx, peutForcerStock }: Props) {
       {modal === 'client' && <ClientSelector onClose={() => setModal(null)} />}
       {modal === 'livraison' && <LivraisonModal initiale={livraison} onClose={() => setModal(null)} onValider={(l) => { setLivraison(l); setModal(null); }} />}
       {modal === 'paiement' && (
-        <PaiementModal ctx={ctx} livraison={livraison} peutForcerStock={peutForcerStock} onClose={() => setModal(null)} onTerminee={() => { setModal(null); setLivraison(null); }} />
+        <PaiementModal ctx={ctx} depot={depot} format={format} livraison={livraison} peutForcerStock={peutForcerStock} onClose={() => setModal(null)} onTerminee={() => { setModal(null); setLivraison(null); }} />
       )}
     </>
   );

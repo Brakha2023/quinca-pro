@@ -63,6 +63,46 @@
 .document .code-barres { display: block; width: 58mm; height: 14mm; }
 .document .code-barres-texte { text-align: center; font: 10px/1.2 'Courier New', monospace; letter-spacing: 2px; }
 
+/* Facture A4 d'une vente : mise en page attendue par la maison (cartouches, lignes HT, cachet, règlement). */
+.facture { font-size: 11px; }
+.facture .facture-entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; padding-bottom: 10px; }
+.facture .facture-entete-vide { flex: 1; text-align: right; font-size: 10px; }
+.facture .document-logo { flex: 1; font-size: 22px; text-align: center; border: 0; }
+.facture .facture-cachet { border: 2px solid #000; border-radius: 10px; padding: 4px 18px; text-align: center; }
+.facture .facture-cachet p { margin: 0; }
+.facture .facture-cachet-nom { font: bold 20px Georgia, serif; letter-spacing: 1px; }
+.facture .facture-haut { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin: 6px 0; }
+.facture .facture-haut-gauche { width: 76mm; }
+.facture .facture-identite { margin: 0; }
+.facture .facture-identite th, .facture .facture-identite td { white-space: nowrap; font-size: 10px; }
+.facture .facture-identite td { font-weight: bold; text-align: center; }
+.facture .facture-operateur { margin: 4px 0 0; width: 62mm; }
+.facture .facture-operateur th { width: 22mm; }
+.facture .facture-client { width: 72mm; margin: 0; }
+.facture .facture-client th { width: 18mm; text-align: left; }
+.facture .facture-client-nom { text-align: center; font-weight: bold; }
+.facture .facture-lignes { margin: 8px 0; }
+.facture .facture-lignes th { white-space: nowrap; }
+.facture .facture-lignes th:nth-child(2) { width: 32%; }
+.facture .facture-lignes th:first-child { width: 14%; }
+.facture .code-barres { width: 42mm; height: 12mm; margin-top: 2px; }
+.facture .facture-bas { display: flex; align-items: flex-start; gap: 8px; margin-top: 6px; }
+.facture .facture-signature { flex: 1; }
+.facture .facture-signature-titre { border: 1px solid #000; background: #eee; text-align: center; font-weight: bold; margin: 0; padding: 3px; }
+.facture .facture-signature-cadre { border: 1px solid #000; border-top: 0; height: 28mm; }
+.facture .facture-paiement, .facture .facture-totaux { margin: 0; width: 60mm; table-layout: fixed; }
+.facture .facture-paiement th, .facture .facture-totaux th { text-align: left; background: #fff; text-transform: none; font-size: 10px; white-space: nowrap; }
+.facture .facture-totaux-bloc { width: 60mm; }
+.facture .facture-devise { text-align: center; font: italic bold 11px Arial, sans-serif; margin: 0 0 1px; }
+.facture .facture-net th, .facture .facture-net td { font-weight: bold; }
+.facture .facture-arrete { margin: 10px 0 0; }
+.facture .facture-reglement { display: flex; align-items: flex-end; gap: 14px; margin-top: 10px; }
+.facture .facture-reglement em { margin-right: 6px; }
+.facture .facture-case-groupe { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.facture .facture-case { width: 14px; height: 14px; border: 1px solid #000; font: bold 12px/12px Arial, sans-serif; text-align: center; }
+.facture .facture-reglement-nature { display: inline-flex; gap: 12px; margin-left: 18px; }
+.facture .facture-reglement-nature .facture-case-groupe { flex-direction: row; align-items: center; gap: 4px; }
+
 /* Aperçu avant impression : plein écran à l'écran, seul le document à l'impression. */
 #zone-impression.apercu-impression { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60; background: rgba(23, 23, 23, .75); overflow: auto; padding: 0 0 24px; }
 .apercu-barre { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: #171717; color: #fff; font: 500 14px system-ui, sans-serif; }
