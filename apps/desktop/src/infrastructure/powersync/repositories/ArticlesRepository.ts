@@ -52,6 +52,74 @@ export function catalogueQuery(filialeId: string | null, depotId: string | null,
   };
 }
 
+export const ARTICLE_QUERY = 'SELECT * FROM articles WHERE id = ?';
+
+/** Stock de l'article dépôt par dépôt, pour la fiche article. */
+export const STOCK_ARTICLE_QUERY = `
+  SELECT s.depot_id, d.nom AS depot_nom, s.quantite, s.quantite_reservee, s.quantite_disponible,
+         s.cout_moyen, s.date_dernier_mouvement
+  FROM stocks s
+  JOIN depots d ON d.id = s.depot_id
+  WHERE s.article_id = ?
+  ORDER BY d.nom`;
+
+/**
+ * Ventes de l'article depuis une date. Les ventes annulées sortent du calcul.
+ * `dernier_prix` s'appuie sur la règle SQLite des colonnes nues avec MAX() :
+ * elles sont lues sur la ligne qui porte le maximum, donc sur la dernière vente.
+ */
+export const VENTES_ARTICLE_QUERY = `
+  SELECT COUNT(DISTINCT l.vente_id) AS nombre_ventes,
+         COALESCE(SUM(l.quantite), 0) AS quantite,
+         COALESCE(SUM(l.total_ht), 0) AS total_ht,
+         COALESCE(SUM(l.total_ttc), 0) AS total_ttc,
+         MAX(v.date_vente) AS derniere_date,
+         l.prix_unitaire_ttc AS dernier_prix
+  FROM lignes_vente l
+  JOIN ventes v ON v.id = l.vente_id
+  WHERE l.article_id = ? AND v.statut != 'ANNULEE' AND v.date_vente >= ?`;
+
+/** Ventes de l'article mois par mois (`YYYY-MM`), du plus récent au plus ancien. */
+export const VENTES_MENSUELLES_ARTICLE_QUERY = `
+  SELECT substr(v.date_vente, 1, 7) AS mois,
+         COUNT(DISTINCT l.vente_id) AS nombre_ventes,
+         COALESCE(SUM(l.quantite), 0) AS quantite,
+         COALESCE(SUM(l.total_ht), 0) AS total_ht,
+         COALESCE(SUM(l.total_ttc), 0) AS total_ttc
+  FROM lignes_vente l
+  JOIN ventes v ON v.id = l.vente_id
+  WHERE l.article_id = ? AND v.statut != 'ANNULEE' AND v.date_vente >= ?
+  GROUP BY mois
+  ORDER BY mois DESC
+  LIMIT 12`;
+
+export interface StockDepotRow {
+  depot_id: string;
+  depot_nom: string | null;
+  quantite: number | null;
+  quantite_reservee: number | null;
+  quantite_disponible: number | null;
+  cout_moyen: number | null;
+  date_dernier_mouvement: string | null;
+}
+
+export interface VentesArticleRow {
+  nombre_ventes: number | null;
+  quantite: number | null;
+  total_ht: number | null;
+  total_ttc: number | null;
+  derniere_date: string | null;
+  dernier_prix: number | null;
+}
+
+export interface VentesMoisRow {
+  mois: string;
+  nombre_ventes: number | null;
+  quantite: number | null;
+  total_ht: number | null;
+  total_ttc: number | null;
+}
+
 export class ArticlesRepository extends BaseRepository {
   async create(filialeId: string, form: ArticleForm): Promise<string> {
     const id = this.nouvelId();

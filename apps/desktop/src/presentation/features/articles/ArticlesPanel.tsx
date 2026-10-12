@@ -1,36 +1,32 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { ArrowUpTrayIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { ArrowUpTrayIcon, DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import * as XLSX from 'xlsx';
-import { margeArticle, type Article, type LigneImportArticle } from '../../../core/articles';
+import { lignesDepuisGrille, margeArticle, type Article, type Cellule, type LigneImportArticle } from '../../../core/articles';
 import { ArticlesRepository } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
+import ArticleDetailsModal from './ArticleDetailsModal';
 import ArticleFormModal from './ArticleFormModal';
 import { useArticles, useFamilles } from './hooks';
 import { useConfirmation } from '../../confirmation/useConfirmation';
 
 interface Props {
   filialeId: string;
+  filiale: { nom: string; adresse?: string | null; telephone?: string | null };
 }
 
-/** Fichier Excel attendu : 4 lignes d'en-tête, puis code | désignation | P.achat | P.vente | famille. */
+/**
+ * Lecture d'un export de catalogue : la ligne d'entêtes est repérée dans la
+ * feuille (le nombre de lignes de titre varie d'un export à l'autre), puis
+ * chaque colonne est suivie par son nom.
+ */
 function lireFichierExcel(data: ArrayBuffer): LigneImportArticle[] {
   const workbook = XLSX.read(data, { type: 'array' });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
-  const nombre = (v: unknown) => parseFloat(String(v ?? '').replace(/[\s,]/g, '')) || 0;
-
-  return rows
-    .slice(4)
-    .filter((row) => row[0] || row[1])
-    .map((row) => ({
-      code: String(row[0] ?? '').trim(),
-      designation: String(row[1] ?? '').trim(),
-      prix_achat: nombre(row[2]),
-      prix_vente: nombre(row[3]),
-      famille_nom: String(row[4] ?? 'DIVERS'),
-    }));
+  const sheet = workbook.Sheets[workbook.SheetNames[0] ?? ''];
+  if (!sheet) throw new Error('Fichier illisible : aucune feuille de calcul.');
+  const grille = XLSX.utils.sheet_to_json<Cellule[]>(sheet, { header: 1, blankrows: false, defval: null, raw: true });
+  return lignesDepuisGrille(grille);
 }
 
 function BadgeMarge({ article }: { article: Article }) {
@@ -39,7 +35,7 @@ function BadgeMarge({ article }: { article: Article }) {
   return <span className={`px-2 py-1 rounded-full text-xs font-medium ${tone}`}>{marge}%</span>;
 }
 
-export default function ArticlesPanel({ filialeId }: Props) {
+export default function ArticlesPanel({ filialeId, filiale }: Props) {
   const repository = useRepository(ArticlesRepository);
   const notifier = useNotifier();
   const confirmer = useConfirmation();
@@ -49,6 +45,7 @@ export default function ArticlesPanel({ filialeId }: Props) {
   const [familleId, setFamilleId] = useState('');
   const [inclureInactifs, setInclureInactifs] = useState(false);
   const [modal, setModal] = useState<{ mode: 'creer' } | { mode: 'modifier'; article: Article } | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const { articles, isLoading } = useArticles(filialeId, { recherche, familleId: familleId || null, inclureInactifs });
   const { familles, famillesParId } = useFamilles(filialeId, { actives: true });
@@ -162,7 +159,9 @@ export default function ArticlesPanel({ filialeId }: Props) {
                 <tr key={article.id} className={`hover:bg-neutral-50 transition-colors ${!article.est_actif ? 'opacity-50' : ''}`}>
                   <td className="px-3 py-2 text-sm font-mono font-medium text-primary-700">{article.code}</td>
                   <td className="px-3 py-2 text-sm font-medium text-neutral-900">
-                    {article.designation}
+                    <button type="button" onClick={() => setDetailId(article.id)} className="text-left hover:text-primary-700 hover:underline print:no-underline">
+                      {article.designation}
+                    </button>
                     {!article.est_actif && <span className="ml-2 text-xs text-neutral-500">(inactif)</span>}
                   </td>
                   <td className="px-3 py-2 text-sm">
@@ -178,6 +177,14 @@ export default function ArticlesPanel({ filialeId }: Props) {
                   <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600">{article.stock_min}</td>
                   <td className="px-3 py-2 text-center print:hidden">
                     <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => setDetailId(article.id)}
+                        className="p-1.5 hover:bg-primary-50 rounded text-primary-700"
+                        title="Détail de l'article"
+                        data-testid={`detail-${article.code}`}
+                      >
+                        <DocumentMagnifyingGlassIcon className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => setModal({ mode: 'modifier', article })}
                         className="p-1.5 hover:bg-blue-50 rounded text-blue-600"
@@ -208,6 +215,10 @@ export default function ArticlesPanel({ filialeId }: Props) {
           </div>
         )}
       </div>
+
+      {detailId && (
+        <ArticleDetailsModal filialeId={filialeId} articleId={detailId} filiale={filiale} onClose={() => setDetailId(null)} />
+      )}
 
       {modal && (
         <ArticleFormModal

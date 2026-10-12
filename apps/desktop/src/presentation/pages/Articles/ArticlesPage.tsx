@@ -18,6 +18,7 @@ const ONGLETS: Array<{ id: Onglet; label: string; icon: ComponentType<{ classNam
 export default function ArticlesPage() {
   const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
   const [onglet, setOnglet] = useState<Onglet>('articles');
+  const infosFiliale = { nom: filiale?.nom ?? 'QuincaPro', adresse: filiale?.adresse, telephone: filiale?.telephone };
 
   return (
     <div className="space-y-6">
@@ -58,7 +59,7 @@ export default function ArticlesPage() {
             ))}
           </div>
           <div className="p-6">
-            {onglet === 'articles' && <ArticlesPanel filialeId={filialeId} />}
+            {onglet === 'articles' && <ArticlesPanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'familles' && <FamillesPanel filialeId={filialeId} />}
             {onglet === 'depots' && <DepotsPanel filialeId={filialeId} />}
           </div>

@@ -1,4 +1,4 @@
-import { code39 } from '../../../core/tresorerie';
+import { code39 } from '../../../core/commun/codeBarres';
 
 interface Props {
   valeur: string;

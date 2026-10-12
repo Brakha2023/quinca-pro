@@ -114,7 +114,7 @@ un PC Windows : `apps/desktop/scripts/windows/CHECKLIST-WINDOWS.md`.
 ## État d'avancement
 
 - **Phase 0 — fondations** : faite (structure, typage strict, connector PowerSync, auth, schéma Postgres, Sync Streams).
-- **Phase 1 — métier local-first** : faite. Catalogue (articles, familles, dépôts, import Excel), Stock (entrées,
+- **Phase 1 — métier local-first** : faite. Catalogue (articles, familles, dépôts, import d'un export Excel, fiche article imprimable), Stock (entrées,
   sorties, transferts, inventaire, journal, alertes), Clients (créances, règlements), Point de vente (vente atomique,
   crédit, livraison, ticket), Ventes (journée, validation, annulation), Fournisseurs (achats réceptionnés, dettes,
   paiements), Trésorerie (caisses, opérations, transferts), Livraisons, Audit, Dashboard et Consolidation.
@@ -122,6 +122,24 @@ un PC Windows : `apps/desktop/scripts/windows/CHECKLIST-WINDOWS.md`.
 - **Phase 2 — desktop prod** : à faire (CSP Tauri, impression thermique, plugins Rust, auto-update, signature,
   build Windows testé).
 - **Phase 3 — pilotage avancé** : exports Excel, rapports périodiques, recherche accentuée.
+
+### Catalogue
+
+Onglets **Articles**, **Familles**, **Dépôts**.
+
+**Import d'un export de catalogue** (`.xls` ou `.xlsx`) : la ligne d'entêtes est repérée dans la feuille
+— le nombre de lignes de titre varie d'un export à l'autre — puis chaque colonne est suivie par son nom
+(`CODE`, `DESIGNATION`, `P. ACHAT`, `P. VENTE`, `FAMILLE`, et leurs synonymes courants), dans n'importe
+quel ordre. Les entêtes répétés en tête de page et les lignes de totaux sont écartés, les familles
+inconnues créées, les codes déjà présents **ignorés et non écrasés** (chaque rejet est motivé ligne par
+ligne). Sans ligne d'entêtes, l'import est refusé plutôt que décalé.
+
+**Fiche article** (bouton *Détail*, ou clic sur la désignation) : tarifs et marges (vente et VIP), stock
+dépôt par dépôt avec coût moyen et valorisation, état du stock face aux seuils (rupture / sous le
+minimum / surstock), activité commerciale sur 30 jours, 3 mois ou 12 mois (quantité vendue, chiffre
+d'affaires, dernier prix pratiqué, écoulement moyen, couverture du stock) et derniers mouvements.
+Le bouton *Imprimer la fiche* en sort un rapport A4 — identification, tarifs, stock par dépôt, ventes
+mois par mois, mouvements, code-barres Code 39 de l'article.
 
 ### Production (module Stock)
 
