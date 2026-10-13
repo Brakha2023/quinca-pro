@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
-import type { MouvementStockRow } from '@quinca/shared-types';
+import type { MouvementStockRow, TypeMouvementStock } from '@quinca/shared-types';
+import { construireBon } from '../../../core/stock';
 import {
   mouvementsQuery,
   stocksParArticleQuery,
@@ -25,6 +26,7 @@ export interface StockParArticle {
 export interface MouvementVue extends MouvementStockRow {
   article_code: string | null;
   article_designation: string | null;
+  article_unite: string | null;
   depot_nom: string | null;
   utilisateur_nom: string | null;
   utilisateur_prenom: string | null;
@@ -64,4 +66,38 @@ export function useStockArticleDepot(articleId: string | null, depotId: string |
     [articleId ?? '', depotId ?? ''],
   );
   return data[0] ?? { quantite: 0, quantite_disponible: 0, cout_moyen: 0 };
+}
+
+/** Bon imprimable : tous les mouvements portant la même référence, remis en forme. */
+export function useBonStock(filialeId: string | null, reference: string | null) {
+  const { sql, params } = useMemo(
+    () => mouvementsQuery(filialeId, { reference, limite: 500 }),
+    [filialeId, reference],
+  );
+  const { data } = useQuery<MouvementVue>(sql, params);
+  return useMemo(
+    () =>
+      reference
+        ? construireBon(
+            reference,
+            data.map((m) => ({
+              id: m.id,
+              type: (m.type ?? 'AJUSTEMENT') as TypeMouvementStock,
+              article_code: m.article_code ?? '',
+              article_designation: m.article_designation ?? '',
+              article_unite: m.article_unite ?? '',
+              depot_nom: m.depot_nom ?? '',
+              quantite: m.quantite ?? 0,
+              quantite_avant: m.quantite_avant ?? 0,
+              quantite_apres: m.quantite_apres ?? 0,
+              cout_unitaire: m.cout_unitaire,
+              motif: m.motif,
+              fournisseur_nom: m.fournisseur_nom,
+              utilisateur: [m.utilisateur_prenom, m.utilisateur_nom].filter(Boolean).join(' '),
+              created_at: m.created_at ?? '',
+            })),
+          )
+        : null,
+    [reference, data],
+  );
 }

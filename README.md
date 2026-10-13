@@ -156,6 +156,17 @@ d'affaires, dernier prix pratiqué, écoulement moyen, couverture du stock) et d
 Le bouton *Imprimer la fiche* en sort un rapport A4 — identification, tarifs, stock par dépôt, ventes
 mois par mois, mouvements, code-barres Code 39 de l'article.
 
+### Bons de mouvement (module Stock)
+
+Chaque mouvement enregistré produit une **pièce imprimable** : bon d'entrée (achat ou retour client),
+bon de sortie (déstockage ou casse), bon de transfert entre dépôts, fiche d'inventaire, bon de
+production. Le bouton *Imprimer le bon* apparaît dans l'écran de saisie juste après la validation, et
+le journal des **Mouvements** permet de rééditer n'importe quelle pièce par sa référence. Le bon porte
+l'entête (référence, date, opérateur, dépôt — les deux pour un transfert —, fournisseur, motif), les
+lignes avec quantité signée, **stock avant et après**, coût unitaire et valeur, le total valorisé
+quand les coûts sont renseignés, le code-barres de la référence et deux signatures. Un transfert
+génère deux mouvements par article : le bon ne compte la ligne qu'une fois.
+
 ### Entrées en stock
 
 Une entrée d'achat porte son **fournisseur** (colonne `mouvements_stock.fournisseur_id`) : le journal

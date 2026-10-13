@@ -99,7 +99,7 @@ export function mouvementsQuery(filialeId: string | null, filtres: FiltresMouvem
   if (filtres.reference) { conditions.push('m.reference = ?'); params.push(filtres.reference); }
   params.push(filtres.limite ?? 200);
   return {
-    sql: `SELECT m.*, a.code AS article_code, a.designation AS article_designation, d.nom AS depot_nom,
+    sql: `SELECT m.*, a.code AS article_code, a.designation AS article_designation, a.unite AS article_unite, d.nom AS depot_nom,
                  u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom, f.raison_sociale AS fournisseur_nom
           FROM mouvements_stock m
           JOIN articles a ON a.id = m.article_id

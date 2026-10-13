@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { PrinterIcon } from '@heroicons/react/24/outline';
 import { TYPES_MOUVEMENT_STOCK, type TypeMouvementStock } from '@quinca/shared-types';
 import { LIBELLES_MOUVEMENT, SENS_MOUVEMENT } from '../../../core/stock';
 import { controleInlineClass } from '../../components/ui/FormField';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useDepots } from '../articles/hooks';
 import { useFournisseurs } from '../fournisseurs/hooks';
+import { BonImprimable, type InfosFiliale } from './EnteteBon';
 import { useMouvements } from './hooks';
 
 function formaterDateHeure(iso: string | null): string {
@@ -13,12 +15,13 @@ function formaterDateHeure(iso: string | null): string {
 }
 
 /** Journal des mouvements de stock (200 derniers, filtrables). */
-export default function MouvementsPanel({ filialeId }: { filialeId: string }) {
+export default function MouvementsPanel({ filialeId, filiale }: { filialeId: string; filiale: InfosFiliale }) {
   const { depots } = useDepots(filialeId);
   const [depotId, setDepotId] = useState('');
   const [type, setType] = useState<TypeMouvementStock | ''>('');
   const [reference, setReference] = useState('');
   const [fournisseurId, setFournisseurId] = useState('');
+  const [bon, setBon] = useState<string | null>(null);
   const { fournisseurs } = useFournisseurs(filialeId);
   const { mouvements, isLoading } = useMouvements(filialeId, { depotId: depotId || null, type: type || null, reference: reference.trim() || null, fournisseurId: fournisseurId || null });
 
@@ -57,6 +60,7 @@ export default function MouvementsPanel({ filialeId }: { filialeId: string }) {
                 <th className="px-3 py-2 text-left">Fournisseur</th>
                 <th className="px-3 py-2 text-left">Motif</th>
                 <th className="px-3 py-2 text-left">Par</th>
+                <th className="px-3 py-2 text-center print:hidden">Bon</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -77,6 +81,19 @@ export default function MouvementsPanel({ filialeId }: { filialeId: string }) {
                     <td className="px-3 py-2 text-sm text-neutral-600" data-testid="mouvement-fournisseur">{m.fournisseur_nom ?? '—'}</td>
                     <td className="px-3 py-2 text-sm text-neutral-600 max-w-xs truncate" title={m.motif ?? ''}>{m.motif ?? '—'}</td>
                     <td className="px-3 py-2 text-sm text-neutral-600">{[m.utilisateur_prenom, m.utilisateur_nom].filter(Boolean).join(' ') || '—'}</td>
+                    <td className="px-3 py-2 text-center print:hidden">
+                      {m.reference && (
+                        <button
+                          type="button"
+                          onClick={() => setBon(m.reference)}
+                          className="p-1.5 hover:bg-primary-50 rounded text-primary-700"
+                          title={`Imprimer le bon ${m.reference}`}
+                          data-testid={`bon-${m.reference}`}
+                        >
+                          <PrinterIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -86,6 +103,8 @@ export default function MouvementsPanel({ filialeId }: { filialeId: string }) {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && mouvements.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun mouvement.</div>}
       </div>
+
+      {bon && <BonImprimable filialeId={filialeId} filiale={filiale} reference={bon} onClose={() => setBon(null)} />}
     </div>
   );
 }

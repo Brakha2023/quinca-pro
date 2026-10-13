@@ -6,11 +6,11 @@ import { useRepository } from '../../hooks/useRepository';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import SelectFournisseur from '../fournisseurs/SelectFournisseur';
-import { CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire } from './EnteteBon';
+import { BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
 import LignesBonEditor, { type LigneBonUI } from './LignesBonEditor';
 import { useContexteMouvement } from './useContexteMouvement';
 
-export default function EntreeStockPanel({ filialeId }: { filialeId: string }) {
+export default function EntreeStockPanel({ filialeId, filiale }: { filialeId: string; filiale: InfosFiliale }) {
   const repository = useRepository(StockRepository);
   const notifier = useNotifier();
   const ctx = useContexteMouvement(filialeId);
@@ -23,6 +23,8 @@ export default function EntreeStockPanel({ filialeId }: { filialeId: string }) {
   const [motif, setMotif] = useState('');
   const [lignes, setLignes] = useState<LigneBonUI[]>([]);
   const [enCours, setEnCours] = useState(false);
+  const [dernierBon, setDernierBon] = useState<string | null>(null);
+  const [apercu, setApercu] = useState<string | null>(null);
   const depotEffectif = depotId || depots[0]?.id || '';
 
   const reinitialiser = () => { setLignes([]); setReference(''); setMotif(''); setFournisseurId(''); };
@@ -36,6 +38,7 @@ export default function EntreeStockPanel({ filialeId }: { filialeId: string }) {
     setEnCours(true);
     try {
       const ref = await repository.enregistrerEntree(ctx, parsed.data);
+      setDernierBon(ref);
       notifier('succes', `Entrée ${ref} enregistrée (${parsed.data.lignes.length} ligne(s)).`);
       reinitialiser();
     } catch (error) {
@@ -51,6 +54,7 @@ export default function EntreeStockPanel({ filialeId }: { filialeId: string }) {
       description="Réception d'achat ou retour client. Le coût moyen des articles est recalculé à partir du coût unitaire saisi."
       actions={
         <>
+          {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}
           <button type="button" onClick={reinitialiser} className={boutonSecondaire} disabled={lignes.length === 0}>Vider</button>
           <button type="button" onClick={valider} className={boutonPrimaire} disabled={enCours || lignes.length === 0}>Valider l'entrée</button>
         </>
@@ -76,6 +80,7 @@ export default function EntreeStockPanel({ filialeId }: { filialeId: string }) {
         <ChampsReferenceMotif reference={reference} motif={motif} onReference={setReference} onMotif={setMotif} placeholderMotif="N° BL, commentaire…" />
       </div>
       <LignesBonEditor filialeId={filialeId} depotId={depotEffectif} lignes={lignes} onChange={setLignes} avecCout />
+      {apercu && <BonImprimable filialeId={filialeId} filiale={filiale} reference={apercu} onClose={() => setApercu(null)} />}
     </CarteBon>
   );
 }

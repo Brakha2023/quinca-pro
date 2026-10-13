@@ -1,6 +1,31 @@
 import type { ReactNode } from 'react';
+import { PrinterIcon } from '@heroicons/react/24/outline';
 import FormField, { inputClass } from '../../components/ui/FormField';
 import type { Depot } from '../../../core/articles';
+import BonStockDocument from './BonStockDocument';
+import { useBonStock } from './hooks';
+
+export interface InfosFiliale {
+  nom: string;
+  adresse?: string | null;
+  telephone?: string | null;
+}
+
+/** Aperçu imprimable d'un bon déjà enregistré, retrouvé par sa référence. */
+export function BonImprimable({ filialeId, filiale, reference, onClose }: { filialeId: string; filiale: InfosFiliale; reference: string; onClose: () => void }) {
+  const bon = useBonStock(filialeId, reference);
+  if (!bon) return null;
+  return <BonStockDocument bon={bon} filiale={filiale} onClose={onClose} />;
+}
+
+/** Proposé après l'enregistrement : la pièce que le magasinier signe et classe. */
+export function BoutonImprimerBon({ reference, onClick }: { reference: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 text-white font-medium rounded-lg" data-testid="imprimer-bon">
+      <PrinterIcon className="w-4 h-4" /> Imprimer le bon {reference}
+    </button>
+  );
+}
 
 export function SelectDepot({ label, depots, value, onChange, erreur }: { label: string; depots: Depot[]; value: string; onChange: (id: string) => void; erreur?: string }) {
   return (

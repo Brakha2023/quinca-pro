@@ -37,7 +37,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     catch (e) { out.sortieRefusee = e.name === 'StockInsuffisantError'; }
     out.stockVisApresRefus = (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a2])).quantite;
 
-    await stock.transferer(ctx, { depot_source_id: d1, depot_destination_id: d2, reference: '', motif: '', lignes: [{ article_id: a1, quantite: 50 }] });
+    out.referenceTransfert = await stock.transferer(ctx, { depot_source_id: d1, depot_destination_id: d2, reference: '', motif: '', lignes: [{ article_id: a1, quantite: 50 }] });
     out.apresTransfert = await db.getAll('SELECT d.code, s.quantite, s.cout_moyen FROM stocks s JOIN depots d ON d.id = s.depot_id WHERE s.article_id = ? ORDER BY d.code', [a1]);
 
     const { mouvementsQuery } = await import('/src/infrastructure/powersync/repositories/StockRepository.ts');
@@ -106,11 +106,37 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('[data-testid=select-fournisseur]').waitFor({ state: 'detached' });
   verifier(true, 'retour client : pas de fournisseur à saisir');
 
+  // Le bon de la saisie qui vient d'être validée s'imprime depuis l'écran lui-même.
+  await page.getByTestId('imprimer-bon').click();
+  const bon = page.locator('#zone-impression.apercu-impression');
+  await bon.waitFor();
+  const papier = (await bon.textContent()).replace(/\s+/g, ' ');
+  verifier(papier.includes("Bon d'entrée — achat"), 'bon d’entrée : titre du document');
+  // L'écran d'entrée propose le premier dépôt actif par ordre alphabétique : « Annexe ».
+  verifier(papier.includes('SOCIMAT CI') && papier.includes('Annexe'), 'bon d’entrée : fournisseur et dépôt');
+  verifier(papier.includes('Total du bon') && papier.includes('12 500 F'), 'bon d’entrée : lignes valorisées et total');
+  verifier(papier.includes('VIS-50') && papier.includes('+5'), 'bon d’entrée : ligne et quantité signée');
+  verifier((await bon.locator('svg.code-barres rect').count()) > 20, 'bon d’entrée : code-barres de la référence');
+  await bon.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
   await page.locator('main').getByRole('link', { name: 'Mouvements', exact: true }).click();
   await page.locator('[data-testid=filtre-fournisseur]').selectOption({ label: 'SOCIMAT CI' });
   await page.locator('tbody tr').first().waitFor();
   const provenances = await page.locator('[data-testid=mouvement-fournisseur]').allTextContents();
   verifier(provenances.length === 3 && provenances.every((t) => t === 'SOCIMAT CI'), `journal : filtre par fournisseur, provenance affichée (${provenances.join(', ') || 'aucune ligne'})`);
+
+  // Réédition d'un bon depuis le journal, y compris un transfert (deux dépôts, une seule ligne par article).
+  await page.locator('[data-testid=filtre-fournisseur]').selectOption('');
+  await page.locator('input[placeholder^="Référence exacte"]').fill(r.referenceTransfert);
+  await page.locator('tbody tr').first().waitFor();
+  await page.locator(`[data-testid="bon-${r.referenceTransfert}"]`).first().click();
+  const bonTransfert = page.locator('#zone-impression.apercu-impression');
+  await bonTransfert.waitFor();
+  const papierTransfert = (await bonTransfert.textContent()).replace(/\s+/g, ' ');
+  verifier(papierTransfert.includes('Bon de transfert entre dépôts'), 'réédition : bon de transfert');
+  verifier(papierTransfert.includes('Origine : Principal') && papierTransfert.includes('Destination : Annexe'), 'réédition : les deux dépôts du transfert');
+  verifier((await bonTransfert.locator('tbody tr').count()) === 1, 'réédition : l’article transféré ne compte qu’une fois');
+  await bonTransfert.getByRole('button', { name: "Fermer l'aperçu" }).click();
 
   // Sous-menu Stock dans la barre latérale : les sections sont des routes.
   const sousMenu = page.locator('[data-testid=sous-menu-stock]');

@@ -17,6 +17,8 @@ export default function StockPage() {
 
   if (!estOngletStock(onglet)) return <Navigate to={cheminOngletStock(ONGLET_STOCK_DEFAUT)} replace />;
 
+  const infosFiliale = { nom: filiale?.nom ?? 'QuincaPro', adresse: filiale?.adresse, telephone: filiale?.telephone };
+
   return (
     <div className="space-y-6">
       <div>
@@ -48,12 +50,12 @@ export default function StockPage() {
           </div>
           <div className="p-6">
             {onglet === 'suivi' && <SuiviStockPanel filialeId={filialeId} />}
-            {onglet === 'entree' && <EntreeStockPanel filialeId={filialeId} />}
-            {onglet === 'sortie' && <SortieStockPanel filialeId={filialeId} />}
-            {onglet === 'transfert' && <TransfertStockPanel filialeId={filialeId} />}
-            {onglet === 'inventaire' && <InventairePanel filialeId={filialeId} />}
+            {onglet === 'entree' && <EntreeStockPanel filialeId={filialeId} filiale={infosFiliale} />}
+            {onglet === 'sortie' && <SortieStockPanel filialeId={filialeId} filiale={infosFiliale} />}
+            {onglet === 'transfert' && <TransfertStockPanel filialeId={filialeId} filiale={infosFiliale} />}
+            {onglet === 'inventaire' && <InventairePanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'production' && <ProductionPanel filialeId={filialeId} />}
-            {onglet === 'mouvements' && <MouvementsPanel filialeId={filialeId} />}
+            {onglet === 'mouvements' && <MouvementsPanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'alertes' && <AlertesPanel filialeId={filialeId} />}
           </div>
         </div>

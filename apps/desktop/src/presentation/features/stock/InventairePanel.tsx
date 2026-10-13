@@ -7,7 +7,7 @@ import { useRepository } from '../../hooks/useRepository';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import ArticlePicker from './ArticlePicker';
-import { CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire } from './EnteteBon';
+import { BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
 import { useStocks } from './hooks';
 import { useContexteMouvement } from './useContexteMouvement';
 import { useConfirmation } from '../../confirmation/useConfirmation';
@@ -26,7 +26,7 @@ interface LigneComptage {
  * proposées avec leur quantité théorique ; on saisit le compté, l'écart est
  * calculé. Les articles absents du dépôt peuvent être ajoutés (compté > 0).
  */
-export default function InventairePanel({ filialeId }: { filialeId: string }) {
+export default function InventairePanel({ filialeId, filiale }: { filialeId: string; filiale: InfosFiliale }) {
   const repository = useRepository(StockRepository);
   const notifier = useNotifier();
   const confirmer = useConfirmation();
@@ -43,6 +43,8 @@ export default function InventairePanel({ filialeId }: { filialeId: string }) {
   /** Articles absents du dépôt ajoutés à la feuille. */
   const [ajouts, setAjouts] = useState<Article[]>([]);
   const [enCours, setEnCours] = useState(false);
+  const [dernierBon, setDernierBon] = useState<string | null>(null);
+  const [apercu, setApercu] = useState<string | null>(null);
 
   // La feuille de comptage est dérivée du stock courant (temps réel) et des saisies : pas d'effet de synchronisation.
   const lignes = useMemo<LigneComptage[]>(() => {
@@ -82,6 +84,7 @@ export default function InventairePanel({ filialeId }: { filialeId: string }) {
     setEnCours(true);
     try {
       const r = await repository.enregistrerInventaire(ctx, parsed.data);
+      setDernierBon(r.ecarts > 0 ? r.reference : null);
       notifier('succes', `Inventaire ${r.reference} validé : ${r.ecarts} écart(s) régularisé(s).`);
       effacerSaisie();
       setAjouts([]);
@@ -99,6 +102,7 @@ export default function InventairePanel({ filialeId }: { filialeId: string }) {
       description="Saisissez la quantité comptée ; seules les lignes renseignées sont prises en compte et seuls les écarts génèrent un mouvement."
       actions={
         <>
+          {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}
           <button type="button" onClick={effacerSaisie} className={boutonSecondaire} disabled={lignesSaisies.length === 0}>Effacer la saisie</button>
           <button type="button" onClick={valider} className={boutonPrimaire} disabled={enCours || lignesSaisies.length === 0}>
             Valider ({lignesSaisies.length} compté(s), {ecarts} écart(s))
@@ -143,6 +147,7 @@ export default function InventairePanel({ filialeId }: { filialeId: string }) {
           </tbody>
         </table>
       </div>
+      {apercu && <BonImprimable filialeId={filialeId} filiale={filiale} reference={apercu} onClose={() => setApercu(null)} />}
     </CarteBon>
   );
 }
