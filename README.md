@@ -167,6 +167,18 @@ lignes avec quantité signée, **stock avant et après**, coût unitaire et vale
 quand les coûts sont renseignés, le code-barres de la référence et deux signatures. Un transfert
 génère deux mouvements par article : le bon ne compte la ligne qu'une fois.
 
+### Quand le serveur refuse les écritures
+
+Une écriture refusée définitivement par Postgres (contrainte violée, règle de sécurité) est abandonnée
+et journalisée. Mais un refus **réparable** — typiquement une colonne absente parce qu'une migration
+n'a pas été appliquée — est rejoué indéfiniment : rien n'est perdu, et rien ne remonte non plus. La
+file d'envoi se bloque alors **entièrement**, pas seulement l'opération fautive.
+
+Le bandeau de synchronisation distingue donc trois situations : *Hors ligne* (normal, le poste
+travaille et accumule), *Synchronisé*, et ***Envoi bloqué · N en attente*** — connecté, mais le serveur
+refuse. Le message du serveur est dans l'infobulle. Sans cet état, le bandeau affichait « Synchronisé »
+en vert pendant que la file grossissait.
+
 ### Remises de ligne et export Excel
 
 L'**entrée en stock** et le **bon de commande fournisseur** acceptent une remise article par article,

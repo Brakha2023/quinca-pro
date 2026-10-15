@@ -46,6 +46,7 @@ SmartScreen affiche « Windows a protégé votre ordinateur » → *Informations
 - [ ] Verrouiller le poste, déverrouiller avec le **même** compte hors ligne.
 - [ ] Déverrouiller avec **un autre compte de la filiale** hors ligne (il doit s'être connecté une fois en ligne depuis la mise à jour).
 - [ ] Reconnecter → file d'envoi vidée, opérations visibles dans Supabase / sur un autre poste.
+- [ ] Pendant la coupure, le bandeau dit **« Hors ligne »** (et non « Envoi bloqué ») : accumuler des écritures hors ligne est le fonctionnement normal.
 - [ ] Fermer et rouvrir l'app hors ligne : reprise directe sans écran de connexion.
 
 ## Robustesse

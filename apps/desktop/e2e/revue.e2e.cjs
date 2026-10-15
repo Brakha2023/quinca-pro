@@ -120,6 +120,16 @@ const PAGES_SIMPLES = ['', 'articles', 'ventes', 'livraisons', 'consolidation', 
   }
   verifier(true, `${vus.length} écrans parcourus sur une base vide`);
 
+  // Le bandeau de synchronisation doit nommer l'état, pas rester muet : sans
+  // backend en test, il annonce « Hors ligne ».
+  const bandeau = page.locator('[data-testid=etat-sync]');
+  await bandeau.waitFor();
+  // Sans backend, l'état oscille entre connexion et hors-ligne : on vérifie
+  // qu'il est nommé et jamais « bloqué » (ce qui affolerait pour un simple hors-ligne).
+  const nature = await bandeau.getAttribute('data-nature');
+  const libelle = (await bandeau.textContent()).trim();
+  verifier(['HORS_LIGNE', 'CONNEXION'].includes(nature) && libelle.length > 0, `bandeau de synchronisation : état nommé « ${libelle} » (${nature})`);
+
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();
 
