@@ -14,6 +14,15 @@ export interface LigneBonUI {
   remise_percent: number;
 }
 
+/**
+ * Remise saisie, ramenée dans [0, 100] dès la frappe : au-delà, le total
+ * afficherait 0 F et la validation ne refuserait qu'à la fin.
+ */
+export const remiseSaisie = (valeur: string): number => {
+  const n = Number(valeur);
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 100) : 0;
+};
+
 /** Montant net d'une ligne : quantité × coût unitaire, remise déduite. */
 export const totalLigneBon = (l: LigneBonUI): number =>
   montantApresRemise((l.cout_unitaire === '' ? 0 : l.cout_unitaire) * l.quantite, l.remise_percent);
@@ -85,7 +94,7 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
                 )}
                 {avecCout && (
                   <td className="px-3 py-2">
-                    <input type="number" min="0" max="100" step="any" value={l.remise_percent} onChange={(e) => modifier(i, { remise_percent: Number(e.target.value) })} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} />
+                    <input type="number" min="0" max="100" step="any" value={l.remise_percent} onFocus={(e) => e.target.select()} onChange={(e) => modifier(i, { remise_percent: remiseSaisie(e.target.value) })} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} />
                   </td>
                 )}
                 {avecCout && <td className="px-3 py-2 text-right font-mono text-sm">{formaterFcfa(totalLigneBon(l))}</td>}

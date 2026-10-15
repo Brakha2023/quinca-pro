@@ -15,6 +15,7 @@ import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
+import { remiseSaisie } from '../stock/LignesBonEditor';
 import ArticlePicker from '../stock/ArticlePicker';
 import { formaterDateHeure } from '../ventes/VenteDetailsModal';
 import SelectFournisseur from './SelectFournisseur';
@@ -114,7 +115,7 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
                   <td className="px-3 py-2 text-sm">{l.article.designation}<span className="text-neutral-400 text-xs ml-2">{l.article.unite}</span></td>
                   <td className="px-3 py-2"><input type="number" min="0" step="any" value={l.quantite} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, quantite: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} /></td>
                   <td className="px-3 py-2"><input type="number" min="0" step="1" value={l.prix_unitaire_ht} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, prix_unitaire_ht: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} /></td>
-                  <td className="px-3 py-2"><input type="number" min="0" max="100" step="any" value={l.remise_percent} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, remise_percent: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} /></td>
+                  <td className="px-3 py-2"><input type="number" min="0" max="100" step="any" value={l.remise_percent} onFocus={(e) => e.target.select()} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, remise_percent: remiseSaisie(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} /></td>
                   <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(totalLigneCommande(l))}</td>
                   <td className="px-3 py-2 text-center"><button type="button" onClick={() => setLignes(lignes.filter((_, j) => j !== i))} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Retirer"><TrashIcon className="w-4 h-4" /></button></td>
                 </tr>

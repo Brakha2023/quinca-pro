@@ -88,3 +88,22 @@ describe('entreeStockSchema : provenance', () => {
     expect(entreeStockSchema.parse({ ...base, type: 'ENTREE_ACHAT', fournisseur_id: '' }).fournisseur_id).toBeNull();
   });
 });
+
+describe('entreeStockSchema : remise illisible', () => {
+  const base = { depot_id: 'd1', type: 'ENTREE_ACHAT', lignes: [{ article_id: 'a1', quantite: 5, cout_unitaire: 2500 }] };
+
+  it('refuse une remise hors bornes plutôt que de la laisser passer', () => {
+    expect(entreeStockSchema.safeParse({ ...base, lignes: [{ ...base.lignes[0], remise_percent: 150 }] }).success).toBe(false);
+    expect(entreeStockSchema.safeParse({ ...base, lignes: [{ ...base.lignes[0], remise_percent: -1 }] }).success).toBe(false);
+  });
+
+  it('refuse une remise non numérique : aucun NaN n’atteint le coût du stock', () => {
+    const r = entreeStockSchema.safeParse({ ...base, lignes: [{ ...base.lignes[0], remise_percent: 'abc' }] });
+    expect(r.success).toBe(false);
+  });
+
+  it('accepte une remise absente et la ramène à zéro', () => {
+    const r = entreeStockSchema.parse(base);
+    expect(r.lignes[0]?.remise_percent).toBe(0);
+  });
+});
