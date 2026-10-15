@@ -12,6 +12,7 @@ const mvt = (over: Partial<MouvementDuBon> = {}): MouvementDuBon => ({
   quantite_avant: 0,
   quantite_apres: 10,
   cout_unitaire: 4500,
+  remise_percent: 0,
   motif: 'BL 42',
   fournisseur_nom: 'SOCIMAT CI',
   utilisateur: 'Awa Koné',
@@ -63,6 +64,17 @@ describe('construireBon', () => {
     expect(bon?.lignes[0]?.quantite).toBe(2);
     expect(bon?.lignes[0]?.quantite_avant).toBe(150);
     expect(bon?.lignes[0]?.quantite_apres).toBe(148);
+  });
+
+  it('signale la remise accordée, le coût retenu en étant déjà net', () => {
+    const bon = construireBon('ENT-2', [mvt({ cout_unitaire: 4050, remise_percent: 10, quantite: 10 })]);
+    expect(bon?.avec_remise).toBe(true);
+    expect(bon?.lignes[0]?.remise_percent).toBe(10);
+    expect(bon?.total_valeur).toBe(40500);
+  });
+
+  it('n’affiche pas de colonne remise quand aucune n’a été accordée', () => {
+    expect(construireBon('ENT-3', [mvt()])?.avec_remise).toBe(false);
   });
 
   it('rend null sans mouvement', () => {

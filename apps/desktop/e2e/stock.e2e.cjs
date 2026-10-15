@@ -97,6 +97,21 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('input[placeholder^="Ajouter un article"]').fill('vis');
   await page.locator('ul li button', { hasText: 'VIS-50' }).click();
   await page.locator('tbody input[type=number]').first().fill('5');
+
+  // Remise de ligne : le total affiché et le coût qui entre en stock en tiennent compte.
+  await page.locator('[data-testid="remise-VIS-50"]').fill('20');
+  await page.locator('[data-testid=total-bon]', { hasText: '10 000 F' }).waitFor();
+  verifier(true, 'entrée : remise de ligne déduite du total (5 × 2 500 − 20 %)');
+
+  // Export Excel : hors Tauri, le repli navigateur télécharge le classeur.
+  const telechargement = page.waitForEvent('download');
+  await page.getByTestId('exporter-excel').click();
+  const fichier = await telechargement;
+  const classeur = require('xlsx').readFile(await fichier.path());
+  const feuille = require('xlsx').utils.sheet_to_json(classeur.Sheets[classeur.SheetNames[0]]);
+  verifier(/\.xlsx$/.test(fichier.suggestedFilename()), `export Excel : fichier ${fichier.suggestedFilename()}`);
+  verifier(feuille.length === 1 && feuille[0].Code === 'VIS-50' && feuille[0]['Remise %'] === 20 && feuille[0]['Total net'] === 10000, 'export Excel : lignes, remise et total relus depuis le classeur');
+
   await page.getByRole('button', { name: "Valider l'entrée" }).click();
   await page.locator('[aria-live]', { hasText: 'Entrée ENT-' }).waitFor();
   verifier(true, 'entrée saisie via l’UI, fournisseur choisi');
@@ -114,7 +129,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(papier.includes("Bon d'entrée — achat"), 'bon d’entrée : titre du document');
   // L'écran d'entrée propose le premier dépôt actif par ordre alphabétique : « Annexe ».
   verifier(papier.includes('SOCIMAT CI') && papier.includes('Annexe'), 'bon d’entrée : fournisseur et dépôt');
-  verifier(papier.includes('Total du bon') && papier.includes('12 500 F'), 'bon d’entrée : lignes valorisées et total');
+  verifier(papier.includes('Total du bon') && papier.includes('10 000 F'), 'bon d’entrée : total net de remise');
+  verifier(papier.includes('20 %'), 'bon d’entrée : remise accordée mentionnée');
   verifier(papier.includes('VIS-50') && papier.includes('+5'), 'bon d’entrée : ligne et quantité signée');
   verifier((await bon.locator('svg.code-barres rect').count()) > 20, 'bon d’entrée : code-barres de la référence');
   await bon.getByRole('button', { name: "Fermer l'aperçu" }).click();
@@ -123,6 +139,13 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('[data-testid=filtre-fournisseur]').selectOption({ label: 'SOCIMAT CI' });
   await page.locator('tbody tr').first().waitFor();
   const provenances = await page.locator('[data-testid=mouvement-fournisseur]').allTextContents();
+  const coutNet = await page.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const m = await db.get("SELECT cout_unitaire, remise_percent FROM mouvements_stock WHERE type = 'ENTREE_ACHAT' AND remise_percent > 0");
+    return m;
+  });
+  verifier(coutNet.cout_unitaire === 2000 && coutNet.remise_percent === 20, 'entrée : stock valorisé au coût net (2 500 − 20 % = 2 000), remise conservée');
+
   verifier(provenances.length === 3 && provenances.every((t) => t === 'SOCIMAT CI'), `journal : filtre par fournisseur, provenance affichée (${provenances.join(', ') || 'aucune ligne'})`);
 
   // Réédition d'un bon depuis le journal, y compris un transfert (deux dépôts, une seule ligne par article).

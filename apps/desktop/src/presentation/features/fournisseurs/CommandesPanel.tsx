@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { EyeIcon, PlusIcon, PrinterIcon, TrashIcon, TruckIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutCommandeFournisseur } from '@quinca/shared-types';
 import type { Article } from '../../../core/articles';
-import { LIBELLES_STATUT_COMMANDE, bonCommandeSchema, receptionSchema, totauxCommande, type Fournisseur, type LigneCommandeFournisseur } from '../../../core/fournisseurs';
+import { LIBELLES_STATUT_COMMANDE, bonCommandeSchema, receptionSchema, totalLigneCommande, totauxCommande, type Fournisseur, type LigneCommandeFournisseur } from '../../../core/fournisseurs';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import FormField, { controleInlineClass, inputClass } from '../../components/ui/FormField';
@@ -14,6 +14,7 @@ import { useRepository } from '../../hooks/useRepository';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
+import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import ArticlePicker from '../stock/ArticlePicker';
 import { formaterDateHeure } from '../ventes/VenteDetailsModal';
 import SelectFournisseur from './SelectFournisseur';
@@ -28,7 +29,7 @@ const STATUT_STYLE: Record<StatutCommandeFournisseur, string> = {
   BROUILLON: 'bg-neutral-100 text-neutral-700', ENVOYEE: 'bg-blue-100 text-blue-700', PARTIELLE: 'bg-orange-100 text-orange-700', LIVREE: 'bg-green-100 text-green-700', ANNULEE: 'bg-red-100 text-red-700',
 };
 
-interface LigneUI { article: Article; quantite: number; prix_unitaire_ht: number }
+interface LigneUI { article: Article; quantite: number; prix_unitaire_ht: number; remise_percent: number }
 
 function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: string; fournisseurId: string; onClose: () => void }) {
   const repository = useRepository(FournisseursRepository);
@@ -47,8 +48,28 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
   const depotEffectif = depotId || depots[0]?.id || '';
   const totaux = totauxCommande({ remise_percent: remise, tva_percent: tva, lignes });
 
+  const exporter = async () => {
+    try {
+      const chemin = await exporterExcel(numero || 'bon-de-commande', [{
+        nom: 'Bon de commande',
+        lignes: lignes.map((l) => ({
+          Code: l.article.code,
+          Désignation: l.article.designation,
+          Unité: l.article.unite,
+          Quantité: l.quantite,
+          'Prix U. HT': l.prix_unitaire_ht,
+          'Remise %': l.remise_percent,
+          'Total HT': totalLigneCommande(l),
+        })),
+      }]);
+      if (chemin) notifier('succes', `Export enregistré : ${chemin}`);
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Export impossible.');
+    }
+  };
+
   const valider = async () => {
-    const parsed = bonCommandeSchema.safeParse({ fournisseur_id: fid, depot_id: depotEffectif, numero, date_livraison_prevue: dateLivraison, remise_percent: remise, tva_percent: tva, notes, lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })) });
+    const parsed = bonCommandeSchema.safeParse({ fournisseur_id: fid, depot_id: depotEffectif, numero, date_livraison_prevue: dateLivraison, remise_percent: remise, tva_percent: tva, notes, lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht, remise_percent: l.remise_percent })) });
     if (!parsed.success) { notifier('erreur', parsed.error.issues[0].message); return; }
     setEnCours(true);
     try {
@@ -67,6 +88,7 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
       <>
         <span className="mr-auto text-sm text-neutral-600">Net à payer : <strong className="font-mono">{formaterFcfa(totaux.net_a_payer)}</strong></span>
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
+        <button type="button" onClick={exporter} disabled={lignes.length === 0} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 disabled:text-neutral-400 text-neutral-700 font-medium rounded-lg" data-testid="exporter-excel">Exporter en Excel</button>
         <button type="button" onClick={valider} disabled={enCours || lignes.length === 0 || !fid} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg">Créer le bon</button>
       </>
     }>
@@ -81,10 +103,10 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
             <FormField label="TVA %"><input type="number" min="0" max="100" value={tva} onChange={(e) => setTva(Number(e.target.value))} className={`${inputClass} text-right font-mono`} /></FormField>
           </div>
         </div>
-        <ArticlePicker filialeId={filialeId} onSelect={(a) => { if (!lignes.some((l) => l.article.id === a.id)) setLignes([...lignes, { article: a, quantite: 1, prix_unitaire_ht: a.prix_achat }]); }} placeholder="Ajouter un article au bon (code ou désignation)…" />
+        <ArticlePicker filialeId={filialeId} onSelect={(a) => { if (!lignes.some((l) => l.article.id === a.id)) setLignes([...lignes, { article: a, quantite: 1, prix_unitaire_ht: a.prix_achat, remise_percent: 0 }]); }} placeholder="Ajouter un article au bon (code ou désignation)…" />
         <div className="border border-neutral-200 rounded-lg overflow-hidden" data-testid="bon-lignes">
           <table className="w-full">
-            <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Code / Réf.</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right w-28">Qté</th><th className="px-3 py-2 text-right w-36">Prix U. HT</th><th className="px-3 py-2 text-right">Total HT</th><th className="w-10" /></tr></thead>
+            <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Code / Réf.</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right w-28">Qté</th><th className="px-3 py-2 text-right w-36">Prix U. HT</th><th className="px-3 py-2 text-right w-24">Remise %</th><th className="px-3 py-2 text-right">Total HT</th><th className="w-10" /></tr></thead>
             <tbody className="divide-y divide-neutral-100">
               {lignes.map((l, i) => (
                 <tr key={l.article.id}>
@@ -92,11 +114,12 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
                   <td className="px-3 py-2 text-sm">{l.article.designation}<span className="text-neutral-400 text-xs ml-2">{l.article.unite}</span></td>
                   <td className="px-3 py-2"><input type="number" min="0" step="any" value={l.quantite} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, quantite: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} /></td>
                   <td className="px-3 py-2"><input type="number" min="0" step="1" value={l.prix_unitaire_ht} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, prix_unitaire_ht: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} /></td>
-                  <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(l.quantite * l.prix_unitaire_ht)}</td>
+                  <td className="px-3 py-2"><input type="number" min="0" max="100" step="any" value={l.remise_percent} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, remise_percent: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} /></td>
+                  <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(totalLigneCommande(l))}</td>
                   <td className="px-3 py-2 text-center"><button type="button" onClick={() => setLignes(lignes.filter((_, j) => j !== i))} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Retirer"><TrashIcon className="w-4 h-4" /></button></td>
                 </tr>
               ))}
-              {lignes.length === 0 && <tr><td colSpan={6} className="px-3 py-5 text-center text-sm text-neutral-400">Aucune ligne.</td></tr>}
+              {lignes.length === 0 && <tr><td colSpan={7} className="px-3 py-5 text-center text-sm text-neutral-400">Aucune ligne.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -104,7 +127,8 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
           <FormField label="Notes" className="flex-1"><input value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} maxLength={500} /></FormField>
           <dl className="text-sm w-64 space-y-1 self-end">
             <div className="flex justify-between"><dt>Montant brut HT</dt><dd className="font-mono">{formaterFcfa(totaux.brut_ht)}</dd></div>
-            <div className="flex justify-between"><dt>Remise</dt><dd className="font-mono">{formaterFcfa(totaux.remise)}</dd></div>
+            {totaux.remise_lignes > 0 && <div className="flex justify-between text-neutral-500"><dt>dont remises de ligne</dt><dd className="font-mono">{formaterFcfa(totaux.remise_lignes)}</dd></div>}
+            <div className="flex justify-between"><dt>Remise totale</dt><dd className="font-mono" data-testid="remise-totale">{formaterFcfa(totaux.remise)}</dd></div>
             <div className="flex justify-between"><dt>Montant net HT</dt><dd className="font-mono">{formaterFcfa(totaux.net_ht)}</dd></div>
             <div className="flex justify-between"><dt>Total TVA</dt><dd className="font-mono">{formaterFcfa(totaux.tva)}</dd></div>
             <div className="flex justify-between font-semibold"><dt>Net à payer</dt><dd className="font-mono">{formaterFcfa(totaux.net_a_payer)}</dd></div>
@@ -199,8 +223,8 @@ function BonImprimable({ commande, lignes, fournisseur, filiale, onClose }: { co
         </table>
       </div>
       <table>
-        <thead><tr><th>Code / Réf.</th><th>Désignation</th><th>Qté</th><th>Prix U. HT</th><th>Total HT</th></tr></thead>
-        <tbody>{lignes.map((l) => <tr key={l.id}><td>{l.code_article}</td><td>{l.designation}</td><td className="num">{l.quantite} {l.unite}</td><td className="num">{formaterFcfa(l.prix_unitaire_ht)}</td><td className="num">{formaterFcfa(l.total_ht)}</td></tr>)}</tbody>
+        <thead><tr><th>Code / Réf.</th><th>Désignation</th><th>Qté</th><th>Prix U. HT</th><th>Remise</th><th>Total HT</th></tr></thead>
+        <tbody>{lignes.map((l) => <tr key={l.id}><td>{l.code_article}</td><td>{l.designation}</td><td className="num">{l.quantite} {l.unite}</td><td className="num">{formaterFcfa(l.prix_unitaire_ht)}</td><td className="num">{l.remise_percent ? `${l.remise_percent} %` : '—'}</td><td className="num">{formaterFcfa(l.total_ht)}</td></tr>)}</tbody>
       </table>
       <div className="document-cartouches">
         <div>

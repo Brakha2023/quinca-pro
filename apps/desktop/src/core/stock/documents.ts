@@ -5,6 +5,8 @@ export const ligneBonSchema = z.object({
   article_id: z.string().min(1, 'Article obligatoire'),
   quantite: z.coerce.number().positive('Quantité > 0'),
   cout_unitaire: z.union([z.literal(''), z.coerce.number().min(0)]).optional().default(''),
+  /** Remise accordée sur la ligne, en % du coût unitaire. */
+  remise_percent: z.coerce.number().min(0, 'Remise ≥ 0').max(100, 'Remise ≤ 100').default(0),
 });
 export type LigneBon = z.infer<typeof ligneBonSchema>;
 

@@ -35,6 +35,8 @@ SmartScreen affiche « Windows a protégé votre ordinateur » → *Informations
 - [ ] **Versement / Retrait / Entrée / Dépense** : le reçu s'imprime, le montant en toutes lettres correspond aux chiffres.
 - [ ] **Transfert inter filiale** : envoi depuis une filiale, réception depuis l'autre poste (demande deux postes ou deux comptes) ; l'annulation en transit recrédite bien la caisse.
 - [ ] **Fiche article** : bouton *Détail* → stock par dépôt, activité commerciale, *Imprimer la fiche*.
+- [ ] **Export Excel** (Stock → Entrée, et Fournisseurs → Bons de commande) : le bouton *Exporter en Excel* ouvre la **boîte d'enregistrement Windows** (et non un téléchargement silencieux) ; le fichier s'ouvre dans Excel avec les colonnes, la remise et les totaux. C'est le point le plus incertain de cette version : il repose sur deux plugins Tauri ajoutés récemment, jamais exécutés hors du navigateur.
+- [ ] **Remise de ligne** : saisir une remise sur une entrée, vérifier que le coût moyen de l'article tient compte du net et que le bon imprimé affiche la remise.
 - [ ] **Entrée de stock avec fournisseur** : choisir un fournisseur, valider, puis le retrouver dans Stock → Mouvements (colonne et filtre *Fournisseur*). Vérifier que la ligne remonte bien dans Supabase (c'est la colonne ajoutée le plus récemment).
 
 ## Hors ligne (le point clé)

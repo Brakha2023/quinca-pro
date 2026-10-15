@@ -17,6 +17,16 @@ export function prixTtcDepuisHt(prixHt: number, tauxTva: number): number {
   return arrondirMontant(prixHt * (1 + tauxTva / 100));
 }
 
+/**
+ * Montant net d'une remise exprimée en pourcentage, bornée à [0, 100].
+ * Une remise absente ou illisible vaut zéro : un NaN se propagerait jusqu'au
+ * coût moyen du stock, où il serait irrattrapable.
+ */
+export function montantApresRemise(montant: number, remisePercent: number | null | undefined): number {
+  const taux = Number.isFinite(remisePercent) ? Math.min(Math.max(remisePercent as number, 0), 100) : 0;
+  return arrondirMontant(montant * (1 - taux / 100));
+}
+
 /** Marge en % du prix d'achat ; 0 si le prix d'achat n'est pas renseigné. */
 export function margePourcent(prixAchat: number, prixVente: number): number {
   if (prixAchat <= 0) return 0;

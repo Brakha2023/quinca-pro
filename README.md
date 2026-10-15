@@ -167,6 +167,20 @@ lignes avec quantité signée, **stock avant et après**, coût unitaire et vale
 quand les coûts sont renseignés, le code-barres de la référence et deux signatures. Un transfert
 génère deux mouvements par article : le bon ne compte la ligne qu'une fois.
 
+### Remises de ligne et export Excel
+
+L'**entrée en stock** et le **bon de commande fournisseur** acceptent une remise article par article,
+saisie au moment de choisir les produits. Sur une entrée, le stock est valorisé au **coût net** (c'est
+lui qui alimente le coût moyen pondéré) et la remise accordée reste inscrite sur le mouvement pour
+pouvoir être justifiée ; le bon imprimé l'affiche. Sur un bon de commande, les remises de ligne
+s'appliquent **avant** la remise globale du bon — l'ordre inverse accorderait deux fois la même
+réduction — et la réception entre en stock au coût net des deux remises, TVA comprise.
+
+Les deux écrans exportent les lignes saisies en **classeur Excel** (`.xlsx`). Sous Tauri, la boîte
+d'enregistrement du système choisit l'emplacement (plugins `dialog` et `fs`) : les téléchargements du
+navigateur ne fonctionnent pas dans la WebView. Hors Tauri, l'export retombe sur un téléchargement
+classique.
+
 ### Entrées en stock
 
 Une entrée d'achat porte son **fournisseur** (colonne `mouvements_stock.fournisseur_id`) : le journal

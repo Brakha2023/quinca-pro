@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TYPES_REGLEMENT, type CommandeFournisseurRow, type FournisseurRow, type LigneCommandeFournisseurRow, type ReglementFournisseurRow, type StatutCommandeFournisseur, type TypeReglement } from '@quinca/shared-types';
-import { arrondirMontant } from '../commun/prix';
+import { arrondirMontant, montantApresRemise } from '../commun/prix';
 import { LIBELLES_TYPE_REGLEMENT } from '../clients';
 import { ligneBonSchema } from '../stock';
 
@@ -195,13 +195,17 @@ export interface LigneCommandeFournisseur {
   quantite: number;
   quantite_recue: number;
   prix_unitaire_ht: number;
+  /** Remise de ligne en %, négociée article par article. */
+  remise_percent: number;
+  /** Montant HT de la ligne, net de sa remise. */
   total_ht: number;
 }
 
 export function ligneCommandeFromRow(row: LigneCommandeFournisseurRow): LigneCommandeFournisseur {
   return {
     id: row.id, commande_id: row.commande_id ?? '', article_id: row.article_id ?? '', code_article: row.code_article ?? '', designation: row.designation ?? '',
-    unite: row.unite ?? '', quantite: row.quantite ?? 0, quantite_recue: row.quantite_recue ?? 0, prix_unitaire_ht: row.prix_unitaire_ht ?? 0, total_ht: row.total_ht ?? 0,
+    unite: row.unite ?? '', quantite: row.quantite ?? 0, quantite_recue: row.quantite_recue ?? 0, prix_unitaire_ht: row.prix_unitaire_ht ?? 0,
+    remise_percent: row.remise_percent ?? 0, total_ht: row.total_ht ?? 0,
   };
 }
 
@@ -219,6 +223,8 @@ export const bonCommandeSchema = z.object({
       article_id: z.string().min(1, 'Article obligatoire'),
       quantite: z.coerce.number().positive('Quantité > 0'),
       prix_unitaire_ht: z.coerce.number().min(0, 'Prix ≥ 0'),
+      /** Remise de ligne en %, négociée article par article. */
+      remise_percent: z.coerce.number().min(0, 'Remise ≥ 0').max(100, 'Remise ≤ 100').default(0),
     }))
     .min(1, 'Au moins une ligne'),
 });
@@ -226,18 +232,46 @@ export type BonCommande = z.infer<typeof bonCommandeSchema>;
 
 export interface TotauxCommande {
   brut_ht: number;
+  /** Remises de ligne cumulées. */
+  remise_lignes: number;
+  /** Remise globale du bon, calculée après les remises de ligne. */
+  remise_globale: number;
+  /** Total des remises accordées (lignes + globale). */
   remise: number;
   net_ht: number;
   tva: number;
   net_a_payer: number;
 }
 
-export function totauxCommande(c: { remise_percent: number; tva_percent: number; lignes: Array<{ quantite: number; prix_unitaire_ht: number }> }): TotauxCommande {
+/** Montant HT d'une ligne, net de sa propre remise. */
+export const totalLigneCommande = (l: { quantite: number; prix_unitaire_ht: number; remise_percent?: number }): number =>
+  montantApresRemise(l.quantite * l.prix_unitaire_ht, l.remise_percent ?? 0);
+
+/**
+ * Totaux d'un bon : les remises de ligne s'appliquent d'abord, la remise
+ * globale ensuite sur ce qu'il reste — l'ordre inverse ferait payer deux fois
+ * la même réduction au fournisseur.
+ */
+export function totauxCommande(c: {
+  remise_percent: number;
+  tva_percent: number;
+  lignes: Array<{ quantite: number; prix_unitaire_ht: number; remise_percent?: number }>;
+}): TotauxCommande {
   const brut_ht = arrondirMontant(c.lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire_ht, 0));
-  const remise = arrondirMontant(brut_ht * (c.remise_percent / 100));
-  const net_ht = arrondirMontant(brut_ht - remise);
+  const apres_lignes = arrondirMontant(c.lignes.reduce((s, l) => s + totalLigneCommande(l), 0));
+  const remise_lignes = arrondirMontant(brut_ht - apres_lignes);
+  const net_ht = montantApresRemise(apres_lignes, c.remise_percent);
+  const remise_globale = arrondirMontant(apres_lignes - net_ht);
   const tva = arrondirMontant(net_ht * (c.tva_percent / 100));
-  return { brut_ht, remise, net_ht, tva, net_a_payer: arrondirMontant(net_ht + tva) };
+  return {
+    brut_ht,
+    remise_lignes,
+    remise_globale,
+    remise: arrondirMontant(remise_lignes + remise_globale),
+    net_ht,
+    tva,
+    net_a_payer: arrondirMontant(net_ht + tva),
+  };
 }
 
 /** Réception (totale ou partielle) d'un bon de commande : quantités reçues par ligne. */
@@ -259,8 +293,9 @@ export function valoriserReception(commande: Pick<CommandeFournisseur, 'remise_p
       const ligne = lignes.find((l) => l.id === r.ligne_id);
       if (!ligne) throw new Error('Ligne de commande introuvable');
       if (ligne.quantite_recue + r.quantite_recue > ligne.quantite) throw new Error(`${ligne.designation} : reçu au-delà de la quantité commandée`);
-      const facteur = (1 - commande.remise_percent / 100) * (1 + commande.tva_percent / 100);
-      return { ligne, quantite_recue: r.quantite_recue, cout_unitaire: arrondirMontant(ligne.prix_unitaire_ht * facteur) };
+      // Le coût qui entre en stock est net des deux remises (ligne puis bon), TVA comprise.
+      const net = montantApresRemise(montantApresRemise(ligne.prix_unitaire_ht, ligne.remise_percent), commande.remise_percent);
+      return { ligne, quantite_recue: r.quantite_recue, cout_unitaire: arrondirMontant(net * (1 + commande.tva_percent / 100)) };
     });
   const total_ttc = arrondirMontant(detail.reduce((s, d) => s + d.cout_unitaire * d.quantite_recue, 0));
   return { total_ttc, lignes: detail };

@@ -98,6 +98,8 @@ export const TABLES = {
     filiale_id: 'text',
     /** Fournisseur ayant livré la marchandise (entrées d'achat). */
     fournisseur_id: 'text',
+    /** Remise de ligne en % ; `cout_unitaire` est déjà net de cette remise. */
+    remise_percent: 'real',
     type: 'text',
     quantite: 'real',
     quantite_avant: 'real',
@@ -319,6 +321,8 @@ export const TABLES = {
     quantite: 'real',
     quantite_recue: 'real',
     prix_unitaire_ht: 'real',
+    /** Remise de ligne en %, appliquée avant la remise globale du bon. */
+    remise_percent: 'real',
     total_ht: 'real',
     created_at: 'text',
   },

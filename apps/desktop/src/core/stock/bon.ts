@@ -14,6 +14,8 @@ export interface MouvementDuBon {
   quantite_avant: number;
   quantite_apres: number;
   cout_unitaire: number | null;
+  /** Remise accordée sur la ligne, en % ; `cout_unitaire` en est déjà net. */
+  remise_percent: number;
   motif: string | null;
   fournisseur_nom: string | null;
   utilisateur: string;
@@ -29,7 +31,8 @@ export interface LigneBonImprime {
   quantite_avant: number;
   quantite_apres: number;
   cout_unitaire: number | null;
-  /** Quantité × coût unitaire ; null quand le coût n'est pas renseigné (sorties). */
+  remise_percent: number;
+  /** Quantité × coût unitaire net ; null quand le coût n'est pas renseigné (sorties). */
   valeur: number | null;
 }
 
@@ -49,6 +52,8 @@ export interface BonStock {
   total_valeur: number;
   /** Au moins une ligne porte un coût : la colonne valeur a un sens. */
   valorise: boolean;
+  /** Au moins une remise a été accordée : la colonne n'est affichée que dans ce cas. */
+  avec_remise: boolean;
 }
 
 const TITRES: Partial<Record<TypeMouvementStock, string>> = {
@@ -86,6 +91,7 @@ export function construireBon(reference: string, mouvements: MouvementDuBon[]): 
     quantite_avant: m.quantite_avant,
     quantite_apres: m.quantite_apres,
     cout_unitaire: m.cout_unitaire,
+    remise_percent: m.remise_percent,
     valeur: m.cout_unitaire == null ? null : arrondirFcfa(Math.abs(m.quantite) * m.cout_unitaire),
   }));
 
@@ -101,5 +107,6 @@ export function construireBon(reference: string, mouvements: MouvementDuBon[]): 
     lignes,
     total_valeur: arrondirFcfa(lignes.reduce((s, l) => s + (l.valeur ?? 0), 0)),
     valorise: lignes.some((l) => l.valeur != null),
+    avec_remise: lignes.some((l) => l.remise_percent > 0),
   };
 }

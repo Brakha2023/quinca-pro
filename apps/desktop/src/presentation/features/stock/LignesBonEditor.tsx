@@ -1,6 +1,7 @@
 import { TrashIcon } from '@heroicons/react/24/outline';
 import type { Article } from '../../../core/articles';
 import { inputClass } from '../../components/ui/FormField';
+import { montantApresRemise } from '../../../core/commun/prix';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import ArticlePicker from './ArticlePicker';
 import { useStockArticleDepot } from './hooks';
@@ -9,7 +10,13 @@ export interface LigneBonUI {
   article: Article;
   quantite: number;
   cout_unitaire: number | '';
+  /** Remise accordée sur la ligne, en % du coût unitaire. */
+  remise_percent: number;
 }
+
+/** Montant net d'une ligne : quantité × coût unitaire, remise déduite. */
+export const totalLigneBon = (l: LigneBonUI): number =>
+  montantApresRemise((l.cout_unitaire === '' ? 0 : l.cout_unitaire) * l.quantite, l.remise_percent);
 
 interface Props {
   filialeId: string;
@@ -36,11 +43,11 @@ function CelluleStock({ articleId, depotId, quantiteDemandee, controler }: { art
 export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, avecCout = false, controlerDisponible = false }: Props) {
   const ajouter = (article: Article) => {
     if (lignes.some((l) => l.article.id === article.id)) return;
-    onChange([...lignes, { article, quantite: 1, cout_unitaire: avecCout ? article.prix_achat : '' }]);
+    onChange([...lignes, { article, quantite: 1, cout_unitaire: avecCout ? article.prix_achat : '', remise_percent: 0 }]);
   };
   const modifier = (i: number, patch: Partial<LigneBonUI>) => onChange(lignes.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   const supprimer = (i: number) => onChange(lignes.filter((_, j) => j !== i));
-  const total = lignes.reduce((s, l) => s + (l.cout_unitaire === '' ? 0 : l.cout_unitaire) * l.quantite, 0);
+  const total = lignes.reduce((s, l) => s + totalLigneBon(l), 0);
 
   return (
     <div className="space-y-3">
@@ -53,7 +60,8 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
               <th className="px-3 py-2 text-right">Stock dispo</th>
               <th className="px-3 py-2 text-right w-32">Quantité</th>
               {avecCout && <th className="px-3 py-2 text-right w-36">Coût unitaire</th>}
-              {avecCout && <th className="px-3 py-2 text-right">Total</th>}
+              {avecCout && <th className="px-3 py-2 text-right w-24">Remise %</th>}
+              {avecCout && <th className="px-3 py-2 text-right">Total net</th>}
               <th className="px-3 py-2 w-10" />
             </tr>
           </thead>
@@ -75,7 +83,12 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
                     <input type="number" min="0" step="1" value={l.cout_unitaire} onChange={(e) => modifier(i, { cout_unitaire: e.target.value === '' ? '' : Number(e.target.value) })} className={`${inputClass} text-right font-mono`} />
                   </td>
                 )}
-                {avecCout && <td className="px-3 py-2 text-right font-mono text-sm">{formaterFcfa((l.cout_unitaire === '' ? 0 : l.cout_unitaire) * l.quantite)}</td>}
+                {avecCout && (
+                  <td className="px-3 py-2">
+                    <input type="number" min="0" max="100" step="any" value={l.remise_percent} onChange={(e) => modifier(i, { remise_percent: Number(e.target.value) })} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} />
+                  </td>
+                )}
+                {avecCout && <td className="px-3 py-2 text-right font-mono text-sm">{formaterFcfa(totalLigneBon(l))}</td>}
                 <td className="px-3 py-2 text-center">
                   <button type="button" onClick={() => supprimer(i)} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Retirer">
                     <TrashIcon className="w-4 h-4" />
@@ -84,12 +97,12 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
               </tr>
             ))}
             {lignes.length === 0 && (
-              <tr><td colSpan={avecCout ? 6 : 4} className="px-3 py-6 text-center text-sm text-neutral-400">Aucune ligne — recherchez un article ci-dessus.</td></tr>
+              <tr><td colSpan={avecCout ? 7 : 4} className="px-3 py-6 text-center text-sm text-neutral-400">Aucune ligne — recherchez un article ci-dessus.</td></tr>
             )}
           </tbody>
           {avecCout && lignes.length > 0 && (
             <tfoot className="bg-neutral-50 font-semibold text-sm">
-              <tr><td colSpan={4} className="px-3 py-2 text-right">Total</td><td className="px-3 py-2 text-right font-mono">{formaterFcfa(total)}</td><td /></tr>
+              <tr><td colSpan={5} className="px-3 py-2 text-right">Total net de remise</td><td className="px-3 py-2 text-right font-mono" data-testid="total-bon">{formaterFcfa(total)}</td><td /></tr>
             </tfoot>
           )}
         </table>

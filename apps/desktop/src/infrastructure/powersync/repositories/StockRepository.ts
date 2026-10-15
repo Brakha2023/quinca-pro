@@ -11,6 +11,7 @@ import {
   type SortieStock,
   type TransfertStock,
 } from '../../../core/stock';
+import { montantApresRemise } from '../../../core/commun/prix';
 import { BaseRepository } from './BaseRepository';
 
 export interface ContexteMouvement {
@@ -124,6 +125,8 @@ export interface OptionsMouvement {
   autoriserNegatif?: boolean;
   /** Fournisseur ayant livré la marchandise (entrées d'achat). */
   fournisseurId?: string | null;
+  /** Remise de ligne consentie, en % : conservée pour justifier le coût net retenu. */
+  remisePercent?: number;
 }
 
 /**
@@ -137,11 +140,13 @@ export class StockRepository extends BaseRepository {
     const reference = entree.reference || genererNumeroBon('ENT');
     return this.db.writeTransaction(async (tx) => {
       for (const ligne of fusionnerLignes(entree.lignes)) {
+        // Le stock est valorisé au coût **net** : c'est lui qui alimente le coût moyen pondéré.
+        const brut = ligne.cout_unitaire === '' ? null : ligne.cout_unitaire;
         await this.appliquer(tx, ctx, entree.depot_id, entree.type, {
           article_id: ligne.article_id,
           quantite: ligne.quantite,
-          cout_unitaire: ligne.cout_unitaire === '' ? null : ligne.cout_unitaire,
-        }, reference, entree.motif || null, { fournisseurId: entree.fournisseur_id });
+          cout_unitaire: brut === null ? null : montantApresRemise(brut, ligne.remise_percent),
+        }, reference, entree.motif || null, { fournisseurId: entree.fournisseur_id, remisePercent: ligne.remise_percent });
       }
       return reference;
     });
@@ -258,13 +263,13 @@ export class StockRepository extends BaseRepository {
     }
 
     await tx.execute(
-      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, motif, fournisseur_id, utilisateur_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, motif, fournisseur_id, remise_percent, utilisateur_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         this.nouvelId(), ligne.article_id, depotId, ctx.filialeId, type,
         Math.abs(resultat.quantite), resultat.quantite_avant, resultat.quantite_apres,
         ligne.cout_unitaire ?? (type === 'TRANSFERT_ENTREE' ? resultat.cout_moyen : null),
-        reference, motif, options.fournisseurId ?? null, ctx.utilisateurId, now,
+        reference, motif, options.fournisseurId ?? null, options.remisePercent ?? 0, ctx.utilisateurId, now,
       ],
     );
   }

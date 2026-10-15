@@ -135,14 +135,28 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('input[placeholder^="Ajouter un article au bon"]').fill('pjav');
   await page.locator('ul li button', { hasText: 'PJAV' }).click();
   await page.locator('[data-testid=bon-lignes] input[type=number]').first().fill('10');
+
+  // Remise négociée sur cet article seulement : 10 × 5 500 − 10 % = 49 500.
+  await page.locator('[data-testid="remise-PJAV"]').fill('10');
+  await page.locator('[data-testid=remise-totale]', { hasText: '5 500 F' }).waitFor();
+  verifier(true, 'bon de commande : remise de ligne reportée dans le récapitulatif');
+
+  const telechargement = page.waitForEvent('download');
+  await page.getByTestId('exporter-excel').click();
+  const fichier = await telechargement;
+  const xlsx = require('xlsx');
+  const classeur = xlsx.readFile(await fichier.path());
+  const feuille = xlsx.utils.sheet_to_json(classeur.Sheets[classeur.SheetNames[0]]);
+  verifier(feuille.length === 1 && feuille[0]['Remise %'] === 10 && feuille[0]['Total HT'] === 49500, `export Excel du bon : ${fichier.suggestedFilename()}`);
+
   await page.getByRole('button', { name: 'Créer le bon' }).click();
   await page.locator('[aria-live]', { hasText: 'Bon de commande BC-' }).waitFor();
   await page.locator('tbody tr', { hasText: 'Envoyée' }).waitFor();
   verifier(true, 'bon de commande créé via l’UI');
   await page.locator('tbody tr', { hasText: 'Envoyée' }).getByTitle('Imprimer le bon').click();
   await page.locator('#zone-impression .document-titre', { hasText: 'Bon de commande fournisseur' }).waitFor();
-  await page.locator('#zone-impression', { hasText: 'CI-ABJ-2020-B-1234' }).locator('text=55 000 F').first().waitFor();
-  verifier(true, 'bon imprimable : N° RC du fournisseur et total 10 × 5 500');
+  await page.locator('#zone-impression', { hasText: 'CI-ABJ-2020-B-1234' }).locator('text=49 500 F').first().waitFor();
+  verifier(true, 'bon imprimable : total de ligne net de la remise négociée');
   await page.keyboard.press('Escape');
   await page.locator('tbody tr', { hasText: 'Envoyée' }).getByTitle('Réceptionner').click();
   await page.getByRole('dialog').locator('input[type=number]').fill('4');

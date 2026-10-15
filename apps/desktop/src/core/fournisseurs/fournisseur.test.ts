@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { achatSchema, calculerDette, totauxAchat, totauxCommande, valoriserReception, statutApresReception, construireReleve, composerRelance } from './fournisseur';
+import { achatSchema, calculerDette, composerRelance, construireReleve, statutApresReception, totalLigneCommande, totauxAchat, totauxCommande, valoriserReception } from './fournisseur';
 
 describe('fournisseur', () => {
   it('calcule la dette', () => {
@@ -18,12 +18,12 @@ describe('fournisseur', () => {
 describe('bons de commande et réceptions', () => {
   const commande = { remise_percent: 10, tva_percent: 0 };
   const lignes = [
-    { id: 'l1', commande_id: 'c', article_id: 'a', code_article: 'A', designation: 'Pied de lavabo', unite: 'PIECE', quantite: 20, quantite_recue: 0, prix_unitaire_ht: 5500, total_ht: 110000 },
-    { id: 'l2', commande_id: 'c', article_id: 'b', code_article: 'B', designation: 'Robinet', unite: 'PIECE', quantite: 5, quantite_recue: 5, prix_unitaire_ht: 1000, total_ht: 5000 },
+    { id: 'l1', commande_id: 'c', article_id: 'a', code_article: 'A', designation: 'Pied de lavabo', unite: 'PIECE', quantite: 20, quantite_recue: 0, prix_unitaire_ht: 5500, remise_percent: 0, total_ht: 110000 },
+    { id: 'l2', commande_id: 'c', article_id: 'b', code_article: 'B', designation: 'Robinet', unite: 'PIECE', quantite: 5, quantite_recue: 5, prix_unitaire_ht: 1000, remise_percent: 0, total_ht: 5000 },
   ];
 
   it('calcule brut, remise, net, TVA, net à payer', () => {
-    expect(totauxCommande({ remise_percent: 10, tva_percent: 18, lignes: [{ quantite: 20, prix_unitaire_ht: 5500 }] })).toEqual({ brut_ht: 110000, remise: 11000, net_ht: 99000, tva: 17820, net_a_payer: 116820 });
+    expect(totauxCommande({ remise_percent: 10, tva_percent: 18, lignes: [{ quantite: 20, prix_unitaire_ht: 5500 }] })).toEqual({ brut_ht: 110000, remise_lignes: 0, remise_globale: 11000, remise: 11000, net_ht: 99000, tva: 17820, net_a_payer: 116820 });
   });
 
   it('valorise une réception partielle au prix remisé et refuse au-delà du commandé', () => {
@@ -57,5 +57,74 @@ describe('relevé et relance', () => {
     expect(corps).toContain('BC-20260918-AB12 du 2026-09-18 — 110000 F');
     expect(corps).toContain('avoir de 25000 F');
     expect(corps).toContain('Awa Koné');
+  });
+});
+
+describe('remise de ligne sur un bon de commande', () => {
+  const bon = {
+    remise_percent: 0,
+    tva_percent: 18,
+    lignes: [
+      { quantite: 10, prix_unitaire_ht: 1000, remise_percent: 10 },
+      { quantite: 5, prix_unitaire_ht: 2000, remise_percent: 0 },
+    ],
+  };
+
+  it('déduit la remise article par article', () => {
+    expect(totalLigneCommande(bon.lignes[0]!)).toBe(9000);
+    expect(totalLigneCommande(bon.lignes[1]!)).toBe(10000);
+  });
+
+  it('détaille les deux niveaux de remise dans les totaux', () => {
+    const t = totauxCommande(bon);
+    expect(t.brut_ht).toBe(20000);
+    expect(t.remise_lignes).toBe(1000);
+    expect(t.remise_globale).toBe(0);
+    expect(t.net_ht).toBe(19000);
+    expect(t.tva).toBe(3420);
+    expect(t.net_a_payer).toBe(22420);
+  });
+
+  it('applique la remise globale après les remises de ligne, pas avant', () => {
+    const t = totauxCommande({ ...bon, remise_percent: 5 });
+    expect(t.remise_lignes).toBe(1000);
+    expect(t.remise_globale).toBe(950); // 5 % de 19 000, pas de 20 000
+    expect(t.remise).toBe(1950);
+    expect(t.net_ht).toBe(18050);
+  });
+
+  it('reste compatible avec un bon sans remise de ligne', () => {
+    const t = totauxCommande({ remise_percent: 10, tva_percent: 0, lignes: [{ quantite: 2, prix_unitaire_ht: 5000 }] });
+    expect(t.brut_ht).toBe(10000);
+    expect(t.remise_lignes).toBe(0);
+    expect(t.net_ht).toBe(9000);
+  });
+});
+
+describe('valoriserReception avec remise de ligne', () => {
+  const ligne = {
+    id: 'l1', commande_id: 'c1', article_id: 'a1', code_article: 'CIM', designation: 'Ciment', unite: 'SAC',
+    quantite: 10, quantite_recue: 0, prix_unitaire_ht: 1000, remise_percent: 10, total_ht: 9000,
+  };
+
+  it('entre en stock au coût net des deux remises, TVA comprise', () => {
+    const r = valoriserReception(
+      { remise_percent: 5, tva_percent: 18 },
+      [ligne],
+      { depot_id: 'd1', reference: '', lignes: [{ ligne_id: 'l1', quantite_recue: 10 }] },
+    );
+    // 1000 − 10 % = 900 ; − 5 % = 855 ; + 18 % = 1008.9
+    expect(r.lignes[0]?.cout_unitaire).toBe(1008.9);
+    expect(r.total_ttc).toBe(10089);
+  });
+
+  it('ignore la remise de ligne quand elle est nulle', () => {
+    const r = valoriserReception(
+      { remise_percent: 0, tva_percent: 0 },
+      [{ ...ligne, remise_percent: 0 }],
+      { depot_id: 'd1', reference: '', lignes: [{ ligne_id: 'l1', quantite_recue: 4 }] },
+    );
+    expect(r.lignes[0]?.cout_unitaire).toBe(1000);
+    expect(r.total_ttc).toBe(4000);
   });
 });

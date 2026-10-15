@@ -4,7 +4,7 @@ import { TYPES_EN_CAISSE } from '../../../core/clients';
 import { genererCodeTiers, genererNumeroPiece } from '../../../core/commun/numerotation';
 import { arrondirMontant } from '../../../core/commun/prix';
 import {
-  calculerDette, ligneCommandeFromRow, statutApresReception, totauxAchat, totauxCommande, valoriserReception,
+  calculerDette, ligneCommandeFromRow, statutApresReception, totalLigneCommande, totauxAchat, totauxCommande, valoriserReception,
   type Achat, type BonCommande, type FournisseurForm, type Reception, type ReglementFournisseurForm,
 } from '../../../core/fournisseurs';
 import { fusionnerLignes } from '../../../core/stock';
@@ -186,7 +186,7 @@ export class FournisseursRepository extends BaseRepository {
       );
       for (const l of lignes) {
         const a = await tx.get<ArticleRow>('SELECT code, designation, unite FROM articles WHERE id = ?', [l.article_id]);
-        await this.insererLigneCommande(tx, id, ctx.filialeId, a, l.article_id, l.quantite, 0, l.prix_unitaire_ht, now);
+        await this.insererLigneCommande(tx, id, ctx.filialeId, a, l.article_id, l.quantite, 0, l.prix_unitaire_ht, now, l.remise_percent);
       }
       return { id, numero };
     });
@@ -231,11 +231,12 @@ export class FournisseursRepository extends BaseRepository {
     });
   }
 
-  private async insererLigneCommande(tx: Transaction, commandeId: string, filialeId: string, a: Pick<ArticleRow, 'code' | 'designation' | 'unite'>, articleId: string, quantite: number, quantiteRecue: number, prixHt: number, now: string): Promise<void> {
+  private async insererLigneCommande(tx: Transaction, commandeId: string, filialeId: string, a: Pick<ArticleRow, 'code' | 'designation' | 'unite'>, articleId: string, quantite: number, quantiteRecue: number, prixHt: number, now: string, remisePercent = 0): Promise<void> {
     await tx.execute(
-      `INSERT INTO lignes_commande_fournisseur (id, commande_id, filiale_id, article_id, code_article, designation, unite, quantite, quantite_recue, prix_unitaire_ht, total_ht, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [this.nouvelId(), commandeId, filialeId, articleId, a.code ?? '', a.designation ?? '', a.unite ?? null, quantite, quantiteRecue, prixHt, arrondirMontant(quantite * prixHt), now],
+      `INSERT INTO lignes_commande_fournisseur (id, commande_id, filiale_id, article_id, code_article, designation, unite, quantite, quantite_recue, prix_unitaire_ht, remise_percent, total_ht, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [this.nouvelId(), commandeId, filialeId, articleId, a.code ?? '', a.designation ?? '', a.unite ?? null, quantite, quantiteRecue, prixHt, remisePercent,
+       totalLigneCommande({ quantite, prix_unitaire_ht: prixHt, remise_percent: remisePercent }), now],
     );
   }
 

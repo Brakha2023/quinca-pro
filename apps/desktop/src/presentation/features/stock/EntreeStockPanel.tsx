@@ -7,7 +7,8 @@ import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import SelectFournisseur from '../fournisseurs/SelectFournisseur';
 import { BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
-import LignesBonEditor, { type LigneBonUI } from './LignesBonEditor';
+import LignesBonEditor, { totalLigneBon, type LigneBonUI } from './LignesBonEditor';
+import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { useContexteMouvement } from './useContexteMouvement';
 
 export default function EntreeStockPanel({ filialeId, filiale }: { filialeId: string; filiale: InfosFiliale }) {
@@ -29,10 +30,30 @@ export default function EntreeStockPanel({ filialeId, filiale }: { filialeId: st
 
   const reinitialiser = () => { setLignes([]); setReference(''); setMotif(''); setFournisseurId(''); };
 
+  const exporter = async () => {
+    try {
+      const chemin = await exporterExcel(reference || 'entree-stock', [{
+        nom: 'Entrée en stock',
+        lignes: lignes.map((l) => ({
+          Code: l.article.code,
+          Désignation: l.article.designation,
+          Unité: l.article.unite,
+          Quantité: l.quantite,
+          'Coût unitaire': l.cout_unitaire === '' ? null : l.cout_unitaire,
+          'Remise %': l.remise_percent,
+          'Total net': totalLigneBon(l),
+        })),
+      }]);
+      if (chemin) notifier('succes', `Export enregistré : ${chemin}`);
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Export impossible.');
+    }
+  };
+
   const valider = async () => {
     const parsed = entreeStockSchema.safeParse({
       depot_id: depotEffectif, type, fournisseur_id: fournisseurId, reference, motif,
-      lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, cout_unitaire: l.cout_unitaire })),
+      lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, cout_unitaire: l.cout_unitaire, remise_percent: l.remise_percent })),
     });
     if (!parsed.success) { notifier('erreur', parsed.error.issues[0].message); return; }
     setEnCours(true);
@@ -55,6 +76,7 @@ export default function EntreeStockPanel({ filialeId, filiale }: { filialeId: st
       actions={
         <>
           {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}
+          <button type="button" onClick={exporter} className={boutonSecondaire} disabled={lignes.length === 0} data-testid="exporter-excel">Exporter en Excel</button>
           <button type="button" onClick={reinitialiser} className={boutonSecondaire} disabled={lignes.length === 0}>Vider</button>
           <button type="button" onClick={valider} className={boutonPrimaire} disabled={enCours || lignes.length === 0}>Valider l'entrée</button>
         </>
