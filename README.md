@@ -167,6 +167,24 @@ lignes avec quantité signée, **stock avant et après**, coût unitaire et vale
 quand les coûts sont renseignés, le code-barres de la référence et deux signatures. Un transfert
 génère deux mouvements par article : le bon ne compte la ligne qu'une fois.
 
+### Cumuls : qui calcule quoi
+
+Le stock d'un dépôt et le solde d'une caisse sont **calculés par Postgres**, par application de deltas
+tirés des journaux (`mouvements_stock`, `mouvements_tresorerie`), qui sont en ajout seul et donc
+toujours exacts. Deux postes hors ligne qui vendent le même article arrivent dans n'importe quel ordre
+et donnent le même résultat — alors qu'en envoyant chacun sa valeur absolue, le dernier arrivé écrasait
+l'autre et sa vente disparaissait du stock.
+
+Le poste continue de tenir ces valeurs dans sa base locale : l'écran réagit immédiatement et la vente
+hors ligne contrôle le disponible. Mais il ne les **envoie** plus (`sansCumulsServeur`), et deux
+déclencheurs de garde refusent toute valeur de cumul venue d'un poste — un poste resté sur une ancienne
+version ne peut donc pas casser le calcul. La valeur du serveur redescend et remplace la projection locale.
+
+Deux outils accompagnent la bascule : `supabase/outils/verifier_cumuls.sql` compare les cumuls stockés
+aux journaux (lecture seule), `supabase/outils/reparer_cumuls.sql` les remet d'accord. Les cumuls des
+clients et des fournisseurs restent calculés par le poste : ils dérivent de plusieurs tables et de
+changements de statut, c'est le chantier suivant.
+
 ### Quand le serveur refuse les écritures
 
 Une écriture refusée définitivement par Postgres (contrainte violée, règle de sécurité) est abandonnée

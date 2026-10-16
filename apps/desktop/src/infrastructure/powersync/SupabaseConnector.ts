@@ -7,6 +7,7 @@ import {
 } from '@powersync/web';
 import { env } from '../config/env';
 import { supabase } from '../supabase/client';
+import { sansCumulsServeur } from './cumulsServeur';
 
 /**
  * Codes d'erreur Postgres pour lesquels réessayer est inutile :
@@ -84,12 +85,17 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
 
     switch (op.op) {
       case UpdateType.PUT: {
-        const { error } = await table.upsert({ ...op.opData, id: op.id });
+        const donnees = sansCumulsServeur(op.table, op.opData);
+        // La ligne doit exister côté serveur pour garder l'identifiant du poste,
+        // même si elle ne porte plus que sa clé : le déclencheur fera le reste.
+        const { error } = await table.upsert({ ...(donnees ?? {}), id: op.id });
         if (error) throw error;
         return;
       }
       case UpdateType.PATCH: {
-        const { error } = await table.update(op.opData ?? {}).eq('id', op.id);
+        const donnees = sansCumulsServeur(op.table, op.opData);
+        if (!donnees) return; // n'envoyait qu'un cumul : le journal suffit au serveur
+        const { error } = await table.update(donnees).eq('id', op.id);
         if (error) throw error;
         return;
       }
