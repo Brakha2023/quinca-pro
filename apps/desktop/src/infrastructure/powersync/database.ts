@@ -1,4 +1,5 @@
 import { PowerSyncDatabase } from '@powersync/web';
+import { COMPTER_ECHECS_ENVOI_QUERY } from './repositories/EchecsEnvoiRepository';
 import { AppSchema } from './schema';
 import { SupabaseConnector } from './SupabaseConnector';
 
@@ -36,6 +37,16 @@ export async function disconnectSync(): Promise<void> {
 export async function countPendingUploads(): Promise<number> {
   const batch = await db.getCrudBatch(1000);
   return batch?.crud.length ?? 0;
+}
+
+/**
+ * Nombre d'écritures que le serveur a refusées définitivement et qui attendent
+ * une décision. Elles ne sont plus dans la file d'envoi : effacer la base
+ * locale les perdrait sans que personne ne l'ait décidé.
+ */
+export async function countEcrituresMisesDeCote(): Promise<number> {
+  const row = await db.getOptional<{ n: number }>(COMPTER_ECHECS_ENVOI_QUERY);
+  return row?.n ?? 0;
 }
 
 /**

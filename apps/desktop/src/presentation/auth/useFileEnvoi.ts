@@ -1,6 +1,6 @@
 import { useQuery, useStatus } from '@powersync/react';
 
-/** Nombre d'écritures locales en attente d'envoi et état de la connexion au serveur. */
+/** Nombre d'écritures locales en attente d'envoi au serveur et état de la connexion. */
 export function useFileEnvoi() {
   const status = useStatus();
   const { data } = useQuery<{ n: number }>('SELECT COUNT(*) AS n FROM ps_crud');

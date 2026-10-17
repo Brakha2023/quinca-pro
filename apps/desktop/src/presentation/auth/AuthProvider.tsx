@@ -7,6 +7,7 @@ import { deverrouiller, estVerrouille, verrouiller } from '../../infrastructure/
 import {
   clearLocalData,
   connectSync,
+  countEcrituresMisesDeCote,
   countPendingUploads,
   db,
   definirProprietaireDonneesLocales,
@@ -125,6 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (enAttente > 0) {
           await restaurerSessionPrecedente();
           throw new Error(`${enAttente} opération(s) de ${sessionLocale?.user.email ?? 'l’utilisateur précédent'} attendent d’être envoyées. Laissez le poste se synchroniser (réseau) avant de changer de filiale.`);
+        }
+        // Les écritures mises de côté ne partiront jamais d'elles-mêmes : les
+        // effacer avec la base locale serait les perdre sans décision.
+        const misDeCote = await countEcrituresMisesDeCote();
+        if (misDeCote > 0) {
+          await restaurerSessionPrecedente();
+          throw new Error(`${misDeCote} écriture(s) refusée(s) par le serveur attendent une décision sur ce poste (bandeau de synchronisation). Traitez-les avant de changer de filiale : elles seraient perdues.`);
         }
         await clearLocalData();
       }

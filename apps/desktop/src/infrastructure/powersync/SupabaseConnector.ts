@@ -1,30 +1,13 @@
 import {
   type CommonPowerSyncDatabase,
-  type CrudEntry,
   type PowerSyncBackendConnector,
   type PowerSyncCredentials,
-  UpdateType,
 } from '@powersync/web';
+import { estEchecDefinitif } from '../../core/sync';
 import { env } from '../config/env';
 import { supabase } from '../supabase/client';
-import { sansCumulsServeur } from './cumulsServeur';
-
-/**
- * Codes d'erreur Postgres pour lesquels réessayer est inutile :
- * la ligne est rejetée définitivement (contrainte, type, droits).
- * Dans ce cas on abandonne la transaction locale pour ne pas bloquer
- * la file d'upload indéfiniment.
- *
- * - 22xxx : data exception (type, format)
- * - 23xxx : integrity constraint violation (unique, FK, check)
- * - 42501 : insufficient privilege (RLS)
- */
-const FATAL_RESPONSE_CODES = [/^22\d{3}$/, /^23\d{3}$/, /^42501$/];
-
-function isFatalError(error: unknown): boolean {
-  const code = (error as { code?: string } | null)?.code;
-  return typeof code === 'string' && FATAL_RESPONSE_CODES.some((re) => re.test(code));
-}
+import { appliquerOperation, operationDepuisCrud } from './envoiSupabase';
+import { EchecsEnvoiRepository } from './repositories/EchecsEnvoiRepository';
 
 /**
  * Pont entre PowerSync et Supabase.
@@ -54,56 +37,40 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
     const transaction = await database.getNextCrudTransaction();
     if (!transaction) return;
 
-    let lastOp: CrudEntry | null = null;
+    const operations = transaction.crud.map(operationDepuisCrud);
+    let rang = 0;
 
     try {
-      for (const op of transaction.crud) {
-        lastOp = op;
-        await this.applyOperation(op);
+      for (; rang < operations.length; rang += 1) {
+        await appliquerOperation(operations[rang]);
       }
       await transaction.complete();
     } catch (error) {
-      if (!isFatalError(error)) {
-        // Erreur réseau ou temporaire : on relance, PowerSync réessaiera.
+      if (!estEchecDefinitif(error)) {
+        // Réseau, serveur indisponible, migration en retard : réparable côté
+        // serveur. On relance, PowerSync réessaiera la même transaction.
         throw error;
       }
 
-      // Erreur définitive : la donnée locale est incohérente avec le serveur.
-      // On l'abandonne pour débloquer la file, en le tracant clairement.
-      console.error('[PowerSync] Opération rejetée définitivement par Supabase, transaction abandonnée', {
-        table: lastOp?.table,
-        id: lastOp?.id,
-        op: lastOp?.op,
+      /*
+       * Refus définitif : réessayer ne corrigera jamais rien. On met de côté
+       * l'opération fautive **et celles qui la suivent** — elles n'ont pas été
+       * envoyées, et les lâcher serait perdre une écriture métier à moitié
+       * passée. Puis on solde la transaction : la file repart.
+       */
+      await new EchecsEnvoiRepository(database).mettreDeCote(
+        operations.slice(rang),
+        error,
+        transaction.transactionId,
+      );
+      console.error('[PowerSync] Écriture refusée par Supabase, mise de côté sur le poste', {
+        table: operations[rang]?.table,
+        id: operations[rang]?.id,
+        operation: operations[rang]?.operation,
+        misDeCote: operations.length - rang,
         error,
       });
       await transaction.complete();
-    }
-  }
-
-  private async applyOperation(op: CrudEntry): Promise<void> {
-    const table = supabase.from(op.table);
-
-    switch (op.op) {
-      case UpdateType.PUT: {
-        const donnees = sansCumulsServeur(op.table, op.opData);
-        // La ligne doit exister côté serveur pour garder l'identifiant du poste,
-        // même si elle ne porte plus que sa clé : le déclencheur fera le reste.
-        const { error } = await table.upsert({ ...(donnees ?? {}), id: op.id });
-        if (error) throw error;
-        return;
-      }
-      case UpdateType.PATCH: {
-        const donnees = sansCumulsServeur(op.table, op.opData);
-        if (!donnees) return; // n'envoyait qu'un cumul : le journal suffit au serveur
-        const { error } = await table.update(donnees).eq('id', op.id);
-        if (error) throw error;
-        return;
-      }
-      case UpdateType.DELETE: {
-        const { error } = await table.delete().eq('id', op.id);
-        if (error) throw error;
-        return;
-      }
     }
   }
 }

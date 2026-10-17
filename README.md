@@ -212,15 +212,28 @@ Les numéros déjà émis restent valides : rien ne relit leur format, et la col
 
 ### Quand le serveur refuse les écritures
 
-Une écriture refusée définitivement par Postgres (contrainte violée, règle de sécurité) est abandonnée
-et journalisée. Mais un refus **réparable** — typiquement une colonne absente parce qu'une migration
-n'a pas été appliquée — est rejoué indéfiniment : rien n'est perdu, et rien ne remonte non plus. La
-file d'envoi se bloque alors **entièrement**, pas seulement l'opération fautive.
+Deux refus très différents, deux réponses :
 
-Le bandeau de synchronisation distingue donc trois situations : *Hors ligne* (normal, le poste
-travaille et accumule), *Synchronisé*, et ***Envoi bloqué · N en attente*** — connecté, mais le serveur
-refuse. Le message du serveur est dans l'infobulle. Sans cet état, le bandeau affichait « Synchronisé »
-en vert pendant que la file grossissait.
+**Refus réparable** — colonne absente parce qu'une migration n'a pas été appliquée, serveur
+indisponible, réseau coupé. Rejouer finira par marcher, donc PowerSync rejoue. Rien n'est perdu, mais
+rien ne remonte non plus, et la file se bloque **entièrement**, pas seulement l'opération fautive.
+
+**Refus définitif** — numéro en doublon, ligne liée absente, champ obligatoire vide, règle de
+sécurité (classes Postgres `22` et `23`, et `42501`). Rejouer ne corrigera jamais rien. L'écriture est
+alors **mise de côté** dans une table locale `echecs_envoi`, avec son contenu, le message du serveur et
+une explication en clair : la file repart, rien n'est perdu, et un gérant décide — *Réessayer* (après
+correction côté serveur) ou *Abandonner*. Avant, elle était abandonnée en silence, avec une seule
+trace dans la console du navigateur que personne ne lit.
+
+Le bandeau de synchronisation couvre donc : *Hors ligne* (normal, le poste travaille et accumule),
+*Synchronisé*, ***Envoi bloqué · N en attente*** (connecté, mais le serveur refuse tout) et
+***N écriture(s) mise(s) de côté***, **cliquable** — elle ouvre la liste, le motif, les données et les
+deux décisions. Changer de filiale sur ce poste reste refusé tant qu'une écriture attend une décision :
+remplacer la base locale les effacerait.
+
+Un détail à connaître pour qui touche à cet écran : PowerSync ne notifie pas les changements d'une
+table **locale** (vérifié sur `@powersync/web` 2.3.1), donc un `useQuery` ne se rafraîchirait jamais.
+Le dépôt prévient les écrans lui-même, et `useEchecsEnvoi` s'y abonne.
 
 ### Remises de ligne et export Excel
 
