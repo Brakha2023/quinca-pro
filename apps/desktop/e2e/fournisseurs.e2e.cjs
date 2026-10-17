@@ -170,7 +170,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('input[type=checkbox]').first().waitFor();
   await page.locator('textarea', { hasText: /en attente de livraison/ }).waitFor();
   const corps = await page.locator('textarea').inputValue();
-  verifier(corps.includes('Bonjour M. Koné') && corps.includes('restent en attente de livraison') && /BC-\d{8}-[A-Z2-9]{4}/.test(corps), 'relance : e-mail composé avec la commande en attente');
+  verifier(corps.includes('Bonjour M. Koné') && corps.includes('restent en attente de livraison') && /BC-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}/.test(corps), 'relance : e-mail composé avec la commande en attente');
   await page.locator('input[type=checkbox]').first().uncheck();
   verifier(!(await page.locator('textarea').inputValue()).includes('en attente de livraison'), 'relance recomposée quand on décoche la commande');
 

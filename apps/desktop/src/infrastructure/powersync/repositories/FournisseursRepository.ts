@@ -1,7 +1,8 @@
 import type { Transaction } from '@powersync/web';
 import type { ArticleRow, CaisseRow, CommandeFournisseurRow, FournisseurRow, LigneCommandeFournisseurRow } from '@quinca/shared-types';
 import { TYPES_EN_CAISSE } from '../../../core/clients';
-import { genererCodeTiers, genererNumeroPiece } from '../../../core/commun/numerotation';
+import { genererCodeTiers } from '../../../core/commun/numerotation';
+import { numeroPiece } from '../../desktop/identitePoste';
 import { arrondirMontant } from '../../../core/commun/prix';
 import {
   calculerDette, ligneCommandeFromRow, statutApresReception, totalLigneCommande, totauxAchat, totauxCommande, valoriserReception,
@@ -149,7 +150,7 @@ export class FournisseursRepository extends BaseRepository {
   enregistrerAchat(ctx: ContexteFournisseur, achat: Achat): Promise<{ id: string; numero: string }> {
     return this.db.writeTransaction(async (tx) => {
       const id = this.nouvelId();
-      const numero = achat.reference || genererNumeroPiece('ACH');
+      const numero = achat.reference || numeroPiece('ACH');
       const now = this.maintenant();
       const t = totauxAchat(achat);
       await tx.execute(
@@ -173,7 +174,7 @@ export class FournisseursRepository extends BaseRepository {
   creerBonCommande(ctx: ContexteFournisseur, bon: BonCommande): Promise<{ id: string; numero: string }> {
     return this.db.writeTransaction(async (tx) => {
       const id = this.nouvelId();
-      const numero = bon.numero || genererNumeroPiece('BC');
+      const numero = bon.numero || numeroPiece('BC');
       const now = this.maintenant();
       const lignes = fusionnerLignes(bon.lignes);
       const t = totauxCommande({ remise_percent: bon.remise_percent, tva_percent: bon.tva_percent, lignes });
@@ -244,7 +245,7 @@ export class FournisseursRepository extends BaseRepository {
   enregistrerReglement(ctx: ContexteFournisseur, fournisseurId: string, form: ReglementFournisseurForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
       const f = await tx.get<FournisseurRow>('SELECT * FROM fournisseurs WHERE id = ?', [fournisseurId]);
-      const numero = genererNumeroPiece('RGF');
+      const numero = numeroPiece('RGF');
       const now = this.maintenant();
       const commandeId = form.commande_id || null;
       await tx.execute(

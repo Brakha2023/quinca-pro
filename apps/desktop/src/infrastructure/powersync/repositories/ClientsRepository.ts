@@ -1,7 +1,8 @@
 import type { Transaction } from '@powersync/web';
 import type { CaisseRow, ClientRow } from '@quinca/shared-types';
 import { calculerSolde, TYPES_EN_CAISSE, type ClientForm, type ReglementForm } from '../../../core/clients';
-import { genererCodeTiers, genererNumeroPiece } from '../../../core/commun/numerotation';
+import { genererCodeTiers } from '../../../core/commun/numerotation';
+import { numeroPiece } from '../../desktop/identitePoste';
 import { BaseRepository } from './BaseRepository';
 
 export interface FiltresClients {
@@ -149,7 +150,7 @@ export class ClientsRepository extends BaseRepository {
   enregistrerReglement(ctx: ContexteReglement, clientId: string, form: ReglementForm, venteId: string | null = null): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
       const client = await tx.get<ClientRow>('SELECT * FROM clients WHERE id = ?', [clientId]);
-      const numero = genererNumeroPiece('REG');
+      const numero = numeroPiece('REG');
       const now = this.maintenant();
       const date = form.date_reglement ? new Date(form.date_reglement).toISOString() : now;
 

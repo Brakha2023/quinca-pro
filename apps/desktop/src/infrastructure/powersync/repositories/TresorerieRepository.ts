@@ -1,6 +1,6 @@
 import type { Transaction } from '@powersync/web';
 import type { CaisseRow, TransfertFilialeRow } from '@quinca/shared-types';
-import { genererNumeroPiece } from '../../../core/commun/numerotation';
+import { numeroPiece } from '../../desktop/identitePoste';
 import {
   CATEGORIE_RETRAIT, CATEGORIE_TRANSFERT_FILIALE, CATEGORIE_VERSEMENT,
   type CaisseForm, type OperationForm, type RetraitForm, type TransfertCaisseForm, type TransfertFilialeForm, type VersementForm,
@@ -83,7 +83,7 @@ export class TresorerieRepository extends BaseRepository {
   /** Recette ou dépense manuelle : mouvement + solde de caisse. */
   enregistrerOperation(ctx: ContexteTresorerie, op: OperationForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
-      const numero = genererNumeroPiece(op.type === 'RECETTE' ? 'REC' : 'DEP');
+      const numero = numeroPiece(op.type === 'RECETTE' ? 'REC' : 'DEP');
       await this.mouvementer(tx, ctx, op.caisse_id, op.type, op.categorie, op.montant, op.description || null, op.reference || numero);
       return numero;
     });
@@ -92,7 +92,7 @@ export class TresorerieRepository extends BaseRepository {
   /** Transfert entre deux caisses : une dépense et une recette portant la même référence. */
   transferer(ctx: ContexteTresorerie, t: TransfertCaisseForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
-      const numero = genererNumeroPiece('TRC');
+      const numero = numeroPiece('TRC');
       const source = await tx.get<CaisseRow>('SELECT * FROM caisses WHERE id = ?', [t.caisse_source_id]);
       const dest = await tx.get<CaisseRow>('SELECT * FROM caisses WHERE id = ?', [t.caisse_destination_id]);
       await this.mouvementer(tx, ctx, t.caisse_source_id, 'DEPENSE', 'TRANSFERT_CAISSE', t.montant, `Vers ${dest.nom ?? ''}${t.motif ? ` — ${t.motif}` : ''}`, numero);
@@ -108,7 +108,7 @@ export class TresorerieRepository extends BaseRepository {
    */
   enregistrerVersement(ctx: ContexteTresorerie, v: VersementForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
-      const numero = genererNumeroPiece('VER');
+      const numero = numeroPiece('VER');
       const description = [v.remettant, v.designation].filter(Boolean).join(' — ');
       await this.mouvementer(tx, ctx, v.caisse_id, 'RECETTE', CATEGORIE_VERSEMENT, v.montant, description || null, v.reference || numero);
       return numero;
@@ -118,7 +118,7 @@ export class TresorerieRepository extends BaseRepository {
   /** Retrait d'espèces : sortie de caisse au profit d'un bénéficiaire nommé. */
   enregistrerRetrait(ctx: ContexteTresorerie, r: RetraitForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
-      const numero = genererNumeroPiece('RET');
+      const numero = numeroPiece('RET');
       const description = [r.beneficiaire, r.motif].filter(Boolean).join(' — ');
       await this.mouvementer(tx, ctx, r.caisse_id, 'DEPENSE', CATEGORIE_RETRAIT, r.montant, description || null, r.reference || numero);
       return numero;
@@ -132,7 +132,7 @@ export class TresorerieRepository extends BaseRepository {
    */
   envoyerVersFiliale(ctx: ContexteTresorerie, t: TransfertFilialeForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
-      const numero = genererNumeroPiece('TRF');
+      const numero = numeroPiece('TRF');
       const now = this.maintenant();
       const destination = await tx.get<{ nom: string | null }>('SELECT nom FROM filiales WHERE id = ?', [t.filiale_destination_id]);
       await tx.execute(

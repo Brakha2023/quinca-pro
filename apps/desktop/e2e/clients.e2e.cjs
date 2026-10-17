@@ -55,8 +55,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
       pro1, stockAvant, pro2, venteId: vente.id, stockApres, c3: c3.solde_actuel, refacturee, nbVentes, lettrage };
   }, { F: filialeId, U: userId });
 
-  verifier(/^CLI-[A-Z2-9]{5}$/.test(r.code) && r.soldeInitial === 50000, `code auto ${r.code}, solde d'ouverture repris en créance`);
-  verifier(/^REG-\d{8}-[A-Z2-9]{4}$/.test(r.numero) && r.c1.cumul_reglements === 30000 && r.c1.solde_actuel === 20000, 'règlement : cumul et créance mis à jour');
+  verifier(/^CLI-[A-HJ-NP-Z2-9]{6}$/.test(r.code) && r.soldeInitial === 50000, `code auto ${r.code}, solde d'ouverture repris en créance`);
+  verifier(/^REG-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(r.numero) && r.c1.cumul_reglements === 30000 && r.c1.solde_actuel === 20000, 'règlement : cumul et créance mis à jour');
   verifier(r.c2 === -5000, 'second règlement → avoir de 5 000 (acompte)');
   verifier(r.caisse === 40000, 'seules les espèces alimentent la caisse (10 000 + 30 000), le chèque non');
   verifier(r.treso.length === 2 && r.treso.every((t) => t.type === 'RECETTE' && t.categorie === 'REGLEMENT_CLIENT'), '2 recettes de trésorerie journalisées');
@@ -164,7 +164,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('[data-testid=liste-debiteurs] button', { hasText: 'SARL KONÉ' }).click();
   await page.locator('textarea', { hasText: /restent impayées/ }).waitFor();
   const corps = await page.locator('textarea').inputValue();
-  verifier(corps.includes('Bonjour SARL KONÉ') && /C01-\d{8}-[A-Z2-9]{4} du/.test(corps) && corps.includes('solde de votre compte'), 'relance : e-mail composé avec la facture impayée et le solde');
+  verifier(corps.includes('Bonjour SARL KONÉ') && /C01-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6} du/.test(corps) && corps.includes('solde de votre compte'), 'relance : e-mail composé avec la facture impayée et le solde');
 
   await page.goto(`${BASE_URL}/#/pos`);
   await page.locator('button', { hasText: 'Client comptoir' }).click();

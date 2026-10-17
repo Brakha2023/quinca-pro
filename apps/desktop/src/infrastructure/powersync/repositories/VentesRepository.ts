@@ -1,7 +1,7 @@
 import type { Transaction } from '@powersync/web';
 import type { CaisseRow, ClientRow, LigneVenteRow, StatutVente, VenteRow } from '@quinca/shared-types';
 import { calculerSolde } from '../../../core/clients';
-import { genererNumeroPiece } from '../../../core/commun/numerotation';
+import { codePoste, numeroPiece } from '../../desktop/identitePoste';
 import { MODES_EN_CAISSE, calculerLigne, preparerVente, type VenteAEnregistrer, type VentePreparee } from '../../../core/ventes';
 import { BaseRepository } from './BaseRepository';
 import { StockRepository } from './StockRepository';
@@ -82,7 +82,7 @@ export class VentesRepository extends BaseRepository {
   }
 
   enregistrer(ctx: ContexteVente, vente: VenteAEnregistrer): Promise<{ id: string; preparee: VentePreparee }> {
-    const preparee = preparerVente(vente, ctx.caisseCode);
+    const preparee = preparerVente(vente, { caisse: ctx.caisseCode, code: codePoste() });
     return this.db.writeTransaction(async (tx) => {
       const id = this.nouvelId();
       const now = this.maintenant();
@@ -121,7 +121,7 @@ export class VentesRepository extends BaseRepository {
           await tx.execute(
             `INSERT INTO reglements_clients (id, numero, client_id, vente_id, date_reglement, montant, type_reglement, reference, caisse_id, utilisateur_id, filiale_id, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [this.nouvelId(), genererNumeroPiece('REG'), vente.client.id, id, now, preparee.montant_encaisse,
+            [this.nouvelId(), numeroPiece('REG'), vente.client.id, id, now, preparee.montant_encaisse,
              preparee.mode_paiement === 'CREDIT' ? 'ESPECES' : preparee.mode_paiement, preparee.numero, ctx.caisseId, ctx.utilisateurId, ctx.filialeId, now],
           );
         }
@@ -141,7 +141,7 @@ export class VentesRepository extends BaseRepository {
         await tx.execute(
           `INSERT INTO livraisons (id, numero, vente_id, client_id, adresse_livraison, chauffeur, vehicule, statut, date_livraison_prevue, filiale_id, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'A_PREPARER', ?, ?, ?, ?)`,
-          [this.nouvelId(), genererNumeroPiece('LIV'), id, vente.client?.id ?? null, vente.livraison.adresse_livraison,
+          [this.nouvelId(), numeroPiece('LIV'), id, vente.client?.id ?? null, vente.livraison.adresse_livraison,
            vente.livraison.chauffeur || null, vente.livraison.vehicule || null, new Date(vente.livraison.date_livraison_prevue).toISOString(), ctx.filialeId, now, now],
         );
       }

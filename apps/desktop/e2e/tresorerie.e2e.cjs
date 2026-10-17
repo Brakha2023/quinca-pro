@@ -67,7 +67,7 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   }, { F: filialeId, U: userId });
 
   const solde = (id) => r.apresLocal.find((c) => c.id === id).solde_actuel;
-  verifier(/^VER-\d{8}-[A-Z2-9]{4}$/.test(r.versement) && /^RET-\d{8}-[A-Z2-9]{4}$/.test(r.retrait), 'numéros de pièce VER / RET générés hors ligne');
+  verifier(/^VER-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(r.versement) && /^RET-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(r.retrait), 'numéros de pièce VER / RET générés hors ligne');
   verifier(solde('c1') === 610500 && solde('c2') === 200000, 'caisse : 500 000 + 375 500 − 100 000 + 50 000 − 15 000 − 200 000 = 610 500, coffre 200 000');
   verifier(r.trf.statut === 'EN_TRANSIT' && r.soldeApresEnvoi === 550500, 'envoi inter-filiale : fonds sortis tout de suite, transfert en transit');
   verifier(r.refusEncaissement, 'seule la filiale destinataire peut encaisser');

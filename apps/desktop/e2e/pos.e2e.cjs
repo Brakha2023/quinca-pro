@@ -71,7 +71,7 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
     return out;
   }, { F: filialeId, U: userId });
 
-  verifier(/^C01-\d{8}-[A-Z2-9]{4}$/.test(r.v1.numero) && r.v1.ttc === 59000 && r.v1.monnaie === 1000, `vente comptoir ${r.v1.numero} : 59 000 F, monnaie 1 000`);
+  verifier(/^C01-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(r.v1.numero) && r.v1.ttc === 59000 && r.v1.monnaie === 1000, `vente comptoir ${r.v1.numero} : 59 000 F, monnaie 1 000`);
   verifier(r.stockApresV1 === 90 && r.caisseApresV1 === 59000, 'stock −10 et caisse +59 000');
   verifier(r.v2.ttc === 23600 && r.v2.reste === 23600 && r.clientApresV2.solde_actuel === 23600 && r.clientApresV2.cumul_factures === 23600, 'vente à crédit : créance client 23 600');
   verifier(r.livraison?.statut === 'A_PREPARER' && r.livraison.adresse_livraison === 'Cocody', 'bon de livraison créé');
@@ -86,6 +86,7 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByRole('dialog', { name: 'Réglages du poste de vente' }).waitFor();
   verifier((await page.getByTestId('format-impression').inputValue()) === 'TICKET', 'poste : impression par défaut en ticket');
+  verifier(/^[A-HJ-NP-Z2-9]{3}$/.test((await page.getByTestId('code-poste').textContent()).trim()), 'poste : code de la machine affiché dans les réglages');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
   await page.locator('input[type=search]').waitFor();
   verifier(true, 'poste configuré (caisse + dépôt mémorisés)');
@@ -113,7 +114,7 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   const facture = page.locator('#zone-impression.facture');
   await facture.waitFor({ state: 'attached' });
   const papier = await texteDe(facture);
-  verifier(/^C01-\d{8}-[A-Z2-9]{4}$/.test(await facture.locator('[data-testid=facture-numero]').textContent()), 'facture A4 : numéro de la vente');
+  verifier(/^C01-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(await facture.locator('[data-testid=facture-numero]').textContent()), 'facture A4 : numéro de la vente');
   verifier(papier.includes('CLIENT DIVERS'), 'facture A4 : cartouche client (vente au comptoir)');
   verifier(papier.includes('CIM-50') && papier.includes('Ciment 50kg') && papier.includes('Dépôt principal'), 'facture A4 : ligne, désignation et dépôt');
   verifier(papier.includes('5 000,00') && papier.includes('10 000,00') && papier.includes('1 800,00'), 'facture A4 : prix unitaire HT, total HT et TVA de la ligne');
@@ -201,6 +202,33 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.goto(`${BASE_URL}/#/audit`);
   await page.locator('main h1', { hasText: 'audit' }).waitFor();
   verifier(true, 'audit : page rendue (journal serveur, vide hors ligne)');
+
+  console.log('Numérotation : un espace de numéros par poste');
+  const codeA = await page.evaluate(() => localStorage.getItem('quinca-code-poste'));
+  verifier(/^[A-HJ-NP-Z2-9]{3}$/.test(codeA) && r.v1.numero.split('-')[1] === codeA,
+    `code de ce poste ${codeA} mémorisé sur la machine et porté par le numéro de vente`);
+
+  // Le code doit survivre au redémarrage : sinon deux « postes » successifs sur
+  // la même machine retomberaient dans le même espace de numéros.
+  await page.reload({ waitUntil: 'networkidle' });
+  const tiragesA = await page.evaluate(async () => {
+    const { codePoste, numeroPiece } = await import('/src/infrastructure/desktop/identitePoste.ts');
+    return { code: codePoste(), numeros: Array.from({ length: 2000 }, () => numeroPiece('ENT', new Date('2026-09-22T09:00:00Z'))) };
+  });
+  verifier(tiragesA.code === codeA && tiragesA.numeros.every((n) => n.split('-')[1] === codeA), 'le code du poste survit au redémarrage');
+
+  // Deuxième poste : contexte navigateur distinct, donc stockage local distinct.
+  const pageB = await browser.newPage({ viewport: { width: 1024, height: 768 } });
+  await pageB.goto(`${BASE_URL}/#/login`, { waitUntil: 'networkidle' });
+  const tiragesB = await pageB.evaluate(async () => {
+    const { codePoste, numeroPiece } = await import('/src/infrastructure/desktop/identitePoste.ts');
+    return { code: codePoste(), numeros: Array.from({ length: 2000 }, () => numeroPiece('ENT', new Date('2026-09-22T09:00:00Z'))) };
+  });
+  verifier(tiragesB.code !== codeA, `deuxième poste, autre code (${codeA} ≠ ${tiragesB.code})`);
+  const communs = tiragesA.numeros.filter((n) => tiragesB.numeros.includes(n));
+  verifier(communs.length === 0, '2 000 pièces du même jour et du même type sur deux postes : aucun numéro en commun');
+  verifier(new Set(tiragesA.numeros).size === 2000, '2 000 pièces sur le même poste : aucun doublon');
+  await pageB.close();
 
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();

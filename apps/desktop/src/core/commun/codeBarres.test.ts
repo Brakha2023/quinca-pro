@@ -31,8 +31,9 @@ describe('normaliserCode39', () => {
     expect(normaliserCode39('reg_cl#2026')).toBe('REG-CL-2026');
   });
 
-  it('tronque au-delà de 24 caractères (lisibilité de la douchette)', () => {
-    expect(normaliserCode39('A'.repeat(40))).toHaveLength(24);
+  it('tronque au-delà de 30 caractères (lisibilité de la douchette)', () => {
+    expect(normaliserCode39('A'.repeat(40))).toHaveLength(30);
+    expect(normaliserCode39('C01-K7Q-20260922-M3Q2PT')).toBe('C01-K7Q-20260922-M3Q2PT');
   });
 });
 

@@ -3,6 +3,7 @@ import { ajouterAuPanier, calculerLigne, calculerTotaux, type LignePanier } from
 import { VenteInvalideError, preparerVente } from './vente';
 import type { Client } from '../clients';
 
+const POSTE = { caisse: 'C01', code: 'K7Q' };
 const ligne = (over: Partial<LignePanier> = {}): LignePanier => ({
   article_id: 'a', code: 'A', designation: 'Art', unite: 'PIECE', prix_unitaire_ttc: 11800, tva_percent: 18, quantite: 1, remise_percent: 0, ...over,
 });
@@ -37,7 +38,7 @@ describe('panier', () => {
     const t = calculerTotaux([ligne({ prix_unitaire_ttc: 1250 })], 5);
     expect(t.total_ttc).toBe(1188); // 1187,5
     expect(Number.isInteger(t.total_tva + t.total_net_ht)).toBe(true);
-    const v = preparerVente({ lignes: [ligne({ prix_unitaire_ttc: 999, remise_percent: 5 })], remise_globale_percent: 0, client: null, livraison: null, notes: '', paiement: { mode_paiement: 'ESPECES', montant_percu: 949 } }, 'C01');
+    const v = preparerVente({ lignes: [ligne({ prix_unitaire_ttc: 999, remise_percent: 5 })], remise_globale_percent: 0, client: null, livraison: null, notes: '', paiement: { mode_paiement: 'ESPECES', montant_percu: 949 } }, POSTE);
     expect(v).toMatchObject({ monnaie: 0, reste_a_payer: 0, montant_encaisse: 949 });
   });
 
@@ -52,26 +53,26 @@ describe('preparerVente', () => {
   const base = { lignes: [ligne({ quantite: 2 })], remise_globale_percent: 0, client: null, livraison: null, notes: '' };
 
   it('espèces : exige le montant remis et rend la monnaie', () => {
-    expect(() => preparerVente({ ...base, paiement: { mode_paiement: 'ESPECES', montant_percu: 20000 } }, 'C01')).toThrow(VenteInvalideError);
-    const v = preparerVente({ ...base, paiement: { mode_paiement: 'ESPECES', montant_percu: 25000 } }, 'C01', new Date('2026-09-16T10:00:00Z'));
+    expect(() => preparerVente({ ...base, paiement: { mode_paiement: 'ESPECES', montant_percu: 20000 } }, POSTE)).toThrow(VenteInvalideError);
+    const v = preparerVente({ ...base, paiement: { mode_paiement: 'ESPECES', montant_percu: 25000 } }, POSTE, new Date('2026-09-16T10:00:00Z'));
     expect(v).toMatchObject({ monnaie: 1400, montant_encaisse: 23600, reste_a_payer: 0 });
-    expect(v.numero).toMatch(/^C01-20260916-[A-Z2-9]{4}$/);
+    expect(v.numero).toMatch(/^C01-K7Q-20260916-[A-HJ-NP-Z2-9]{6}$/);
   });
 
   it('crédit : client obligatoire, dans le plafond', () => {
-    expect(() => preparerVente({ ...base, paiement: { mode_paiement: 'CREDIT', montant_percu: 0 } }, 'C01')).toThrow(/client en compte/);
-    expect(() => preparerVente({ ...base, client: client({ solde_actuel: 90000 }), paiement: { mode_paiement: 'CREDIT', montant_percu: 0 } }, 'C01')).toThrow(/Plafond/);
-    const v = preparerVente({ ...base, client: client(), paiement: { mode_paiement: 'CREDIT', montant_percu: 999 } }, 'C01');
+    expect(() => preparerVente({ ...base, paiement: { mode_paiement: 'CREDIT', montant_percu: 0 } }, POSTE)).toThrow(/client en compte/);
+    expect(() => preparerVente({ ...base, client: client({ solde_actuel: 90000 }), paiement: { mode_paiement: 'CREDIT', montant_percu: 0 } }, POSTE)).toThrow(/Plafond/);
+    const v = preparerVente({ ...base, client: client(), paiement: { mode_paiement: 'CREDIT', montant_percu: 999 } }, POSTE);
     expect(v).toMatchObject({ montant_percu: 0, montant_encaisse: 0, reste_a_payer: 23600, monnaie: 0 });
   });
 
   it('mobile money partiel : le reste devient une créance', () => {
-    const v = preparerVente({ ...base, client: client(), paiement: { mode_paiement: 'MOBILE_MONEY', montant_percu: 10000 } }, 'C01');
+    const v = preparerVente({ ...base, client: client(), paiement: { mode_paiement: 'MOBILE_MONEY', montant_percu: 10000 } }, POSTE);
     expect(v).toMatchObject({ montant_encaisse: 10000, reste_a_payer: 13600 });
-    expect(() => preparerVente({ ...base, paiement: { mode_paiement: 'MOBILE_MONEY', montant_percu: 30000 } }, 'C01')).toThrow(/dépasse/);
+    expect(() => preparerVente({ ...base, paiement: { mode_paiement: 'MOBILE_MONEY', montant_percu: 30000 } }, POSTE)).toThrow(/dépasse/);
   });
 
   it('refuse un ticket vide', () => {
-    expect(() => preparerVente({ ...base, lignes: [], paiement: { mode_paiement: 'ESPECES', montant_percu: 0 } }, 'C01')).toThrow(/vide/);
+    expect(() => preparerVente({ ...base, lignes: [], paiement: { mode_paiement: 'ESPECES', montant_percu: 0 } }, POSTE)).toThrow(/vide/);
   });
 });

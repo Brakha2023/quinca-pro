@@ -1,4 +1,4 @@
-import { genererNumeroPiece } from '../../../core/commun/numerotation';
+import { numeroPiece } from '../../desktop/identitePoste';
 import { calculerLigne, totauxProforma, type ProformaForm } from '../../../core/ventes';
 import { BaseRepository } from './BaseRepository';
 
@@ -42,7 +42,7 @@ export class ProformasRepository extends BaseRepository {
   enregistrer(ctx: ContexteProforma, form: ProformaForm): Promise<{ id: string; numero: string }> {
     return this.db.writeTransaction(async (tx) => {
       const id = this.nouvelId();
-      const numero = form.numero || genererNumeroPiece('PRO');
+      const numero = form.numero || numeroPiece('PRO');
       const now = this.maintenant();
       const t = totauxProforma(form);
       await tx.execute(

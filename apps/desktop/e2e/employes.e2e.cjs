@@ -49,7 +49,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     return { matricule: fiche.matricule, matricule2: fiche2.matricule, doublon, nbPointagesAwa, caisseApresAvance, gen, paieAwa, paieMoussa, netAwa2: paieAwa2.net_a_payer, paieAwa3, repaye, gen2, caisseFin, treso, e1 };
   }, { F: filialeId, U: userId });
 
-  verifier(/^EMP-[A-Z2-9]{5}$/.test(r.matricule) && r.matricule2 === 'EMP-002' && r.doublon, 'matricule auto, matricule saisi en majuscules, doublon détecté');
+  verifier(/^EMP-[A-HJ-NP-Z2-9]{6}$/.test(r.matricule) && r.matricule2 === 'EMP-002' && r.doublon, 'matricule auto, matricule saisi en majuscules, doublon détecté');
   verifier(r.nbPointagesAwa === 22, 'un seul pointage par jour (le second remplace le premier)');
   verifier(r.caisseApresAvance === 950000, 'avance de 50 000 sortie de caisse');
   verifier(r.gen.creees === 2 && r.paieAwa.jours_presents === 20 && r.paieAwa.jours_absents === 1 && r.paieAwa.jours_justifies === 1, 'paies générées depuis les pointages (Awa : 20 P / 1 A / 1 J)');

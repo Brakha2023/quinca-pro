@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { StockInsuffisantError, appliquerMouvement, calculerCoutMoyenPondere, genererNumeroBon, statutStock } from './mouvement';
+import { StockInsuffisantError, appliquerMouvement, calculerCoutMoyenPondere, statutStock } from './mouvement';
 import { entreeStockSchema, fusionnerLignes } from './documents';
 
 describe('appliquerMouvement', () => {
@@ -50,14 +50,6 @@ describe('statutStock', () => {
     expect(statutStock(20, 5, 50)).toBe('OK');
     expect(statutStock(60, 5, 50)).toBe('SURSTOCK');
     expect(statutStock(60, 5, 0)).toBe('OK');
-  });
-});
-
-describe('genererNumeroBon', () => {
-  it('produit un numéro daté avec suffixe aléatoire', () => {
-    const n = genererNumeroBon('ENT', new Date('2026-09-16T10:00:00Z'));
-    expect(n).toMatch(/^ENT-20260916-[A-Z2-9]{4}$/);
-    expect(genererNumeroBon('ENT')).not.toBe(genererNumeroBon('ENT'));
   });
 });
 

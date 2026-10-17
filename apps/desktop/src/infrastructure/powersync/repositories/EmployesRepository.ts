@@ -1,7 +1,8 @@
 import type { Transaction } from '@powersync/web';
 import type { CaisseRow, EmployeRow, PaieRow, PointageRow, StatutPointage } from '@quinca/shared-types';
 import { TYPES_EN_CAISSE } from '../../../core/clients';
-import { genererCodeTiers, genererNumeroPiece } from '../../../core/commun/numerotation';
+import { genererCodeTiers } from '../../../core/commun/numerotation';
+import { numeroPiece } from '../../desktop/identitePoste';
 import { calculerPaie, employeFromRow, nomComplet, type AvanceSalaireForm, type EmployeForm, type PaiementPaieForm, type PointageForm } from '../../../core/employes';
 import { BaseRepository } from './BaseRepository';
 
@@ -101,7 +102,7 @@ export class EmployesRepository extends BaseRepository {
   /** Avance sur salaire : pièce + dépense en caisse ; retenue sur la paie de la période. */
   enregistrerAvance(ctx: ContexteEmploye, form: AvanceSalaireForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
-      const numero = genererNumeroPiece('AVS');
+      const numero = numeroPiece('AVS');
       const now = this.maintenant();
       const e = await tx.get<EmployeRow>(EMPLOYE_QUERY, [form.employe_id]);
       await tx.execute(

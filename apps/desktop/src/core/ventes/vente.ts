@@ -65,6 +65,14 @@ export class VenteInvalideError extends Error {
   }
 }
 
+/** Poste qui enregistre la vente : le numéro du ticket en dérive, `C01-K7Q-20260922-M3Q2PT`. */
+export interface PosteVente {
+  /** Code de la caisse, qui préfixe le numéro — un ticket se rattache d'abord à sa caisse. */
+  caisse: string;
+  /** Code de la machine, pour que deux postes hors ligne ne tirent pas dans le même espace de numéros. */
+  code: string;
+}
+
 /**
  * Applique les règles de caisse et prépare les montants de la vente.
  *
@@ -73,7 +81,7 @@ export class VenteInvalideError extends Error {
  *   (client en compte obligatoire).
  * - Crédit : rien n'est perçu ; la créance doit rester dans le plafond du client.
  */
-export function preparerVente(vente: VenteAEnregistrer, codeCaisse: string, date: Date = new Date()): VentePreparee {
+export function preparerVente(vente: VenteAEnregistrer, poste: PosteVente, date: Date = new Date()): VentePreparee {
   if (vente.lignes.length === 0) throw new VenteInvalideError('Le ticket est vide');
   if (vente.lignes.some((l) => l.quantite <= 0)) throw new VenteInvalideError('Quantité invalide sur une ligne');
 
@@ -105,7 +113,7 @@ export function preparerVente(vente: VenteAEnregistrer, codeCaisse: string, date
   }
 
   return {
-    numero: genererNumeroPiece(codeCaisse, date),
+    numero: genererNumeroPiece({ prefixe: poste.caisse, poste: poste.code, date }),
     totaux,
     mode_paiement,
     montant_percu: montantPercu,

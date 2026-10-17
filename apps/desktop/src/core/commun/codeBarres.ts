@@ -26,12 +26,22 @@ export const MOTIFS_CODE39: Readonly<Record<string, string>> = {
   [CODE39_START_STOP]: 'nwnnwnwnn',
 };
 
-/** Ce que Code 39 sait coder, le reste étant remplacé par un tiret. */
+/** Longueur au-delà de laquelle le symbole devient trop dense pour une douchette bas de gamme. */
+export const LONGUEUR_MAX_CODE39 = 30;
+
+/**
+ * Ce que Code 39 sait coder, le reste étant remplacé par un tiret.
+ *
+ * La limite est à 30 caractères : un numéro de pièce avec code de poste en fait
+ * 23, et une caisse au code long peut aller plus loin. Mieux vaut des barres
+ * plus fines qu'un code tronqué, qui se relirait en un **autre** numéro.
+ */
 export const normaliserCode39 = (texte: string): string =>
   texte
     .toUpperCase()
     .replace(/[^0-9A-Z\-. ]/g, '-')
-    .slice(0, 24);
+    .slice(0, LONGUEUR_MAX_CODE39);
+
 
 /** Une barre du symbole : position et largeur en unités étroites. */
 export interface BarreCodeBarres {

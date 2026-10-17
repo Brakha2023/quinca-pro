@@ -1,7 +1,6 @@
 import type { MouvementStockRow, StockRow } from '@quinca/shared-types';
 import type { TypeMouvementStock } from '@quinca/shared-types';
 import { arrondirMontant } from '../commun/prix';
-import { genererNumeroPiece } from '../commun/numerotation';
 
 export interface Stock {
   id: string;
@@ -187,5 +186,3 @@ export function statutStock(quantite: number, stockMin: number, stockMax: number
   return 'OK';
 }
 
-/** Numéro de bon de stock, ex. `ENT-20260916-K7Q2` (voir {@link genererNumeroPiece}). */
-export const genererNumeroBon = genererNumeroPiece;

@@ -4,7 +4,6 @@ import {
   STOCK_VIDE,
   appliquerMouvement,
   fusionnerLignes,
-  genererNumeroBon,
   type EntreeStock,
   type EtatStock,
   type Inventaire,
@@ -12,6 +11,7 @@ import {
   type TransfertStock,
 } from '../../../core/stock';
 import { montantApresRemise } from '../../../core/commun/prix';
+import { numeroPiece } from '../../desktop/identitePoste';
 import { BaseRepository } from './BaseRepository';
 
 export interface ContexteMouvement {
@@ -137,7 +137,7 @@ export interface OptionsMouvement {
  */
 export class StockRepository extends BaseRepository {
   enregistrerEntree(ctx: ContexteMouvement, entree: EntreeStock): Promise<string> {
-    const reference = entree.reference || genererNumeroBon('ENT');
+    const reference = entree.reference || numeroPiece('ENT');
     return this.db.writeTransaction(async (tx) => {
       for (const ligne of fusionnerLignes(entree.lignes)) {
         // Le stock est valorisé au coût **net** : c'est lui qui alimente le coût moyen pondéré.
@@ -153,7 +153,7 @@ export class StockRepository extends BaseRepository {
   }
 
   enregistrerSortie(ctx: ContexteMouvement, sortie: SortieStock): Promise<string> {
-    const reference = sortie.reference || genererNumeroBon(sortie.type === 'CASSE' ? 'CAS' : 'SOR');
+    const reference = sortie.reference || numeroPiece(sortie.type === 'CASSE' ? 'CAS' : 'SOR');
     return this.db.writeTransaction(async (tx) => {
       for (const ligne of fusionnerLignes(sortie.lignes)) {
         await this.appliquer(tx, ctx, sortie.depot_id, sortie.type, {
@@ -168,7 +168,7 @@ export class StockRepository extends BaseRepository {
 
   /** Transfert inter-dépôts : sortie du dépôt source puis entrée au dépôt destination, au coût moyen source. */
   transferer(ctx: ContexteMouvement, transfert: TransfertStock): Promise<string> {
-    const reference = transfert.reference || genererNumeroBon('TRF');
+    const reference = transfert.reference || numeroPiece('TRF');
     return this.db.writeTransaction(async (tx) => {
       for (const ligne of fusionnerLignes(transfert.lignes)) {
         const source = await this.lireEtat(tx, ligne.article_id, transfert.depot_source_id);
@@ -189,7 +189,7 @@ export class StockRepository extends BaseRepository {
 
   /** Inventaire : la quantité comptée devient la quantité en stock ; seuls les écarts génèrent un mouvement. */
   enregistrerInventaire(ctx: ContexteMouvement, inventaire: Inventaire): Promise<{ reference: string; ecarts: number }> {
-    const reference = inventaire.reference || genererNumeroBon('INV');
+    const reference = inventaire.reference || numeroPiece('INV');
     return this.db.writeTransaction(async (tx) => {
       let ecarts = 0;
       for (const ligne of inventaire.lignes) {

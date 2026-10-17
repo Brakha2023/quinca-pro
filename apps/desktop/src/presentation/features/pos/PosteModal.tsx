@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CaisseRow, DepotRow } from '@quinca/shared-types';
 import { FORMATS_IMPRESSION, type FormatImpression } from '../../../core/ventes';
+import { codePoste } from '../../../infrastructure/desktop/identitePoste';
 import Modal from '../../components/ui/Modal';
 import FormField, { inputClass } from '../../components/ui/FormField';
 
@@ -55,6 +56,10 @@ export default function PosteModal({ caisses, depots, caisseId, depotId, format,
           </select>
           <p className="text-xs text-neutral-500 mt-1">Les deux formats restent proposés après chaque vente ; celui-ci est le bouton principal.</p>
         </FormField>
+        <p className="text-xs text-neutral-500 border-t border-neutral-100 pt-3">
+          Code de ce poste : <strong className="font-mono text-neutral-700" data-testid="code-poste">{codePoste()}</strong> — il préfixe les numéros
+          des pièces créées ici (ventes, bons, règlements), pour qu'aucun numéro ne puisse être tiré deux fois par deux machines hors ligne.
+        </p>
         {(caisses.length === 0 || depots.length === 0) && (
           <p className="text-sm text-red-600">Aucune caisse ou aucun dépôt actif dans cette filiale : créez-les d'abord (Catalogue → Dépôts).</p>
         )}

@@ -185,6 +185,31 @@ aux journaux (lecture seule), `supabase/outils/reparer_cumuls.sql` les remet d'a
 clients et des fournisseurs restent calculés par le poste : ils dérivent de plusieurs tables et de
 changements de statut, c'est le chantier suivant.
 
+### Numérotation des pièces hors ligne
+
+Aucun compteur central n'est possible : un poste doit numéroter une vente sans réseau. Le numéro est
+donc tiré au hasard, et sa seule protection est le nombre de tirages possibles — un doublon tombe sur
+la contrainte `unique (filiale_id, numero)` du serveur et la pièce est refusée.
+
+Le format est `PREFIXE-POSTE-AAAAMMJJ-XXXXXX`, par exemple `ENT-K7Q-20260922-M3Q2PT`, et porte deux
+garde-fous qui se multiplient :
+
+- **le code du poste**, tiré une fois par machine et mémorisé dans son stockage local (visible dans
+  Point de vente → Changer) : deux postes ne tirent jamais dans le même espace de numéros ;
+- **un suffixe de 6 caractères** au lieu de 4, soit 32⁶ ≈ 1,07 milliard de tirages par préfixe, par
+  poste et par jour, contre 32⁴ ≈ 1 million auparavant.
+
+À 100 pièces par jour et par caisse (300 jours ouvrés), le risque qu'un numéro soit tiré deux fois
+passe ainsi d'environ **76 % par an** à **0,14 %** ; à 200 pièces par jour, de 99,7 % à 0,55 %. Et
+deux postes qui tireraient par malchance le même code (3 caractères, moins de 0,02 % de risque à
+quatre postes) retombent simplement sur le suffixe à 6 caractères, sans rien casser.
+
+Les ventes prennent le code de leur caisse comme préfixe (`C01-K7Q-…`) ; toutes
+les autres pièces prennent leur nature (`ENT`, `SOR`, `INV`, `BC`, `REG`, `VER`…). Les codes de tiers
+(`CLI-`, `FOU-`, `EMP-`) passent de 5 à 6 caractères.
+
+Les numéros déjà émis restent valides : rien ne relit leur format, et la colonne est en `text`.
+
 ### Quand le serveur refuse les écritures
 
 Une écriture refusée définitivement par Postgres (contrainte violée, règle de sécurité) est abandonnée

@@ -1,5 +1,5 @@
 import type { ArticleRow, StockRow } from '@quinca/shared-types';
-import { genererNumeroPiece } from '../../../core/commun/numerotation';
+import { numeroPiece } from '../../desktop/identitePoste';
 import { arrondirMontant } from '../../../core/commun/prix';
 import { fusionnerLignes, repartirCoutProduction, type ProductionForm } from '../../../core/stock';
 import { BaseRepository } from './BaseRepository';
@@ -46,7 +46,7 @@ export class ProductionsRepository extends BaseRepository {
   enregistrer(ctx: ContexteMouvement, form: ProductionForm): Promise<{ id: string; numero: string; coutMatieres: number }> {
     return this.db.writeTransaction(async (tx) => {
       const id = this.nouvelId();
-      const numero = form.numero || genererNumeroPiece('PRD');
+      const numero = form.numero || numeroPiece('PRD');
       const now = this.maintenant();
       const stock = new StockRepository(this.db);
       const article = async (articleId: string) => {

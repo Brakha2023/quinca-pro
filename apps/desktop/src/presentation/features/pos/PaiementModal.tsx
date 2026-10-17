@@ -18,6 +18,7 @@ import {
   type VentePreparee,
 } from '../../../core/ventes';
 import type { Client } from '../../../core/clients';
+import { codePoste } from '../../../infrastructure/desktop/identitePoste';
 import { VentesRepository, type ContexteVente } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import Modal from '../../components/ui/Modal';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
@@ -73,7 +74,7 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
 
   const apercu = useMemo(() => {
     try {
-      return { ok: true as const, v: preparerVente({ lignes, remise_globale_percent: remiseGlobale, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' }, ctx.caisseCode) };
+      return { ok: true as const, v: preparerVente({ lignes, remise_globale_percent: remiseGlobale, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' }, { caisse: ctx.caisseCode, code: codePoste() }) };
     } catch (e) {
       return { ok: false as const, message: e instanceof Error ? e.message : 'Vente invalide' };
     }

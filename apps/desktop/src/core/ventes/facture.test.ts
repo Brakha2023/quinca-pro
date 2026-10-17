@@ -40,7 +40,7 @@ describe('recapFacture', () => {
   const vente = (mode: 'ESPECES' | 'CREDIT', percu: number, client: unknown = null) =>
     preparerVente(
       { lignes: [ligne()], remise_globale_percent: 0, client: client as never, paiement: { mode_paiement: mode, montant_percu: percu }, livraison: null, notes: '' },
-      'C1',
+      { caisse: 'C1', code: 'K7Q' },
     );
 
   it('reprend les totaux de la vente', () => {
