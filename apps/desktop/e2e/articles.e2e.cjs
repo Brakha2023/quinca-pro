@@ -92,6 +92,9 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   await page.locator('main h1', { hasText: 'Catalogue' }).waitFor();
   await page.locator('aside').locator('text=Awa Koné').waitFor();
   verifier(true, 'profil réel affiché dans la sidebar');
+  // La requête vivante revient après le premier rendu : compter tout de suite
+  // photographie la liste vide d'avant, et le scénario échoue au hasard.
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 2);
   verifier((await page.locator('tbody tr').count()) === 2, 'articles listés en temps réel');
 
   await page.getByRole('button', { name: 'Nouvel article' }).click();

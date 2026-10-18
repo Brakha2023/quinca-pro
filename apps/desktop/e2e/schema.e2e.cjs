@@ -89,8 +89,11 @@ const ACCEPTE = { status: 200, contentType: 'application/json', body: '[]' };
   await bandeau.waitFor({ state: 'detached', timeout: 10000 });
   verifier(true, 'serveur corrigé : le bandeau disparaît à la revérification');
 
-  const inattendues = erreurs.filter((e) => !/status of (400|404)/.test(e) && !/Failed to load resource/.test(e));
-  verifier(inattendues.length === 0, `aucune erreur console inattendue${inattendues.length ? ' : ' + inattendues.join(' | ') : ''}`);
+  // Comme le scénario d'audit : la coupure réseau est provoquée ici même, et la
+  // tentative de synchronisation qui tombe dedans n'arrive pas à tous les
+  // passages — ne pas la tolérer rendait ce scénario intermittent.
+  const inattendues = erreurs.filter((e) => !/status of (400|404)/.test(e) && !/Failed to load resource/.test(e) && !/Failed to fetch/.test(e));
+  verifier(inattendues.length === 0, `aucune erreur console hors serveur simulé et coupure réseau${inattendues.length ? ' : ' + inattendues.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');
 })().catch((e) => { console.error(e.message); process.exit(1); });
