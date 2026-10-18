@@ -7,6 +7,7 @@ import { controleInlineClass } from '../../components/ui/FormField';
 import { useConfirmation } from '../../confirmation/useConfirmation';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
+import NoteHistorique from '../../components/ui/NoteHistorique';
 import { useNotifier } from '../../notifications/useNotifier';
 import { CaisseFormModal } from './modales';
 import { useCaissesToutes, useMouvementsTresorerie, useSoldeOuverture } from './hooks';
@@ -67,6 +68,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
         <p className="text-sm text-neutral-600">Total en caisses : <strong className="font-mono">{formaterFcfa(caisses.filter((c) => c.est_active).reduce((s, c) => s + c.solde_actuel, 0))}</strong></p>
         <button type="button" onClick={() => setModal({ type: 'caisse' })} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle caisse</button>
       </div>
+      <NoteHistorique quoi="le journal de caisse" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {caisses.map((c) => (

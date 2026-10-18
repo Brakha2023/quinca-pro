@@ -235,6 +235,38 @@ Un détail à connaître pour qui touche à cet écran : PowerSync ne notifie pa
 table **locale** (vérifié sur `@powersync/web` 2.3.1), donc un `useQuery` ne se rafraîchirait jamais.
 Le dépôt prévient les écrans lui-même, et `useEchecsEnvoi` s'y abonne.
 
+### Ce que le poste télécharge, et ce qu'il laisse au serveur
+
+Chaque poste recevait toute l'activité depuis l'ouverture, pour toujours. Deux corrections, dans
+`supabase/sync-streams.yaml` :
+
+**`audit_log` n'est plus synchronisé.** C'est un journal de surveillance écrit par Postgres, qui
+recopie la ligne entière à chaque écriture métier — il pesait donc à lui seul une bonne part de la
+base locale, pour un écran consulté une fois par mois. La page Audit l'interroge maintenant
+directement sur le serveur (`useJournalAudit`) : c'est le seul écran de l'application qui exige le
+réseau, et il le dit clairement quand il ne l'a pas. Un journal de surveillance n'a de toute façon
+rien à faire sur la machine qu'il surveille.
+
+**L'activité est bornée à douze mois.** Les règles de synchronisation n'ont pas de `now()` : elles
+doivent être déterministes, une ligne ne peut pas sortir d'un flux en vieillissant toute seule. La
+borne vient donc du poste, qui l'envoie à la connexion (`connection.parameter('depuis')`,
+`core/sync/historique.ts`). C'est le **premier jour du mois**, douze mois en arrière : la valeur ne
+change qu'une fois par mois, alors qu'une date recalculée chaque jour ferait refaire les paquets —
+et donc retélécharger l'historique — tous les jours.
+
+Ce qui **n'est pas** borné : le référentiel (il ne grossit pas avec le temps) et le flux `encours` —
+une vente non soldée, une commande fournisseur ouverte, une livraison à faire, un transfert en
+transit restent sur le poste quel que soit leur âge. Sans cela, la borne ferait disparaître la pièce
+en laissant la créance au compte du client. Les écrans qui listent un historique le disent
+(`NoteHistorique`).
+
+Chaque requête porte `connection.parameter('depuis') IS NULL OR …` : un poste resté sur une ancienne
+version n'envoie pas la borne et continue de tout recevoir. **Les deux déploiements sont donc
+indépendants** — ni l'ordre ni le décalage ne privent un poste de ses données. Seule contrainte :
+appliquer d'abord la migration `20260923000000_horodater_lignes_vente.sql`, qui donne à
+`lignes_vente` l'horodatage sans lequel son flux ne peut pas être borné (c'était la seule table
+d'activité sans date, et la plus volumineuse).
+
 ### L'heure du poste
 
 Toutes les dates de l'application viennent de `new Date()` sur la machine : le poste doit pouvoir

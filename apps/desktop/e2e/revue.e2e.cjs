@@ -16,6 +16,9 @@ const PAGES_SIMPLES = ['', 'articles', 'ventes', 'livraisons', 'consolidation', 
 (async () => {
   const { browser, page, erreurs } = await ouvrirNavigateur();
   const { filialeId } = await simulerSession(page);
+  // La page Audit interroge le serveur (la table n'est plus synchronisée) :
+  // on répond à sa place, pour ne rien demander à la vraie base.
+  await page.route('**/rest/v1/audit_log*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 
   console.log('Requêtes SQL (base locale réelle)');
   const sql = await page.evaluate(async (F) => {

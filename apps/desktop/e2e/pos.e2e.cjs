@@ -7,6 +7,9 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
 (async () => {
   const { browser, page, erreurs } = await ouvrirNavigateur();
   const { filialeId, userId } = await simulerSession(page);
+  // La page Audit interroge le serveur (la table n'est plus synchronisée) :
+  // on répond à sa place, pour ne rien demander à la vraie base.
+  await page.route('**/rest/v1/audit_log*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 
   console.log('Repository (base locale)');
   const r = await page.evaluate(async ({ F, U }) => {

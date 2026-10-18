@@ -103,10 +103,10 @@ export class VentesRepository extends BaseRepository {
         const l = calculerLigne(ligne);
         await tx.execute(
           `INSERT INTO lignes_vente (id, vente_id, filiale_id, article_id, code_article, designation, quantite, prix_unitaire_ht, prix_unitaire_ttc,
-                                     remise_percent, tva_percent, total_ht, total_ttc, depot_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                     remise_percent, tva_percent, total_ht, total_ttc, depot_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [this.nouvelId(), id, ctx.filialeId, l.article_id, l.code, l.designation, l.quantite, l.prix_unitaire_ht, l.prix_unitaire_ttc,
-           l.remise_percent, l.tva_percent, l.total_ht, l.total_ttc, ctx.depotId],
+           l.remise_percent, l.tva_percent, l.total_ht, l.total_ttc, ctx.depotId, now],
         );
         await this.stock.appliquerDansTransaction(
           tx, ctx, ctx.depotId, 'SORTIE_VENTE',

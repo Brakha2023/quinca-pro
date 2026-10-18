@@ -5,6 +5,7 @@ import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE } from '../../../core/ven
 import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
+import NoteHistorique from '../../components/ui/NoteHistorique';
 import { controleInlineClass } from '../../components/ui/FormField';
 import { useCaisses } from '../../features/clients/hooks';
 import VenteDetailsModal, { STATUT_VENTE_STYLE, formaterDateHeure } from '../../features/ventes/VenteDetailsModal';
@@ -83,6 +84,7 @@ export default function VentesPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Ventes</h1>
           <p className="text-sm text-neutral-500 mt-1">{filiale?.nom} · journée de caisse et historique</p>
+          <NoteHistorique quoi="les ventes" />
         </div>
         <div className="flex gap-2">
           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer</button>

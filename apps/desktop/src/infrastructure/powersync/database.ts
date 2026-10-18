@@ -1,4 +1,5 @@
 import { PowerSyncDatabase } from '@powersync/web';
+import { debutHistoriqueLocal } from '../../core/sync';
 import { COMPTER_ECHECS_ENVOI_QUERY } from './repositories/EchecsEnvoiRepository';
 import { AppSchema } from './schema';
 import { SupabaseConnector } from './SupabaseConnector';
@@ -22,10 +23,16 @@ export const db = new PowerSyncDatabase({
 
 const connector = new SupabaseConnector();
 
-/** Démarre la synchronisation avec le serveur (idempotent). */
+/**
+ * Démarre la synchronisation avec le serveur (idempotent).
+ *
+ * `depuis` borne l'activité téléchargée (voir `core/sync/historique` et
+ * `supabase/sync-streams.yaml`). C'est un paramètre de connexion : le changer
+ * demande de se reconnecter, d'où le calcul ici, une fois, à l'ouverture.
+ */
 export async function connectSync(): Promise<void> {
   if (db.connected || db.currentStatus.connecting) return;
-  await db.connect(connector);
+  await db.connect(connector, { params: { depuis: debutHistoriqueLocal() } });
 }
 
 /** Coupe la synchronisation sans toucher aux données locales. */

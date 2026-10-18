@@ -262,6 +262,8 @@ export const TABLES = {
     total_ht: 'real',
     total_ttc: 'real',
     depot_id: 'text',
+    /** Horodatage propre à la ligne : il borne son flux de synchronisation (voir sync-streams.yaml). */
+    created_at: 'text',
   },
   reglements_clients: {
     numero: 'text',
@@ -429,17 +431,13 @@ export const TABLES = {
     utilisateur_id: 'text',
     ...COMMUNES_HORODATAGE,
   },
-  audit_log: {
-    utilisateur_id: 'text',
-    action: 'text',
-    table_cible: 'text',
-    enregistrement_id: 'text',
-    anciennes_valeurs: 'text',
-    nouvelles_valeurs: 'text',
-    filiale_id: 'text',
-    created_at: 'text',
-  },
 } as const satisfies Record<string, Record<string, ColumnType>>;
+
+/*
+ * `audit_log` ne figure pas ci-dessus : le journal de surveillance n'est plus
+ * synchronisé sur les postes (voir supabase/sync-streams.yaml). La page Audit
+ * l'interroge sur le serveur, où les colonnes `jsonb` arrivent en objets.
+ */
 
 export type Tables = typeof TABLES;
 export type TableName = keyof Tables;
@@ -472,7 +470,6 @@ export type LivraisonRow = Row<'livraisons'>;
 export type CommandeFournisseurRow = Row<'commandes_fournisseurs'>;
 export type ReglementFournisseurRow = Row<'reglements_fournisseurs'>;
 export type MouvementTresorerieRow = Row<'mouvements_tresorerie'>;
-export type AuditLogRow = Row<'audit_log'>;
 export type ProductionRow = Row<'productions'>;
 export type LigneProductionRow = Row<'lignes_production'>;
 export type LigneCommandeFournisseurRow = Row<'lignes_commande_fournisseur'>;

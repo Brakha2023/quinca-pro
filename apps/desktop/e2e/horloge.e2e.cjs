@@ -13,6 +13,8 @@ const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
  * Jeton tel que le poste se retrouve **en avance** de `avanceMs` sur le serveur
  * (valeur négative : le poste est en retard).
  */
+// 30 s de marge sur les valeurs rondes : le temps que le scénario s'exécute,
+// l'écart mesuré reste dans la même minute, donc le libellé ne bouge pas.
 const jetonDecale = (avanceMs) =>
   `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: 'aaaaaaaa-0000-0000-0000-00000000e2e0', iat: Math.floor((Date.now() - avanceMs) / 1000) })}.e2e`;
 
@@ -34,10 +36,10 @@ const mesurer = (page, jeton) =>
   verifier((await page.locator('[data-testid=bandeau-horloge]').count()) === 0, 'écart de 20 s : rien ne s’affiche, rien ne change sur une pièce');
 
   console.log('Poste décalé de quelques minutes');
-  const mesure = await mesurer(page, jetonDecale(6 * 60_000));
+  const mesure = await mesurer(page, jetonDecale(6 * 60_000 + 30_000));
   const bandeau = page.locator('[data-testid=bandeau-horloge]');
   await bandeau.waitFor({ timeout: 5000 });
-  verifier(Math.abs(mesure.ecart_ms - 6 * 60_000) < 2000, `écart mesuré sur le jeton : ${Math.round(mesure.ecart_ms / 1000)} s d’avance`);
+  verifier(Math.abs(mesure.ecart_ms - (6 * 60_000 + 30_000)) < 5000, `écart mesuré sur le jeton : ${Math.round(mesure.ecart_ms / 1000)} s d’avance`);
   verifier((await bandeau.getAttribute('data-niveau')) === 'AVERTISSEMENT', 'bandeau d’avertissement, sans bloquer le travail');
   const texte = (await bandeau.textContent()).replace(/\s+/g, ' ');
   verifier(texte.includes('en avance de 6 min'), `le bandeau dit le sens et l’ampleur : « ${texte.slice(0, 60)}… »`);
@@ -48,7 +50,7 @@ const mesurer = (page, jeton) =>
   verifier((await page.locator('[data-testid=caisse-fermee]').count()) === 0, 'quelques minutes d’écart : la caisse reste ouverte');
 
   console.log('Poste franchement à côté');
-  await mesurer(page, jetonDecale(-3 * 3_600_000));
+  await mesurer(page, jetonDecale(-(3 * 3_600_000 + 30_000)));
   await page.locator('[data-testid=caisse-fermee]').waitFor({ timeout: 5000 });
   const refus = (await page.locator('[data-testid=caisse-fermee]').textContent()).replace(/\s+/g, ' ');
   verifier(refus.includes('en retard de 3 h'), `caisse fermée, motif affiché : « ${refus.slice(0, 70)}… »`);
@@ -67,7 +69,7 @@ const mesurer = (page, jeton) =>
 
   // … mais le serveur tranche à la connexion suivante : si l'heure est toujours
   // fausse, le prochain jeton rétablit le blocage en quelques secondes.
-  await mesurer(page, jetonDecale(-3 * 3_600_000));
+  await mesurer(page, jetonDecale(-(3 * 3_600_000 + 30_000)));
   await page.locator('[data-testid=caisse-fermee]').waitFor({ timeout: 5000 });
   verifier(true, 'déclaration non tenue : le jeton suivant referme la caisse');
 

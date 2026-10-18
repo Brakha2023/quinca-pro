@@ -3,6 +3,7 @@ import { PrinterIcon } from '@heroicons/react/24/outline';
 import { TYPES_MOUVEMENT_STOCK, type TypeMouvementStock } from '@quinca/shared-types';
 import { LIBELLES_MOUVEMENT, SENS_MOUVEMENT } from '../../../core/stock';
 import { controleInlineClass } from '../../components/ui/FormField';
+import NoteHistorique from '../../components/ui/NoteHistorique';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useDepots } from '../articles/hooks';
 import { useFournisseurs } from '../fournisseurs/hooks';
@@ -27,6 +28,7 @@ export default function MouvementsPanel({ filialeId, filiale }: { filialeId: str
 
   return (
     <div className="space-y-4">
+      <NoteHistorique quoi="les mouvements" />
       <div className="flex flex-wrap items-center gap-3 print:hidden">
         <select value={depotId} onChange={(e) => setDepotId(e.target.value)} className={controleInlineClass}>
           <option value="">Tous les dépôts</option>
