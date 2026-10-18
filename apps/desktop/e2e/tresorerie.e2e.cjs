@@ -100,11 +100,67 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   const montant = async (testId) => (await page.locator(`[data-testid=${testId}]`).textContent()).replace(/[^\d-]/g, '');
   verifier((await montant('solde-cloture')) === (await montant('solde-actuel')), 'solde de clôture = solde actuel sur une période qui va jusqu’à aujourd’hui');
 
+  // Liste des caisses : tableau dense, totaux en bas, filtres, impression, export.
+  console.log('État des caisses');
+  const lignesCaisses = (n) => page.waitForFunction((attendu) => document.querySelectorAll('[data-testid^="caisse-"]').length === attendu, n);
+  await lignesCaisses(2);
+  const compteurCaisses = page.getByTestId('compteur-caisses');
+  const resumeCaisses = async () => (await compteurCaisses.textContent()).replace(/\s+/g, ' ');
+  // Ouvertures du jour : 500 000 + 0 ; clôtures : 550 500 + 200 000.
+  verifier((await resumeCaisses()).includes('2 caisse(s)') && (await resumeCaisses()).includes('750 500 F'), `liste : 2 caisses et la clôture totalisée (${await resumeCaisses()})`);
+  verifier((await texteDe(page, '[data-testid=total-caisses]')) === '750 500 F', 'liste : ligne de total des soldes du jour');
+  const ligneCoffre = await texteDe(page, '[data-testid=caisse-C02]');
+  verifier(ligneCoffre.includes('Coffre') && ligneCoffre.includes('200 000 F'), `liste : une ligne par caisse, ouverture → clôture (${ligneCoffre.trim()})`);
+
+  await page.getByTestId('recherche-caisse').fill('coffre');
+  await lignesCaisses(1);
+  verifier((await resumeCaisses()).includes('1 caisse(s)'), 'recherche : le total suit les caisses retenues');
+
+  await page.getByTestId('recherche-caisse').fill('');
+  await lignesCaisses(2);
+  await page.getByTestId('filtre-etat-caisse').selectOption('NEGATIVES');
+  await page.locator('text=Aucune caisse dans ce périmètre').waitFor();
+  verifier(true, 'filtre « soldes négatifs » : aucune caisse à découvert ici');
+  await page.getByTestId('filtre-etat-caisse').selectOption('ACTIVES');
+  await lignesCaisses(2);
+
+  await page.getByTestId('imprimer-caisses').click();
+  const etatCaisses = page.locator('#zone-impression');
+  await etatCaisses.locator('[data-testid=ligne-etat-caisse]').first().waitFor();
+  const papierCaisses = await texteDe(page, '#zone-impression');
+  verifier((await etatCaisses.locator('[data-testid=ligne-etat-caisse]').count()) === 2, 'document : une ligne par caisse retenue');
+  verifier(papierCaisses.includes('ÉTAT DES CAISSES') || papierCaisses.includes('État des caisses'), 'document : titre');
+  verifier(papierCaisses.includes('Caisses actives ·') && papierCaisses.includes('Filiale Abidjan'), 'document : périmètre retenu et en-tête de la maison');
+  verifier((await texteDe(page, '[data-testid=total-cloture]')) === '750 500 F', 'document : total des clôtures');
+  verifier(papierCaisses.includes('Caisse principale') && papierCaisses.includes('500 000 F'), 'document : solde d’ouverture de chaque caisse');
+  verifier(!papierCaisses.includes('Point de Vente') && !papierCaisses.includes('Consolidation'), 'document : ni menu ni bandeau de l’application');
+  await etatCaisses.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
+  const telechargementCaisses = page.waitForEvent('download');
+  await page.getByTestId('exporter-caisses').click();
+  const fichierCaisses = await telechargementCaisses;
+  const classeurCaisses = require('xlsx').readFile(await fichierCaisses.path());
+  const feuilleCaisses = require('xlsx').utils.sheet_to_json(classeurCaisses.Sheets[classeurCaisses.SheetNames[0]]);
+  verifier(/^etat-des-caisses-\d{4}-\d{2}-\d{2}\.xlsx$/.test(fichierCaisses.suggestedFilename()), `export Excel : fichier ${fichierCaisses.suggestedFilename()}`);
+  const principale = feuilleCaisses.find((l) => l.Code === 'C01');
+  verifier(feuilleCaisses.length === 2 && principale["Solde d'ouverture"] === 500000 && principale['Total entrées'] === 450500
+    && principale['Total sorties'] === 400000 && principale['Solde de clôture'] === 550500,
+    'export Excel : ouverture, entrées, sorties et clôture relues depuis le classeur');
+
   await page.getByRole('button', { name: 'Imprimer le journal' }).click();
   await page.locator('#zone-impression .document-titre', { hasText: 'Journal de caisse' }).waitFor();
   const journalImprime = await texteDe(page, '#zone-impression');
   verifier(journalImprime.includes("Solde d'ouverture") && journalImprime.includes('Totaux') && journalImprime.includes('Caisse principale'), 'journal imprimable : ouverture, totaux, caisse');
   await page.keyboard.press('Escape');
+
+  // Le journal part aussi en classeur, avec la caisse et la période retenues.
+  const telechargementJournal = page.waitForEvent('download');
+  await page.getByTestId('exporter-journal').click();
+  const fichierJournal = await telechargementJournal;
+  const feuilleJournal = require('xlsx').utils.sheet_to_json(require('xlsx').readFile(await fichierJournal.path()).Sheets.Journal);
+  verifier(/^journal-de-caisse-C01-\d{4}-\d{2}-\d{2}\.xlsx$/.test(fichierJournal.suggestedFilename()), `export Excel du journal : fichier ${fichierJournal.suggestedFilename()}`);
+  verifier(feuilleJournal.length === r.journal.lignes.length && feuilleJournal.every((l) => l.Caisse === 'Caisse principale'),
+    'export Excel du journal : les mouvements de la caisse retenue, avec leur solde courant');
 
   // Versement : encaissement d'un remettant hors compte, puis reçu.
   await sousMenu.getByRole('link', { name: 'Versement' }).click();

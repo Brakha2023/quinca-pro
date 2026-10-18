@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
 import type { CaisseRow, MouvementTresorerieRow, TransfertFilialeRow } from '@quinca/shared-types';
-import { caisseFromRow, soldeOuverture, type MouvementJournal } from '../../../core/tresorerie';
+import {
+  caisseFromRow, etatCaisses, recapEtatCaisses, soldeOuverture,
+  type MouvementCaisse, type MouvementJournal,
+} from '../../../core/tresorerie';
 import {
   CAISSES_QUERY, TRANSFERTS_FILIALES_QUERY, mouvementsDepuisQuery, mouvementsTresorerieQuery, type FiltresTresorerie,
 } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
@@ -40,6 +43,20 @@ export function useSoldeOuverture(filialeId: string | null, caisseId: string | n
     [caisses, caisseId],
   );
   return { soldeActuel, ouverture: useMemo(() => soldeOuverture(soldeActuel, data), [soldeActuel, data]) };
+}
+
+/**
+ * État de toutes les caisses sur une période : une seule lecture des
+ * mouvements depuis le début de la période sert à la fois aux ouvertures et
+ * aux totaux, caisse par caisse.
+ */
+export function useEtatCaisses(filialeId: string | null, dateDebut: string, dateFin: string) {
+  const caisses = useCaissesToutes(filialeId);
+  const { sql, params } = useMemo(() => mouvementsDepuisQuery(filialeId, null, dateDebut), [filialeId, dateDebut]);
+  const { data, isLoading } = useQuery<MouvementCaisse & { id: string }>(sql, params);
+  const finISO = useMemo(() => new Date(`${dateFin}T23:59:59.999`).toISOString(), [dateFin]);
+  const lignes = useMemo(() => etatCaisses(caisses, data, finISO), [caisses, data, finISO]);
+  return { caisses, lignes, recap: recapEtatCaisses(lignes), isLoading };
 }
 
 export interface TransfertFilialeVue extends TransfertFilialeRow {

@@ -100,8 +100,13 @@ const LIGNES = [
   verifier(/Ce poste garde les ventes des 12 derniers mois/.test(note), `note sur la page Ventes : « ${note.slice(0, 80)}… »`);
   verifier(note.includes('non soldées'), 'la note dit aussi ce qui reste malgré la borne');
 
-  const inattendues = erreurs.filter((e) => !/status of 500/.test(e) && !/Failed to load resource/.test(e));
-  verifier(inattendues.length === 0, `aucune erreur console inattendue${inattendues.length ? ' : ' + inattendues.join(' | ') : ''}`);
+  // Le scénario coupe lui-même le réseau (`setOffline`) : si une tentative de
+  // synchronisation tombe pendant cette fenêtre, PowerSync le signale en
+  // console. C'est la coupure simulée qui parle, pas un défaut — et comme la
+  // tentative n'arrive pas à chaque exécution, ne pas la tolérer rendait ce
+  // scénario intermittent.
+  const inattendues = erreurs.filter((e) => !/status of 500/.test(e) && !/Failed to load resource/.test(e) && !/Failed to fetch/.test(e));
+  verifier(inattendues.length === 0, `aucune erreur console hors serveur simulé et coupure réseau${inattendues.length ? ' : ' + inattendues.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');
 })().catch((e) => { console.error(e.message); process.exit(1); });

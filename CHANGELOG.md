@@ -55,6 +55,16 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   Filtrer par dépôt ne fait plus disparaître un article absent de ce dépôt : il y figure en rupture,
   ce qui est précisément l'information recherchée.
 
+- **Liste des caisses : tableau, filtres, impression et export Excel.** Les cartes ne tenaient plus
+  dès qu'une maison a dix ou quinze caisses. Trésorerie → Liste des caisses est désormais un **état des
+  caisses** : une ligne par caisse avec solde d'ouverture, entrées, sorties, solde de clôture et solde
+  du jour, le total en bas, et des filtres (recherche, caisses actives / fermées / mouvementées /
+  soldes négatifs, période). *Imprimer / PDF* sort l'état A4 du périmètre retenu, *Exporter Excel* le
+  même périmètre ; le journal de caisse s'exporte aussi en classeur.
+
+  Sur une période passée, le solde du jour et le solde de clôture ne disent pas la même chose : les
+  deux colonnes sont là, et l'écart se lit.
+
 - **Transfert de stock entre filiales.** Nouveau sous-menu Stock → *Transfert entre filiales* : la
   marchandise sort du dépôt de départ dès l'envoi et le bon reste **en transit** ; la filiale
   destinataire la fait entrer dans le dépôt de son choix à l'arrivée. L'expéditeur peut annuler tant

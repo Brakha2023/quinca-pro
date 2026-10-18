@@ -33,12 +33,16 @@ export function mouvementsTresorerieQuery(filialeId: string | null, filtres: Fil
   };
 }
 
-/** Mouvements d'une caisse depuis un instant donné : sert à remonter au solde d'ouverture. */
+/**
+ * Mouvements depuis un instant donné : sert à remonter au solde d'ouverture,
+ * caisse par caisse (`caisse_id`) pour l'état des caisses, ou toutes caisses
+ * confondues pour le journal.
+ */
 export function mouvementsDepuisQuery(filialeId: string | null, caisseId: string | null, debut: string) {
   const conditions = ['filiale_id = ?', 'date_operation >= ?'];
   const params: Array<string | number> = [filialeId ?? '', new Date(`${debut}T00:00:00`).toISOString()];
   if (caisseId) { conditions.push('caisse_id = ?'); params.push(caisseId); }
-  return { sql: `SELECT id, type, montant, date_operation FROM mouvements_tresorerie WHERE ${conditions.join(' AND ')}`, params };
+  return { sql: `SELECT id, caisse_id, type, montant, date_operation FROM mouvements_tresorerie WHERE ${conditions.join(' AND ')}`, params };
 }
 
 /** Transferts inter-filiales où la filiale est expéditrice ou destinataire. */

@@ -436,12 +436,20 @@ groupé en caisse, catégorie SALAIRE ; une paie payée n'est plus recalculée) 
 
 Sections (routes `/tresorerie/<section>`, sous-menu latéral) :
 
-- **Liste des caisses** : cartes des caisses avec leur solde, création / modification / désactivation
-  (une caisse non vide ne se désactive pas), puis **mouvement de caisse** filtré par caisse et par
-  période — **solde d'ouverture** (déduit du solde actuel en remontant les mouvements de la période),
-  recettes, dépenses, **solde de clôture** et **solde actuel**, journal chronologique avec solde courant
-  après chaque opération, et **journal de caisse imprimable** (A4, période, soldes, totaux, double
-  signature).
+- **Liste des caisses** : tableau dense d'**état des caisses** — une ligne par caisse (code, libellé,
+  responsable, solde d'ouverture, entrées, sorties, solde de clôture, solde du jour) et le total en bas.
+  Filtres : recherche (code, libellé, responsable), caisses retenues (actives, fermées, mouvementées
+  sur la période, soldes négatifs) et période. **Imprimer / PDF** sort l'état A4 du périmètre retenu
+  (périmètre écrit en clair, total, double signature) ; **Exporter Excel** le même périmètre. Création,
+  modification et désactivation depuis la ligne (une caisse non vide ne se désactive pas).
+
+  Le **solde d'ouverture** se déduit du solde actuel en remontant les mouvements : sur une période
+  passée, les mouvements postérieurs comptent pour l'ouverture mais pas dans les totaux de la période,
+  et le solde du jour diffère alors de la clôture — l'écart est l'information.
+
+  Cliquer une ligne ouvre en dessous le **journal de cette caisse** : solde d'ouverture, recettes,
+  dépenses, solde de clôture et solde actuel, journal chronologique avec solde courant après chaque
+  opération, **imprimable** (A4, période, soldes, totaux, double signature) et **exportable en Excel**.
 - **Versement** : encaissement au guichet. Si le remettant est un client en compte, le versement passe
   par son compte (créance et cumuls mis à jour, comme dans le module Clients) ; sinon c'est une recette
   de caisse `VERSEMENT`. Reçu imprimé aussitôt.
