@@ -28,3 +28,20 @@ describe('sansCumulsServeur', () => {
     expect(sansCumulsServeur('articles', undefined)).toEqual({});
   });
 });
+
+describe('comptes de tiers', () => {
+  it('ne renvoie pas les cumuls d’un client : le serveur les tient depuis les pièces', () => {
+    expect(sansCumulsServeur('clients', { cumul_factures: 150000, cumul_reglements: 70000, solde_actuel: 100000 })).toBeNull();
+  });
+
+  it('laisse passer le solde d’ouverture, qui appartient à la fiche', () => {
+    expect(sansCumulsServeur('clients', { raison_sociale: 'SARL KONÉ', solde_initial: 20000, solde_actuel: 120000 })).toEqual({
+      raison_sociale: 'SARL KONÉ',
+      solde_initial: 20000,
+    });
+  });
+
+  it('traite le fournisseur comme le client', () => {
+    expect(sansCumulsServeur('fournisseurs', { cumul_factures: 230000, solde_actuel: 155000, plafond_credit: 500000 })).toEqual({ plafond_credit: 500000 });
+  });
+});

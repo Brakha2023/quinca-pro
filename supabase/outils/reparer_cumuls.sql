@@ -11,6 +11,8 @@ begin;
 -- c'est une correction délibérée, on les met en sommeil le temps de la transaction.
 alter table public.stocks disable trigger trg_stocks_ignorer_cumuls;
 alter table public.caisses disable trigger trg_caisses_ignorer_cumuls;
+alter table public.clients disable trigger trg_clients_ignorer_cumuls;
+alter table public.fournisseurs disable trigger trg_fournisseurs_ignorer_cumuls;
 
 update public.stocks s
    set quantite = coalesce(j.quantite, 0),
@@ -28,7 +30,42 @@ update public.caisses c
  where j.caisse_id = c.id
    and c.solde_actuel is distinct from coalesce(j.solde, 0);
 
+-- Comptes clients : factures des ventes vivantes, règlements du journal moins
+-- ce qui avait été encaissé au comptoir sur les ventes annulées.
+update public.clients c
+   set cumul_factures = coalesce(v.factures, 0),
+       cumul_reglements = round(coalesce(r.reglements, 0) - coalesce(v.repris, 0), 2),
+       solde_actuel = round(coalesce(c.solde_initial, 0) + coalesce(v.factures, 0) - coalesce(r.reglements, 0) + coalesce(v.repris, 0), 2),
+       updated_at = now()
+  from (select id from public.clients) tous
+  left join (select client_id,
+                    sum(case when statut <> 'ANNULEE' then coalesce(total_ttc, 0) else 0 end) as factures,
+                    sum(case when statut =  'ANNULEE' then coalesce(montant_percu, 0) - coalesce(monnaie, 0) else 0 end) as repris
+               from public.ventes where client_id is not null group by client_id) v on v.client_id = tous.id
+  left join (select client_id, sum(coalesce(montant, 0)) as reglements
+               from public.reglements_clients group by client_id) r on r.client_id = tous.id
+ where c.id = tous.id
+   and (c.cumul_factures is distinct from coalesce(v.factures, 0)
+        or c.cumul_reglements is distinct from round(coalesce(r.reglements, 0) - coalesce(v.repris, 0), 2));
+
+-- Comptes fournisseurs : la dette suit la valeur reçue.
+update public.fournisseurs f
+   set cumul_factures = coalesce(a.recu, 0),
+       cumul_reglements = coalesce(r.reglements, 0),
+       solde_actuel = round(coalesce(f.solde_initial, 0) + coalesce(a.recu, 0) - coalesce(r.reglements, 0), 2),
+       updated_at = now()
+  from (select id from public.fournisseurs) tous
+  left join (select fournisseur_id, sum(case when statut <> 'ANNULEE' then coalesce(total_recu_ttc, 0) else 0 end) as recu
+               from public.commandes_fournisseurs where fournisseur_id is not null group by fournisseur_id) a on a.fournisseur_id = tous.id
+  left join (select fournisseur_id, sum(coalesce(montant, 0)) as reglements
+               from public.reglements_fournisseurs group by fournisseur_id) r on r.fournisseur_id = tous.id
+ where f.id = tous.id
+   and (f.cumul_factures is distinct from coalesce(a.recu, 0)
+        or f.cumul_reglements is distinct from coalesce(r.reglements, 0));
+
 alter table public.stocks enable trigger trg_stocks_ignorer_cumuls;
 alter table public.caisses enable trigger trg_caisses_ignorer_cumuls;
+alter table public.clients enable trigger trg_clients_ignorer_cumuls;
+alter table public.fournisseurs enable trigger trg_fournisseurs_ignorer_cumuls;
 
 commit;

@@ -180,10 +180,23 @@ hors ligne contrôle le disponible. Mais il ne les **envoie** plus (`sansCumulsS
 déclencheurs de garde refusent toute valeur de cumul venue d'un poste — un poste resté sur une ancienne
 version ne peut donc pas casser le calcul. La valeur du serveur redescend et remplace la projection locale.
 
+**Les comptes des clients et des fournisseurs suivent la même règle**, avec une difficulté en plus :
+ils ne dérivent pas d'un journal unique mais de pièces **dont le statut change** — une vente annulée
+doit décrocher ce qu'elle avait accroché. Les déclencheurs réagissent donc à l'INSERT *et* à l'UPDATE,
+et appliquent la différence entre l'ancienne et la nouvelle contribution de la pièce.
+
+| Cumul | Ce qui l'alimente |
+| --- | --- |
+| `clients.cumul_factures` | `ventes.total_ttc`, hors ventes annulées |
+| `clients.cumul_reglements` | `reglements_clients.montant`, moins ce qui avait été encaissé au comptoir sur une vente annulée |
+| `fournisseurs.cumul_factures` | `commandes_fournisseurs.total_recu_ttc` — la valeur **reçue**, pas la commandée |
+| `fournisseurs.cumul_reglements` | `reglements_fournisseurs.montant` |
+
+`solde_initial` reste au poste : c'est une donnée de la fiche, pas un cumul. Le serveur le respecte et
+recalcule `solde_actuel = solde_initial + factures − règlements` à chaque mouvement.
+
 Deux outils accompagnent la bascule : `supabase/outils/verifier_cumuls.sql` compare les cumuls stockés
-aux journaux (lecture seule), `supabase/outils/reparer_cumuls.sql` les remet d'accord. Les cumuls des
-clients et des fournisseurs restent calculés par le poste : ils dérivent de plusieurs tables et de
-changements de statut, c'est le chantier suivant.
+aux journaux et aux pièces (lecture seule), `supabase/outils/reparer_cumuls.sql` les remet d'accord.
 
 ### Numérotation des pièces hors ligne
 

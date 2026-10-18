@@ -10,6 +10,10 @@
 export const COLONNES_CALCULEES_SERVEUR: Record<string, readonly string[]> = {
   stocks: ['quantite', 'quantite_disponible', 'cout_moyen', 'date_dernier_mouvement'],
   caisses: ['solde_actuel'],
+  // `solde_initial` n'est pas là : il appartient à la fiche, le poste le fixe
+  // et le serveur recalcule `solde_actuel` avec.
+  clients: ['cumul_factures', 'cumul_reglements', 'solde_actuel'],
+  fournisseurs: ['cumul_factures', 'cumul_reglements', 'solde_actuel'],
 };
 
 /**
