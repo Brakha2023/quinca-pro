@@ -11,23 +11,20 @@
 # et `stocks` (dénormalisé exprès : pas de jointure nécessaire).
 #
 # ------------------------------------------------------------
-# HISTORIQUE BORNÉ — `connection.parameter('depuis')`
+# HISTORIQUE BORNÉ — la colonne `dans_fenetre`
 # ------------------------------------------------------------
-# Les règles de synchronisation n'ont pas de `now()` : elles doivent être
-# déterministes, une ligne ne peut pas sortir d'un flux en vieillissant toute
-# seule. La borne vient donc du poste, qui envoie une date à la connexion
-# (`db.connect(connecteur, { params: { depuis } })`, voir
-# `infrastructure/powersync/historique.ts` — premier jour du mois, 12 mois en
-# arrière, pour que la valeur ne change qu'une fois par mois).
+# Ces règles ne savent pas comparer une date à « il y a douze mois » : elles
+# doivent être déterministes (pas de `now()`), et un paramètre envoyé par le
+# poste ne supporte que l'**égalité** — ni `>=`, ni fonction autour. Une ligne
+# ne peut donc pas quitter un flux en vieillissant toute seule.
 #
-# `connection.parameter('depuis') IS NULL OR …` : un poste resté sur une
-# ancienne version n'envoie pas la date et continue de tout recevoir. On peut
-# donc déployer ce fichier **avant** la mise à jour des postes, sans rien
-# casser ni rien priver.
+# C'est donc le serveur qui marque les lignes, et le flux se contente d'une
+# égalité. `rafraichir_fenetre_historique()` (migration 20260924000000) tourne
+# une fois par jour : elle garde les douze derniers mois **et** tout ce qui
+# n'est pas soldé — une créance se relance et une commande ouverte se
+# réceptionne, même deux ans après.
 #
-# Ce qui n'est pas borné : le référentiel (il ne grossit pas avec le temps) et
-# ce qui n'est pas soldé — une créance ou une commande ouverte doit rester
-# visible du poste, quel que soit son âge.
+#   https://docs.powersync.com/sync/advanced/sync-data-by-time
 #
 # `audit_log` n'est plus synchronisé : c'est un journal de surveillance, il se
 # consulte sur le serveur (page Audit, en ligne). Il représentait à lui seul
@@ -41,6 +38,7 @@ with:
 
 streams:
   # Ce qu'il faut pour démarrer l'app : profil, filiales, référentiel.
+  # Rien ici n'est borné dans le temps : le référentiel ne grossit pas avec les années.
   referentiel:
     auto_subscribe: true
     priority: 1
@@ -62,43 +60,28 @@ streams:
       - SELECT * FROM fournisseurs WHERE filiale_id IN mes_filiales
       - SELECT * FROM employes WHERE filiale_id IN mes_filiales
 
-  # Activité des douze derniers mois (voir l'en-tête) : volumineuse, après le référentiel.
+  # Activité : volumineuse, après le référentiel, et bornée (voir l'en-tête).
   activite:
     auto_subscribe: true
     priority: 2
     queries:
-      - SELECT * FROM ventes WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_vente) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM lignes_vente WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM reglements_clients WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_reglement) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM proformas WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_proforma) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM lignes_proforma WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM livraisons WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM mouvements_stock WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM productions WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM lignes_production WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_commande) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_reglement) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_operation) >= unixepoch(connection.parameter('depuis')))
+      - SELECT * FROM ventes WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_vente WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM reglements_clients WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM proformas WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_proforma WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM livraisons WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM mouvements_stock WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM productions WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_production WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       # Transfert inter-filiale : visible des deux côtés (l'expéditeur suit son
       # envoi, le destinataire encaisse à l'arrivée).
-      - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM transferts_filiales WHERE filiale_destination_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM pointages WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_pointage) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM avances_salaire WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(date_avance) >= unixepoch(connection.parameter('depuis')))
-      - SELECT * FROM paies WHERE filiale_id IN mes_filiales AND (connection.parameter('depuis') IS NULL OR unixepoch(created_at) >= unixepoch(connection.parameter('depuis')))
-
-  # Ce qui n'est pas soldé reste sur le poste, même ancien : une créance se
-  # relance, une commande en cours se réceptionne, un transfert en transit
-  # s'encaisse. Sans ces requêtes, la borne des douze mois ferait disparaître
-  # la pièce tout en laissant le solde au compte.
-  encours:
-    auto_subscribe: true
-    priority: 2
-    queries:
-      - SELECT * FROM ventes WHERE filiale_id IN mes_filiales AND reste_a_payer > 0 AND statut != 'ANNULEE'
-      - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales AND statut IN ('BROUILLON', 'ENVOYEE', 'PARTIELLE')
-      - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales AND reste_a_payer > 0 AND statut != 'ANNULEE'
-      - SELECT * FROM livraisons WHERE filiale_id IN mes_filiales AND statut IN ('A_PREPARER', 'EN_COURS')
-      - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales AND statut = 'EN_TRANSIT'
-      - SELECT * FROM transferts_filiales WHERE filiale_destination_id IN mes_filiales AND statut = 'EN_TRANSIT'
+      - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM transferts_filiales WHERE filiale_destination_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM pointages WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM avances_salaire WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM paies WHERE filiale_id IN mes_filiales AND dans_fenetre = true

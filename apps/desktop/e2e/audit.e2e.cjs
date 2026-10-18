@@ -97,7 +97,7 @@ const LIGNES = [
   await page.goto(`${BASE_URL}/#/ventes`);
   await page.locator('[data-testid=note-historique]').first().waitFor();
   const note = (await page.locator('[data-testid=note-historique]').first().textContent()).replace(/\s+/g, ' ');
-  verifier(/Ce poste garde les ventes depuis \w+ \d{4}/.test(note), `note sur la page Ventes : « ${note.slice(0, 80)}… »`);
+  verifier(/Ce poste garde les ventes des 12 derniers mois/.test(note), `note sur la page Ventes : « ${note.slice(0, 80)}… »`);
   verifier(note.includes('non soldées'), 'la note dit aussi ce qui reste malgré la borne');
 
   const inattendues = erreurs.filter((e) => !/status of 500/.test(e) && !/Failed to load resource/.test(e));

@@ -137,7 +137,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
 
   await page.locator('main').getByRole('link', { name: 'Mouvements', exact: true }).click();
   await page.locator('[data-testid=filtre-fournisseur]').selectOption({ label: 'SOCIMAT CI' });
-  await page.locator('tbody tr').first().waitFor();
+  // Attendre « une ligne » ne prouve rien : la liste non filtrée en montre déjà.
+  // On attend que la requête filtrée soit arrivée, sinon on lit l'état d'avant.
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 3);
   const provenances = await page.locator('[data-testid=mouvement-fournisseur]').allTextContents();
   const coutNet = await page.evaluate(async () => {
     const { db } = await import('/src/infrastructure/powersync/database.ts');

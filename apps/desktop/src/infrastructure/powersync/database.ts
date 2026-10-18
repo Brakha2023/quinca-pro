@@ -1,5 +1,4 @@
 import { PowerSyncDatabase } from '@powersync/web';
-import { debutHistoriqueLocal } from '../../core/sync';
 import { COMPTER_ECHECS_ENVOI_QUERY } from './repositories/EchecsEnvoiRepository';
 import { AppSchema } from './schema';
 import { SupabaseConnector } from './SupabaseConnector';
@@ -26,13 +25,13 @@ const connector = new SupabaseConnector();
 /**
  * Démarre la synchronisation avec le serveur (idempotent).
  *
- * `depuis` borne l'activité téléchargée (voir `core/sync/historique` et
- * `supabase/sync-streams.yaml`). C'est un paramètre de connexion : le changer
- * demande de se reconnecter, d'où le calcul ici, une fois, à l'ouverture.
+ * Le poste ne demande pas de fenêtre : c'est le serveur qui marque les lignes
+ * à synchroniser (colonne `dans_fenetre`, voir `supabase/sync-streams.yaml`),
+ * faute de pouvoir comparer une date dans une règle de synchronisation.
  */
 export async function connectSync(): Promise<void> {
   if (db.connected || db.currentStatus.connecting) return;
-  await db.connect(connector, { params: { depuis: debutHistoriqueLocal() } });
+  await db.connect(connector);
 }
 
 /** Coupe la synchronisation sans toucher aux données locales. */

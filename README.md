@@ -247,25 +247,31 @@ directement sur le serveur (`useJournalAudit`) : c'est le seul écran de l'appli
 réseau, et il le dit clairement quand il ne l'a pas. Un journal de surveillance n'a de toute façon
 rien à faire sur la machine qu'il surveille.
 
-**L'activité est bornée à douze mois.** Les règles de synchronisation n'ont pas de `now()` : elles
-doivent être déterministes, une ligne ne peut pas sortir d'un flux en vieillissant toute seule. La
-borne vient donc du poste, qui l'envoie à la connexion (`connection.parameter('depuis')`,
-`core/sync/historique.ts`). C'est le **premier jour du mois**, douze mois en arrière : la valeur ne
-change qu'une fois par mois, alors qu'une date recalculée chaque jour ferait refaire les paquets —
-et donc retélécharger l'historique — tous les jours.
+**L'activité est bornée à douze mois.** Une règle de synchronisation ne peut pas comparer une date à
+« il y a douze mois » : elle doit être déterministe (pas de `now()`), et un paramètre envoyé par le
+poste ne supporte que l'**égalité** — ni `>=`, ni fonction autour. Une ligne ne peut donc pas quitter
+un flux en vieillissant toute seule.
 
-Ce qui **n'est pas** borné : le référentiel (il ne grossit pas avec le temps) et le flux `encours` —
-une vente non soldée, une commande fournisseur ouverte, une livraison à faire, un transfert en
-transit restent sur le poste quel que soit leur âge. Sans cela, la borne ferait disparaître la pièce
-en laissant la créance au compte du client. Les écrans qui listent un historique le disent
+C'est le serveur qui marque les lignes, et le flux se contente d'un `dans_fenetre = true`, qui est
+une égalité ([méthode documentée par PowerSync](https://docs.powersync.com/sync/advanced/sync-data-by-time)).
+`rafraichir_fenetre_historique()` (migration `20260924000000`) tourne une fois par jour via pg_cron
+et n'écrit **que les lignes qui changent d'état** : une poignée par jour, pas une réécriture générale
+qui ferait tout retélécharger aux postes.
+
+Ce qui **n'est pas** borné : le référentiel (il ne grossit pas avec le temps) et tout ce qui n'est pas
+soldé — vente non soldée, commande fournisseur ouverte, livraison à faire, transfert en transit
+restent sur le poste quel que soit leur âge. Sans cela, la borne ferait disparaître la pièce en
+laissant la créance au compte du client. Les écrans qui listent un historique le disent
 (`NoteHistorique`).
 
-Chaque requête porte `connection.parameter('depuis') IS NULL OR …` : un poste resté sur une ancienne
-version n'envoie pas la borne et continue de tout recevoir. **Les deux déploiements sont donc
-indépendants** — ni l'ordre ni le décalage ne privent un poste de ses données. Seule contrainte :
-appliquer d'abord la migration `20260923000000_horodater_lignes_vente.sql`, qui donne à
-`lignes_vente` l'horodatage sans lequel son flux ne peut pas être borné (c'était la seule table
-d'activité sans date, et la plus volumineuse).
+La bascule de fenêtre n'est pas un événement métier : `audit_trigger()` ignore une mise à jour qui ne
+touche que `dans_fenetre`, sinon le ménage quotidien remplirait le journal de surveillance.
+
+Deux migrations sont nécessaires avant de déployer le YAML : `20260923000000_horodater_lignes_vente`
+(c'était la seule table d'activité sans date, et la plus volumineuse — donc la seule impossible à
+borner) et `20260924000000_fenetre_historique`. Tant qu'elles ne sont pas passées, le YAML référence
+une colonne absente et le dashboard le refusera. L'application, elle, se déploie quand on veut : elle
+ne demande rien au serveur sur ce point.
 
 ### L'heure du poste
 
