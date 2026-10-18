@@ -92,6 +92,23 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('tbody tr', { hasText: 'CIM-50' }).first().waitFor();
   verifier((await page.locator('tbody tr').count()) === 4, 'suivi : 4 lignes de stock (ciment × 2 dépôts, vis, brique produite)');
 
+  // L'état du stock partait à l'imprimante avec le menu ; c'est maintenant un
+  // document à part, valorisé et daté.
+  await page.getByTestId('imprimer-etat-stock').click();
+  const etat = page.locator('#zone-impression');
+  await etat.locator('[data-testid=ligne-etat-stock]').first().waitFor();
+  const papierStock = (await etat.textContent()).replace(/\s+/g, ' ');
+  verifier((await etat.locator('[data-testid=ligne-etat-stock]').count()) === 4, 'état du stock : les 4 lignes de la liste');
+  verifier(papierStock.includes('État du stock') && papierStock.includes('Filiale Abidjan'), 'état du stock : titre et en-tête de la maison');
+  verifier(papierStock.includes('tous dépôts'), 'état du stock : périmètre de la liste annoncé');
+  verifier(/\d+ ligne\(s\) ·/.test(papierStock) && papierStock.includes('Ruptures'), 'état du stock : valorisation et alertes récapitulées');
+  verifier(papierStock.includes('CIM-50') && papierStock.includes('Ciment 50kg') && papierStock.includes('Principal') && papierStock.includes('Annexe'),
+    'état du stock : chaque article avec son dépôt');
+  verifier(papierStock.includes('918 500 F'), 'état du stock : valeur du stock au coût moyen');
+  verifier(!papierStock.includes('Point de Vente') && !papierStock.includes('Consolidation') && !papierStock.includes('Alertes seulement'),
+    'état du stock : ni menu, ni filtres, ni bandeau de l’application');
+  await etat.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
   await page.locator('main').getByRole('link', { name: 'Entrée', exact: true }).click();
   await page.locator('[data-testid=select-fournisseur]').selectOption({ index: 1 });
   await page.locator('input[placeholder^="Ajouter un article"]').fill('vis');

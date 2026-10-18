@@ -137,6 +137,21 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.goto(`${BASE_URL}/#/ventes`);
   await page.locator('tbody tr').first().waitFor();
   verifier((await page.locator('tbody tr').count()) === 4, 'page Ventes : 4 tickets du jour');
+
+  // Le journal partait à l'imprimante avec le menu et les tuiles ; c'est
+  // maintenant un document à part.
+  await page.getByTestId('imprimer-journal-ventes').click();
+  const journal = page.locator('#zone-impression');
+  await journal.locator('[data-testid=ligne-journal-vente]').first().waitFor();
+  const feuille = await texteDe(journal);
+  verifier((await journal.locator('[data-testid=ligne-journal-vente]').count()) === 4, 'journal des ventes : les 4 tickets de la liste');
+  verifier(feuille.includes('Journal des ventes') && feuille.includes('Filiale Abidjan'), 'journal des ventes : titre et en-tête de la maison');
+  verifier(/journée du \d{2}\/\d{2}\/\d{4} · toutes caisses/.test(feuille), `journal des ventes : période imprimée sur le document`);
+  verifier(feuille.includes('Encaissé') && feuille.includes('Vendu à crédit'), 'journal des ventes : récapitulatif de caisse');
+  verifier(feuille.includes('annulée(s), hors totaux'), 'journal des ventes : la vente annulée est signalée et hors totaux');
+  verifier(!feuille.includes('Point de Vente') && !feuille.includes('Consolidation'), 'journal des ventes : ni menu ni bandeau de l’application');
+  verifier(feuille.includes('Visa du gérant'), 'journal des ventes : emplacement de visa');
+  await journal.getByRole('button', { name: "Fermer l'aperçu" }).click();
   await page.locator('tbody tr').first().getByTitle('Détail').click();
   await page.getByRole('dialog').locator('td', { hasText: 'Ciment' }).waitFor();
   verifier(true, 'détail du ticket avec ses lignes');

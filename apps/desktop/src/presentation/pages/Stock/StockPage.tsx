@@ -49,7 +49,7 @@ export default function StockPage() {
             ))}
           </div>
           <div className="p-6">
-            {onglet === 'suivi' && <SuiviStockPanel filialeId={filialeId} />}
+            {onglet === 'suivi' && <SuiviStockPanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'entree' && <EntreeStockPanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'sortie' && <SortieStockPanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'transfert' && <TransfertStockPanel filialeId={filialeId} filiale={infosFiliale} />}

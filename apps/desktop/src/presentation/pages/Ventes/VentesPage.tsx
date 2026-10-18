@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { CheckIcon, EyeIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { STATUTS_VENTE, type ModePaiement, type StatutVente } from '@quinca/shared-types';
-import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE } from '../../../core/ventes';
+import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, recapJournalVentes } from '../../../core/ventes';
 import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import NoteHistorique from '../../components/ui/NoteHistorique';
 import { controleInlineClass } from '../../components/ui/FormField';
 import { useCaisses } from '../../features/clients/hooks';
+import JournalVentesDocument from '../../features/ventes/JournalVentesDocument';
 import VenteDetailsModal, { STATUT_VENTE_STYLE, formaterDateHeure } from '../../features/ventes/VenteDetailsModal';
 import { useVentes } from '../../features/ventes/hooks';
 import { useRepository } from '../../hooks/useRepository';
@@ -33,26 +34,13 @@ export default function VentesPage() {
   const [recherche, setRecherche] = useState('');
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<VenteVueRow | null>(null);
+  const [apercu, setApercu] = useState(false);
 
   const { ventes, isLoading } = useVentes(filialeId, { dateDebut, dateFin, caisseId: caisseId || null, statut: statut || null, recherche });
   const peutValider = utilisateur?.profil === 'GERANT' || utilisateur?.profil === 'DIRECTEUR';
 
-  const stats = useMemo(() => {
-    const actives = ventes.filter((v) => v.statut !== 'ANNULEE');
-    const parMode = new Map<string, number>();
-    for (const v of actives) {
-      const encaisse = (v.montant_percu ?? 0) - (v.monnaie ?? 0);
-      parMode.set(v.mode_paiement ?? '?', (parMode.get(v.mode_paiement ?? '?') ?? 0) + encaisse);
-    }
-    return {
-      ca: actives.reduce((s, v) => s + (v.total_ttc ?? 0), 0),
-      nombre: actives.length,
-      encaisse: actives.reduce((s, v) => s + (v.montant_percu ?? 0) - (v.monnaie ?? 0), 0),
-      credit: actives.reduce((s, v) => s + (v.reste_a_payer ?? 0), 0),
-      enAttente: actives.filter((v) => v.statut === 'EN_ATTENTE').length,
-      parMode,
-    };
-  }, [ventes]);
+  // Les mêmes totaux que le journal imprimé : une seule règle, dans `core/ventes`.
+  const stats = useMemo(() => recapJournalVentes(ventes), [ventes]);
 
   const enAttenteIds = ventes.filter((v) => v.statut === 'EN_ATTENTE').map((v) => v.id);
   const toutSelectionne = enAttenteIds.length > 0 && enAttenteIds.every((id) => selection.has(id));
@@ -87,7 +75,7 @@ export default function VentesPage() {
           <NoteHistorique quoi="les ventes" />
         </div>
         <div className="flex gap-2">
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer</button>
+          <button onClick={() => setApercu(true)} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="imprimer-journal-ventes"><PrinterIcon className="w-5 h-5" /> Imprimer</button>
           {peutValider && (
             <button onClick={validerSelection} disabled={selection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg">
               <CheckIcon className="w-5 h-5" /> Valider ({[...selection].filter((id) => enAttenteIds.includes(id)).length})
@@ -97,11 +85,11 @@ export default function VentesPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Chiffre d'affaires TTC</p><p className="text-xl font-bold font-mono text-primary-700 mt-1">{formaterFcfa(stats.ca)}</p></div>
+        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Chiffre d'affaires TTC</p><p className="text-xl font-bold font-mono text-primary-700 mt-1">{formaterFcfa(stats.chiffre_affaires)}</p></div>
         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Ventes</p><p className="text-xl font-bold mt-1">{stats.nombre}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Encaissé</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(stats.encaisse)}</p><p className="text-xs text-neutral-500 mt-1">{[...stats.parMode].map(([m, v]) => `${LIBELLES_MODE_PAIEMENT[m as ModePaiement] ?? m} ${formaterFcfa(v)}`).join(' · ')}</p></div>
+        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Encaissé</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(stats.encaisse)}</p><p className="text-xs text-neutral-500 mt-1">{stats.par_mode.map((m) => `${LIBELLES_MODE_PAIEMENT[m.mode as ModePaiement] ?? m.mode} ${formaterFcfa(m.montant)}`).join(' · ')}</p></div>
         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Vendu à crédit</p><p className="text-xl font-bold font-mono text-orange-700 mt-1">{formaterFcfa(stats.credit)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">En attente de validation</p><p className={`text-xl font-bold mt-1 ${stats.enAttente ? 'text-orange-700' : ''}`}>{stats.enAttente}</p></div>
+        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">En attente de validation</p><p className={`text-xl font-bold mt-1 ${stats.en_attente ? 'text-orange-700' : ''}`}>{stats.en_attente}</p></div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 print:hidden">
@@ -150,6 +138,20 @@ export default function VentesPage() {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && ventes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune vente sur la période.</div>}
       </div>
+
+      {apercu && (
+        <JournalVentesDocument
+          ventes={ventes}
+          filiale={{ nom: filiale?.nom ?? 'QuincaPro', adresse: filiale?.adresse, telephone: filiale?.telephone }}
+          filtres={{
+            dateDebut, dateFin,
+            caisseNom: caisses.find((c) => c.id === caisseId)?.nom ?? null,
+            statutLabel: statut ? LIBELLES_STATUT_VENTE[statut] : null,
+            recherche,
+          }}
+          onClose={() => setApercu(false)}
+        />
+      )}
 
       {detail && <VenteDetailsModal vente={detail} filialeId={filialeId} peutAnnuler={peutValider} onClose={() => setDetail(null)} />}
     </div>

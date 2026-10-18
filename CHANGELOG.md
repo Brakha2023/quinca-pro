@@ -42,13 +42,18 @@ visible à l'écran ; tous pouvaient faire perdre des données.
 
 ### Corrigé
 
-- **Impression du catalogue.** « Imprimer » envoyait la page entière à l'imprimante — menu latéral et
-  barre d'outils compris — et la liste s'arrêtait à ce qui tenait dans la fenêtre : un catalogue de
-  104 articles sortait sur une seule feuille tronquée. C'est désormais un document A4 à part, avec
-  l'en-tête de la maison, le périmètre de la liste (famille, recherche, inactifs), un récapitulatif,
-  et un tableau qui se poursuit de page en page — entêtes de colonnes répétées en haut, identification
-  répétée en bas. « Imprimer → Enregistrer au format PDF » donne un PDF propre, sans bibliothèque
-  supplémentaire.
+- **Impressions de listes : catalogue, journal des ventes, état du stock.** « Imprimer » envoyait la
+  page entière à l'imprimante — menu latéral et barre d'outils compris — et la liste s'arrêtait à ce
+  qui tenait dans la fenêtre : un catalogue de 104 articles sortait sur une seule feuille tronquée.
+  Les trois écrans produisent désormais un document A4 à part, avec l'en-tête de la maison, le
+  périmètre de la liste (filtres en vigueur), un récapitulatif, et un tableau qui se poursuit de page
+  en page — entêtes de colonnes répétées en haut, identification répétée en bas.
+  « Imprimer → Enregistrer au format PDF » donne un PDF propre, sans bibliothèque supplémentaire.
+
+  Le **journal des ventes** porte le récapitulatif de caisse (chiffre d'affaires, encaissé ventilé par
+  mode de paiement, vendu à crédit, en attente de validation, ventes annulées hors totaux) et un
+  emplacement de visa. L'**état du stock** porte la valorisation au coût moyen, le compte des ruptures
+  et des stocks faibles, et signale les quantités négatives à régulariser.
 
 ### Modifié
 
