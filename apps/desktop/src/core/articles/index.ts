@@ -1,4 +1,5 @@
 export * from './article';
+export * from './catalogue';
 export * from './famille';
 export * from './depot';
 export * from './importArticles';

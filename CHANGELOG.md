@@ -40,6 +40,16 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   d'envoi en silence.
 - **Code du poste** visible dans Point de vente → Changer, à coller sur la machine.
 
+### Corrigé
+
+- **Impression du catalogue.** « Imprimer » envoyait la page entière à l'imprimante — menu latéral et
+  barre d'outils compris — et la liste s'arrêtait à ce qui tenait dans la fenêtre : un catalogue de
+  104 articles sortait sur une seule feuille tronquée. C'est désormais un document A4 à part, avec
+  l'en-tête de la maison, le périmètre de la liste (famille, recherche, inactifs), un récapitulatif,
+  et un tableau qui se poursuit de page en page — entêtes de colonnes répétées en haut, identification
+  répétée en bas. « Imprimer → Enregistrer au format PDF » donne un PDF propre, sans bibliothèque
+  supplémentaire.
+
 ### Modifié
 
 - **Le journal d'audit n'est plus synchronisé** sur les postes : il se consulte sur le serveur, en

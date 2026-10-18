@@ -182,6 +182,68 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   await doc.getByRole('button', { name: "Fermer l'aperçu" }).click();
   await page.keyboard.press('Escape');
 
+  console.log('Catalogue imprimé');
+  // Un vrai catalogue, de la taille de celui de la maison : c'est ce volume
+  // qui faisait apparaître le défaut (liste coupée à la hauteur de l'écran).
+  const gros = (() => {
+    const XLSX = require('xlsx');
+    const lignes = [['CODE', 'DESIGNATION', 'P. ACHAT', 'P. VENTE', 'FAMILLE']];
+    for (let i = 1; i <= 120; i += 1) {
+      lignes.push([`CAT-${String(i).padStart(3, '0')}`, `Article de catalogue ${i}`, 1000 + i, 1500 + i, 'CARREAU']);
+    }
+    const livre = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livre, XLSX.utils.aoa_to_sheet(lignes), 'A');
+    return XLSX.write(livre, { type: 'buffer', bookType: 'xls' });
+  })();
+  await page.setInputFiles('input[type=file]', { name: 'CATALOGUE.xls', mimeType: 'application/vnd.ms-excel', buffer: gros });
+  await page.locator('[aria-live]', { hasText: '120 article(s) importé(s)' }).waitFor();
+  await page.locator('tbody tr', { hasText: 'CAT-120' }).waitFor();
+
+  const compteur = page.getByTestId('compteur-articles');
+  const nombreAffiche = async () => Number((await compteur.textContent()).match(/\d+/)[0]);
+  const catalogue = page.locator('#zone-impression');
+
+  // Tout le catalogue : c'est le cas qui échouait, la liste s'arrêtant à ce
+  // qui tenait dans la fenêtre.
+  const total = await nombreAffiche();
+  await page.getByTestId('imprimer-catalogue').click();
+  await catalogue.locator('[data-testid=ligne-catalogue]').first().waitFor();
+  const lignes = await catalogue.locator('[data-testid=ligne-catalogue]').count();
+  verifier(total > 100 && lignes === total, `catalogue imprimé : les ${total} articles, pas seulement ce qui tenait à l'écran`);
+
+  const papier = await texteDe(catalogue);
+  verifier(papier.includes('Catalogue des articles'), 'catalogue imprimé : titre du document');
+  verifier(papier.includes('Filiale Abidjan'), 'catalogue imprimé : en-tête de la maison');
+  verifier(papier.includes('toutes familles · articles actifs seulement'), 'catalogue imprimé : périmètre de la liste annoncé');
+  verifier(papier.includes('Marge moyenne'), 'catalogue imprimé : récapitulatif');
+  verifier(papier.includes('ROB-01') && papier.includes('12 500 F'), 'catalogue imprimé : code et prix de vente');
+  // Le défaut d'origine : la page entière partait à l'impression, menu compris.
+  verifier(!papier.includes('Point de Vente') && !papier.includes('Consolidation') && !papier.includes('Importer Excel'),
+    'catalogue imprimé : ni menu, ni barre d’outils, ni bandeau de l’application');
+  verifier((await catalogue.locator('.document-liste thead').count()) === 1, 'catalogue imprimé : entêtes de tableau répétées de page en page');
+  // Le pied est répété au bas de chaque page par le moteur d'impression :
+  // sans lui, les pages 2 et suivantes ne portent aucune identification.
+  verifier(/Catalogue des articles · Filiale Abidjan · édité le \d{2}\/\d{2}\/\d{4} · \d+ article\(s\)/.test(papier),
+    'catalogue imprimé : pied identifiant les pages suivantes');
+  await catalogue.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
+  // Filtré : le document doit dire sur quoi il porte, sinon une liste partielle
+  // se lit comme le catalogue entier.
+  await page.locator('select').first().selectOption({ label: 'SANITAIRE' });
+  await page.waitForFunction((avant) => {
+    const p = document.querySelector('[data-testid=compteur-articles]');
+    return p && Number(p.textContent.match(/\d+/)[0]) < avant;
+  }, total);
+  const filtres = await nombreAffiche();
+  await page.getByTestId('imprimer-catalogue').click();
+  await catalogue.locator('[data-testid=ligne-catalogue]').first().waitFor();
+  const papierFiltre = await texteDe(catalogue);
+  verifier((await catalogue.locator('[data-testid=ligne-catalogue]').count()) === filtres, `catalogue filtré : ${filtres} article(s) imprimé(s)`);
+  verifier(papierFiltre.includes('famille « SANITAIRE »'), 'catalogue filtré : la famille retenue est écrite sur le document');
+  await catalogue.getByRole('button', { name: "Fermer l'aperçu" }).click();
+  await page.locator('select').first().selectOption('');
+  await page.locator('tbody tr', { hasText: '01408202625001' }).waitFor();
+
   await page.getByRole('button', { name: 'Familles' }).click();
   await page.locator('tbody tr', { hasText: 'SANITAIRE' }).waitFor();
   await page.locator('tbody tr', { hasText: 'CARREAU' }).waitFor();

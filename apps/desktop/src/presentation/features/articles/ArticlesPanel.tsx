@@ -7,6 +7,7 @@ import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import ArticleDetailsModal from './ArticleDetailsModal';
+import CatalogueDocument from './CatalogueDocument';
 import ArticleFormModal from './ArticleFormModal';
 import { useArticles, useFamilles } from './hooks';
 import { useConfirmation } from '../../confirmation/useConfirmation';
@@ -46,6 +47,7 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
   const [inclureInactifs, setInclureInactifs] = useState(false);
   const [modal, setModal] = useState<{ mode: 'creer' } | { mode: 'modifier'; article: Article } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [apercu, setApercu] = useState(false);
 
   const { articles, isLoading } = useArticles(filialeId, { recherche, familleId: familleId || null, inclureInactifs });
   const { familles, famillesParId } = useFamilles(filialeId, { actives: true });
@@ -118,8 +120,9 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
             <ArrowUpTrayIcon className="w-4 h-4" /> Importer Excel
           </button>
           <button
-            onClick={() => window.print()}
+            onClick={() => setApercu(true)}
             className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm"
+            data-testid="imprimer-catalogue"
           >
             <PrinterIcon className="w-4 h-4" /> Imprimer
           </button>
@@ -132,7 +135,7 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
         </div>
       </div>
 
-      <p className="text-sm text-neutral-600">
+      <p className="text-sm text-neutral-600" data-testid="compteur-articles">
         <strong>{articles.length}</strong> article(s)
       </p>
 
@@ -215,6 +218,16 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
           </div>
         )}
       </div>
+
+      {apercu && (
+        <CatalogueDocument
+          articles={articles}
+          nomFamille={(id) => (id && famillesParId.get(id)?.nom) || '—'}
+          filiale={filiale}
+          filtres={{ recherche, familleNom: (familleId && famillesParId.get(familleId)?.nom) || null, inclureInactifs }}
+          onClose={() => setApercu(false)}
+        />
+      )}
 
       {detailId && (
         <ArticleDetailsModal filialeId={filialeId} articleId={detailId} filiale={filiale} onClose={() => setDetailId(null)} />

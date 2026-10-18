@@ -60,6 +60,18 @@
 .document .recu-pied { display: flex; gap: 12px; align-items: flex-end; justify-content: space-between; margin-top: 10px; }
 .document .recu-signatures { display: flex; justify-content: space-between; border-top: 1px solid #000; padding-top: 6px; margin-top: 10px; font-weight: bold; font-size: 11px; }
 .document .recu-decoupe { border-top: 1px dashed #000; margin-top: 14px; padding-top: 4px; font-size: 10px; color: #444; }
+/* Longues listes (catalogue, journaux) : plus compact, et le tableau se
+   poursuit de page en page avec ses entêtes au lieu de s'arrêter au bas. */
+.document .document-liste { font-size: 10px; }
+.document .document-liste th, .document .document-liste td { padding: 2px 4px; }
+.document .document-liste .document-code { font-family: 'Courier New', monospace; white-space: nowrap; }
+.document .document-liste thead { display: table-header-group; }
+.document .document-liste tr { break-inside: avoid; page-break-inside: avoid; }
+/* Répété au bas de chaque page par le moteur d'impression : sans lui, les
+   pages suivantes ne portent aucune identification. */
+.document .document-liste tfoot { display: table-footer-group; }
+.document .document-liste .document-liste-pied { border: 0; border-top: 1px solid #000; padding-top: 3px; font-size: 9px; text-align: center; }
+
 .document .code-barres { display: block; width: 58mm; height: 14mm; }
 .document .code-barres-texte { text-align: center; font: 10px/1.2 'Courier New', monospace; letter-spacing: 2px; }
 
