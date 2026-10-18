@@ -183,7 +183,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   // Sous-menu Stock dans la barre latérale : les sections sont des routes.
   const sousMenu = page.locator('[data-testid=sous-menu-stock]');
   await sousMenu.waitFor();
-  verifier((await sousMenu.locator('a').count()) === 8, 'sous-menu Stock : 8 sections dans la barre latérale');
+  verifier((await sousMenu.locator('a').count()) === 9, 'sous-menu Stock : 9 sections dans la barre latérale');
   await sousMenu.getByRole('link', { name: 'Production' }).click();
   await page.waitForURL(/#\/stock\/production$/);
   await page.locator('main h2', { hasText: 'Production' }).waitFor();
@@ -278,6 +278,128 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await compteurAlertes.locator('text=3').first().waitFor();
   verifier(true, 'filtre par dépôt : l’article absent du dépôt y est en rupture, il ne disparaît pas');
   verifier(true, 'alertes affichées');
+
+  console.log('Transfert entre filiales');
+  // La marchandise voyage : Abidjan sort du stock tout de suite, Bouaké fait
+  // entrer à l'arrivée. Entre les deux, elle n'est dans aucun dépôt.
+  const t = await page.evaluate(async ({ F, U }) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { TransfertsStockRepository } = await import('/src/infrastructure/powersync/repositories/TransfertsStockRepository.ts');
+    const { DepotsRepository } = await import('/src/infrastructure/powersync/repositories/DepotsRepository.ts');
+    const { transfertFilialeStockSchema } = await import('/src/core/stock/index.ts');
+    const BKE = 'filiale-bouake';
+    await db.execute("INSERT OR REPLACE INTO filiales (id, code, nom, type, est_active) VALUES (?, 'BKE', 'Filiale Bouaké', 'FILIALE', 1)", [BKE]);
+    const dBke = await new DepotsRepository(db).create(BKE, { code: 'DB1', nom: 'Dépôt Bouaké', adresse: '', responsable: '' });
+
+    const repo = new TransfertsStockRepository(db);
+    const ctxAbj = { filialeId: F, utilisateurId: U };
+    const ctxBke = { filialeId: BKE, utilisateurId: U };
+    const principal = await db.get("SELECT id FROM depots WHERE nom = 'Principal'");
+    const ciment = await db.get("SELECT id FROM articles WHERE code = 'CIM-50'");
+    const brique = await db.get("SELECT id FROM articles WHERE code = 'BRQ-15'");
+    const out = {};
+
+    out.avantEnvoi = (await db.get('SELECT quantite FROM stocks WHERE article_id = ? AND depot_id = ?', [ciment.id, principal.id])).quantite;
+    const numero = await repo.envoyer(ctxAbj, transfertFilialeStockSchema.parse({
+      filiale_destination_id: BKE, depot_source_id: principal.id, transporteur: 'Kouassi — 1234 CI', motif: 'Appro. Bouaké',
+      lignes: [{ article_id: ciment.id, quantite: 10 }, { article_id: brique.id, quantite: 20 }],
+    }));
+    out.numero = numero;
+    out.bon = await db.get('SELECT * FROM transferts_stock WHERE numero = ?', [numero]);
+    out.lignes = await db.getAll('SELECT code, quantite, cout_unitaire, montant FROM lignes_transfert_stock WHERE transfert_id = ? ORDER BY code', [out.bon.id]);
+    out.apresEnvoi = (await db.get('SELECT quantite FROM stocks WHERE article_id = ? AND depot_id = ?', [ciment.id, principal.id])).quantite;
+    // Pendant le trajet, la marchandise n'est entrée nulle part.
+    out.stockBkePendant = (await db.get('SELECT COUNT(*) AS n FROM stocks WHERE filiale_id = ?', [BKE])).n;
+
+    let refusReception = false;
+    try { await repo.recevoir(ctxAbj, out.bon.id, principal.id); } catch (e) { refusReception = /destinataire/.test(e.message); }
+    out.refusReception = refusReception;
+    let refusAnnulation = false;
+    try { await repo.annuler(ctxBke, out.bon.id, 'essai'); } catch (e) { refusAnnulation = /expéditrice/.test(e.message); }
+    out.refusAnnulation = refusAnnulation;
+
+    const recu = await repo.recevoir(ctxBke, out.bon.id, dBke);
+    out.articlesCrees = recu.articlesCrees;
+    out.bonRecu = await db.get('SELECT statut, depot_destination_id, date_reception FROM transferts_stock WHERE id = ?', [out.bon.id]);
+    out.stockBke = await db.getAll('SELECT a.code, s.quantite, s.cout_moyen FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.filiale_id = ? ORDER BY a.code', [BKE]);
+    out.catalogueBke = await db.getAll('SELECT code, designation, prix_achat, prix_vente FROM articles WHERE filiale_id = ? ORDER BY code', [BKE]);
+    let refusDouble = false;
+    try { await repo.recevoir(ctxBke, out.bon.id, dBke); } catch (e) { refusDouble = /déjà/.test(e.message); }
+    out.refusDouble = refusDouble;
+
+    // Annulation d'un bon resté en transit : la marchandise rentre au dépôt.
+    const numeroAnnule = await repo.envoyer(ctxAbj, transfertFilialeStockSchema.parse({
+      filiale_destination_id: BKE, depot_source_id: principal.id, motif: 'Erreur de saisie',
+      lignes: [{ article_id: ciment.id, quantite: 5 }],
+    }));
+    const bon2 = await db.get('SELECT * FROM transferts_stock WHERE numero = ?', [numeroAnnule]);
+    out.avantAnnulation = (await db.get('SELECT quantite FROM stocks WHERE article_id = ? AND depot_id = ?', [ciment.id, principal.id])).quantite;
+    await repo.annuler(ctxAbj, bon2.id, 'Camion non parti');
+    out.bonAnnule = await db.get('SELECT statut, motif FROM transferts_stock WHERE id = ?', [bon2.id]);
+    out.apresAnnulation = (await db.get('SELECT quantite FROM stocks WHERE article_id = ? AND depot_id = ?', [ciment.id, principal.id])).quantite;
+    return out;
+  }, { F: filialeId, U: userId });
+
+  verifier(/^TSF-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(t.numero), `bon de transfert numéroté hors ligne (${t.numero})`);
+  verifier(t.bon.statut === 'EN_TRANSIT' && t.apresEnvoi === t.avantEnvoi - 10, 'envoi : la marchandise quitte le dépôt de départ tout de suite');
+  verifier(t.stockBkePendant === 0, 'en transit : la marchandise n’est entrée dans aucun dépôt de la filiale destinataire');
+  // Ciment : 10 × 4 500 (coût moyen du dépôt) ; briques : 20 × 450.
+  verifier(t.bon.nombre_lignes === 2 && t.bon.quantite_totale === 30 && t.bon.valeur_totale === 54000, `en-tête : 2 lignes, 30 unités, 54 000 F (${t.bon.valeur_totale})`);
+  verifier(t.lignes[0].code === 'BRQ-15' && t.lignes[0].cout_unitaire === 450 && t.lignes[1].cout_unitaire === 4500, 'lignes : le coût moyen du dépôt de départ voyage avec la marchandise');
+  verifier(t.refusReception, 'seule la filiale destinataire peut réceptionner');
+  verifier(t.refusAnnulation, 'seule la filiale expéditrice peut annuler');
+  verifier(t.bonRecu.statut === 'RECU' && t.bonRecu.date_reception, 'réception : bon soldé, dépôt d’arrivée renseigné');
+  verifier(t.stockBke.length === 2 && t.stockBke[0].quantite === 20 && t.stockBke[0].cout_moyen === 450, 'réception : la marchandise entre au coût qui a voyagé avec elle');
+  verifier(t.articlesCrees.length === 2 && t.catalogueBke.length === 2, `catalogue : les articles inconnus de la filiale sont créés par la réception (${t.articlesCrees.join(', ')})`);
+  verifier(t.catalogueBke[1].code === 'CIM-50' && t.catalogueBke[1].prix_vente === 5500 && t.catalogueBke[1].prix_achat === 4500,
+    'catalogue : l’article créé reprend le prix de vente de l’expéditeur, jamais 0 F');
+  verifier(t.refusDouble, 'un bon déjà reçu ne se réceptionne pas deux fois');
+  verifier(t.bonAnnule.statut === 'ANNULE' && /Erreur de saisie — Annulé/.test(t.bonAnnule.motif), 'annulation : motif d’origine conservé');
+  verifier(t.apresAnnulation === t.avantAnnulation + 5, 'annulation : la marchandise rentre au dépôt de départ');
+
+  console.log('Transfert entre filiales : écran, bon imprimé, export');
+  await sousMenu.getByRole('link', { name: 'Transfert entre filiales' }).click();
+  await page.waitForURL(/#\/stock\/transfert-filiale$/);
+  const compteurTransferts = page.getByTestId('compteur-transferts');
+  await compteurTransferts.waitFor();
+  // La requête vivante arrive après le premier rendu : lire le compteur tout de
+  // suite, c'est photographier la liste vide d'avant. Et le tableau de saisie a
+  // lui aussi un `tbody` : seules les lignes de l'historique se comptent.
+  const lignesHistorique = (n) => page.waitForFunction((attendu) => document.querySelectorAll('[data-testid^="bon-transfert-"]').length === attendu, n);
+  await lignesHistorique(2);
+  const resumeTransferts = async () => (await compteurTransferts.textContent()).replace(/\s+/g, ' ');
+  verifier((await resumeTransferts()).includes('2 bon(s)'), `historique : les deux bons de la filiale (${await resumeTransferts()})`);
+
+  await page.getByTestId('filtre-statut-transfert').selectOption('RECU');
+  await lignesHistorique(1);
+  verifier((await resumeTransferts()).includes('1 bon(s)'), 'filtre par statut : seuls les bons reçus');
+
+  await page.getByTestId(`imprimer-transfert-${t.numero}`).click();
+  const bonTransfertFiliale = page.locator('#zone-impression');
+  await bonTransfertFiliale.locator('[data-testid=ligne-transfert]').first().waitFor();
+  const papierTsf = (await bonTransfertFiliale.textContent()).replace(/\s+/g, ' ');
+  verifier(papierTsf.includes('Bon de transfert de stock inter-filiales'), 'bon : titre du document');
+  verifier(papierTsf.includes(`Bon n° ${t.numero}`) && papierTsf.includes('Filiale Abidjan') && papierTsf.includes('Filiale Bouaké'), 'bon : numéro, expéditeur et destinataire');
+  verifier(papierTsf.includes('Principal') && papierTsf.includes('Dépôt Bouaké'), 'bon : dépôt de départ et dépôt d’arrivée');
+  verifier(papierTsf.includes('Kouassi — 1234 CI') && papierTsf.includes('Appro. Bouaké'), 'bon : transporteur et motif');
+  verifier((await bonTransfertFiliale.locator('[data-testid=ligne-transfert]').count()) === 2, 'bon : les deux articles transférés');
+  verifier((await bonTransfertFiliale.getByTestId('transfert-total').textContent()).replace(/\s/g, '') === '54000F', 'bon : total au coût de départ');
+  verifier((await bonTransfertFiliale.locator('.document-cachet').count()) === 2, 'bon : un cachet pour chaque filiale, comme sur le papier');
+  verifier((await bonTransfertFiliale.locator('svg.code-barres rect').count()) > 20, 'bon : code-barres du numéro de pièce');
+  verifier(!papierTsf.includes('Suivi de stock') && !papierTsf.includes('Consolidation'), 'bon : ni menu ni onglets de l’application');
+  await bonTransfertFiliale.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
+  await page.getByTestId('filtre-statut-transfert').selectOption('');
+  await lignesHistorique(2);
+  const telechargementTsf = page.waitForEvent('download');
+  await page.getByTestId('exporter-transferts').click();
+  const fichierTsf = await telechargementTsf;
+  const classeurTsf = require('xlsx').readFile(await fichierTsf.path());
+  const feuilleTsf = require('xlsx').utils.sheet_to_json(classeurTsf.Sheets[classeurTsf.SheetNames[0]]);
+  verifier(/^transferts-filiales-\d{4}-\d{2}-\d{2}\.xlsx$/.test(fichierTsf.suggestedFilename()), `export Excel : fichier ${fichierTsf.suggestedFilename()}`);
+  const envoi = feuilleTsf.find((l) => l['Bon n°'] === t.numero);
+  verifier(feuilleTsf.length === 2 && envoi.Sens === 'Envoi' && envoi.Statut === 'Reçu' && envoi.Valeur === 54000 && envoi.Articles === 2,
+    'export Excel : sens, statut et valeur relus depuis le classeur');
 
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();

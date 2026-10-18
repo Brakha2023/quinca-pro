@@ -82,6 +82,13 @@ streams:
       # envoi, le destinataire encaisse à l'arrivée).
       - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM transferts_filiales WHERE filiale_destination_id IN mes_filiales AND dans_fenetre = true
+      # Transfert de stock entre filiales : même principe, la marchandise part
+      # d'un côté et entre de l'autre ; le bon et ses lignes doivent être
+      # lisibles des deux, sinon le destinataire reçoit une pièce vide.
+      - SELECT * FROM transferts_stock WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM transferts_stock WHERE filiale_destination_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_transfert_stock WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_transfert_stock WHERE filiale_destination_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM pointages WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM avances_salaire WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM paies WHERE filiale_id IN mes_filiales AND dans_fenetre = true

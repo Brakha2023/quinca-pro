@@ -368,6 +368,43 @@ export const TABLES = {
     utilisateur_reception_id: 'text',
     ...COMMUNES_HORODATAGE,
   },
+  /**
+   * Transfert de marchandise entre filiales : la pièce qui répond de la
+   * marchandise pendant qu'elle est sur la route (voir `lignes_transfert_stock`).
+   */
+  transferts_stock: {
+    numero: 'text',
+    filiale_source_id: 'text',
+    filiale_destination_id: 'text',
+    depot_source_id: 'text',
+    depot_destination_id: 'text',
+    statut: 'text',
+    motif: 'text',
+    transporteur: 'text',
+    nombre_lignes: 'integer',
+    quantite_totale: 'real',
+    valeur_totale: 'real',
+    date_envoi: 'text',
+    date_reception: 'text',
+    utilisateur_envoi_id: 'text',
+    utilisateur_reception_id: 'text',
+    ...COMMUNES_HORODATAGE,
+  },
+  /** Ligne du bon de transfert : le code fait foi, les catalogues étant propres à chaque filiale. */
+  lignes_transfert_stock: {
+    transfert_id: 'text',
+    filiale_source_id: 'text',
+    filiale_destination_id: 'text',
+    article_id: 'text',
+    code: 'text',
+    designation: 'text',
+    unite: 'text',
+    quantite: 'real',
+    cout_unitaire: 'real',
+    prix_vente: 'real',
+    montant: 'real',
+    created_at: 'text',
+  },
   employes: {
     matricule: 'text',
     nom: 'text',
@@ -476,6 +513,8 @@ export type LigneCommandeFournisseurRow = Row<'lignes_commande_fournisseur'>;
 export type ProformaRow = Row<'proformas'>;
 export type LigneProformaRow = Row<'lignes_proforma'>;
 export type TransfertFilialeRow = Row<'transferts_filiales'>;
+export type TransfertStockRow = Row<'transferts_stock'>;
+export type LigneTransfertStockRow = Row<'lignes_transfert_stock'>;
 export type EmployeRow = Row<'employes'>;
 export type PointageRow = Row<'pointages'>;
 export type AvanceSalaireRow = Row<'avances_salaire'>;

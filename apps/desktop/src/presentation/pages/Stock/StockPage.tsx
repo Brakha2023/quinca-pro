@@ -7,12 +7,13 @@ import MouvementsPanel from '../../features/stock/MouvementsPanel';
 import ProductionPanel from '../../features/stock/ProductionPanel';
 import SortieStockPanel from '../../features/stock/SortieStockPanel';
 import SuiviStockPanel from '../../features/stock/SuiviStockPanel';
+import TransfertFilialeStockPanel from '../../features/stock/TransfertFilialeStockPanel';
 import TransfertStockPanel from '../../features/stock/TransfertStockPanel';
 import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock, estOngletStock } from './onglets';
 
 /** Gestion du stock de la filiale courante : suivi, bons, inventaire, production, journal, alertes. */
 export default function StockPage() {
-  const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
+  const { filialeId, filiale, filiales, estVueConsolidee } = useFilialeCourante();
   const { onglet } = useParams();
 
   if (!estOngletStock(onglet)) return <Navigate to={cheminOngletStock(ONGLET_STOCK_DEFAUT)} replace />;
@@ -53,6 +54,7 @@ export default function StockPage() {
             {onglet === 'entree' && <EntreeStockPanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'sortie' && <SortieStockPanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'transfert' && <TransfertStockPanel filialeId={filialeId} filiale={infosFiliale} />}
+            {onglet === 'transfert-filiale' && <TransfertFilialeStockPanel filialeId={filialeId} filiale={infosFiliale} filiales={filiales.map((f) => ({ id: f.id, nom: f.nom }))} />}
             {onglet === 'inventaire' && <InventairePanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'production' && <ProductionPanel filialeId={filialeId} />}
             {onglet === 'mouvements' && <MouvementsPanel filialeId={filialeId} filiale={infosFiliale} />}

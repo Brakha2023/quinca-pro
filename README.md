@@ -360,6 +360,31 @@ des mouvements l'affiche et se filtre par fournisseur. Le champ est facultatif e
 retour client, qui ne vient d'aucun fournisseur. **Il n'engage aucune dette** : une dette fournisseur
 naît d'un bon de commande réceptionné (module Fournisseurs), pas d'une entrée libre.
 
+### Transfert de stock entre filiales (module Stock)
+
+La marchandise voyage : la filiale expéditrice sort du dépôt de départ **dès l'envoi**, le bon part
+« en transit », et la filiale destinataire fait entrer la marchandise dans le dépôt de son choix
+**à l'arrivée**. Entre les deux, les quantités ne sont dans aucun dépôt — c'est le bon qui en répond.
+L'expéditeur peut annuler tant que rien n'est arrivé : la marchandise rentre au dépôt de départ, le
+motif d'origine est conservé. Pièce `transferts_stock` + `lignes_transfert_stock`, visible des deux
+côtés (RLS et flux de synchronisation des deux filiales), comme le transfert d'espèces du module
+Trésorerie.
+
+Ce n'est pas un transfert entre dépôts en deux écritures, et pas seulement parce que le camion met un
+jour : un poste ne synchronise que le stock de ses filiales, et la RLS lui refuserait d'écrire dans
+celui d'une autre.
+
+Les catalogues étant propres à chaque filiale (`articles` est unique par `(filiale_id, code)`), la
+ligne du bon emporte le **code**, la désignation, l'unité, le coût moyen du dépôt de départ et le prix
+de vente de l'expéditeur. À la réception, la filiale retrouve l'article par son code ; un article
+qu'elle ne connaît pas encore est **créé** (prix de vente de l'expéditeur comme amorce) plutôt que de
+refuser une marchandise déjà posée dans la cour — l'écran annonce nommément les créations à vérifier.
+
+Le **bon de transfert A4** s'imprime à tout moment depuis l'historique : numéro et code-barres,
+expéditeur et destinataire avec leurs dépôts, transporteur, motif, lignes valorisées, total, un
+cachet par filiale et l'opérateur de saisie. L'historique se filtre (période, sens, filiale, statut)
+et s'exporte en Excel.
+
 ### Production (module Stock)
 
 Une production consomme des matières premières (sortie `SORTIE_PRODUCTION` au coût moyen du dépôt) et

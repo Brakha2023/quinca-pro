@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
-import type { MouvementStockRow, TypeMouvementStock } from '@quinca/shared-types';
-import { construireBon } from '../../../core/stock';
+import type { LigneTransfertStockRow, MouvementStockRow, TransfertStockRow, TypeMouvementStock } from '@quinca/shared-types';
+import { construireBon, type LigneTransfertStock, type TransfertStockVue } from '../../../core/stock';
 import {
   mouvementsQuery,
   stocksParArticleQuery,
@@ -11,6 +11,11 @@ import {
   type FiltresStock,
   type StockVueRow,
 } from '../../../infrastructure/powersync/repositories/StockRepository';
+import {
+  LIGNES_TRANSFERT_QUERY,
+  transfertsStockQuery,
+  type FiltresTransfertsStock,
+} from '../../../infrastructure/powersync/repositories/TransfertsStockRepository';
 
 export interface StockParArticle {
   article_id: string;
@@ -106,5 +111,73 @@ export function useBonStock(filialeId: string | null, reference: string | null) 
           )
         : null,
     [reference, data],
+  );
+}
+
+/** Ligne de la liste des transferts entre filiales : l'en-tête, noms joints. */
+export interface TransfertStockRowVue extends TransfertStockRow {
+  filiale_source_nom: string | null;
+  filiale_destination_nom: string | null;
+  depot_source_nom: string | null;
+  depot_destination_nom: string | null;
+  envoi_nom: string | null;
+  envoi_prenom: string | null;
+  reception_nom: string | null;
+  reception_prenom: string | null;
+}
+
+const nomComplet = (prenom: string | null, nom: string | null) => [prenom, nom].filter(Boolean).join(' ') || null;
+
+function versVue(row: TransfertStockRowVue): TransfertStockVue {
+  return {
+    id: row.id,
+    numero: row.numero ?? '',
+    statut: (row.statut ?? 'EN_TRANSIT') as TransfertStockVue['statut'],
+    filiale_source_id: row.filiale_source_id ?? '',
+    filiale_destination_id: row.filiale_destination_id ?? '',
+    filiale_source_nom: row.filiale_source_nom,
+    filiale_destination_nom: row.filiale_destination_nom,
+    depot_source_nom: row.depot_source_nom,
+    depot_destination_nom: row.depot_destination_nom,
+    motif: row.motif,
+    transporteur: row.transporteur,
+    nombre_lignes: row.nombre_lignes ?? 0,
+    quantite_totale: row.quantite_totale ?? 0,
+    valeur_totale: row.valeur_totale ?? 0,
+    date_envoi: row.date_envoi ?? '',
+    date_reception: row.date_reception,
+    utilisateur_envoi: nomComplet(row.envoi_prenom, row.envoi_nom),
+    utilisateur_reception: nomComplet(row.reception_prenom, row.reception_nom),
+  };
+}
+
+/** Transferts entre filiales où la filiale est partie prenante, dans les deux sens. */
+export function useTransfertsStock(filialeId: string | null, filtres: FiltresTransfertsStock = {}) {
+  const { sql, params } = useMemo(
+    () => transfertsStockQuery(filialeId, filtres),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
+    [filialeId, filtres.debut, filtres.fin, filtres.sens, filtres.filialeId, filtres.statut, filtres.limite],
+  );
+  const { data, isLoading } = useQuery<TransfertStockRowVue>(sql, params);
+  const transferts = useMemo(() => data.map(versVue), [data]);
+  return { transferts, isLoading };
+}
+
+/** Lignes d'un bon de transfert : le détail de la marchandise. */
+export function useLignesTransfert(transfertId: string | null) {
+  const { data } = useQuery<LigneTransfertStockRow>(LIGNES_TRANSFERT_QUERY, [transfertId ?? '']);
+  return useMemo<LigneTransfertStock[]>(
+    () =>
+      data.map((l) => ({
+        id: l.id,
+        code: l.code ?? '',
+        designation: l.designation ?? '',
+        unite: l.unite ?? 'PIECE',
+        quantite: l.quantite ?? 0,
+        cout_unitaire: l.cout_unitaire ?? 0,
+        prix_vente: l.prix_vente ?? 0,
+        montant: l.montant ?? 0,
+      })),
+    [data],
   );
 }

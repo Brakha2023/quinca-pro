@@ -52,8 +52,8 @@ export default function TransfertStockPanel({ filialeId, filiale }: { filialeId:
 
   return (
     <CarteBon
-      titre="Transfert inter-dépôts"
-      description="Sortie du dépôt source et entrée au dépôt destination, au coût moyen du dépôt source. Le transfert inter-filiales viendra avec le module Fournisseurs (bons de livraison)."
+      titre="Transfert entre dépôts de la filiale"
+      description="Sortie du dépôt source et entrée au dépôt destination, au coût moyen du dépôt source, dans la même écriture. Pour expédier vers une autre filiale, voir « Transfert entre filiales » : la marchandise y voyage, et le bon attend la réception."
       actions={
         <>
           {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}

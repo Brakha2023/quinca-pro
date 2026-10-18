@@ -55,6 +55,21 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   Filtrer par dépôt ne fait plus disparaître un article absent de ce dépôt : il y figure en rupture,
   ce qui est précisément l'information recherchée.
 
+- **Transfert de stock entre filiales.** Nouveau sous-menu Stock → *Transfert entre filiales* : la
+  marchandise sort du dépôt de départ dès l'envoi et le bon reste **en transit** ; la filiale
+  destinataire la fait entrer dans le dépôt de son choix à l'arrivée. L'expéditeur peut annuler tant
+  que rien n'est arrivé (la marchandise rentre au dépôt de départ). Le bon est visible des deux côtés.
+
+  Le **bon de transfert A4** s'imprime à tout moment depuis l'historique : numéro et code-barres,
+  expéditeur et destinataire avec leurs dépôts, transporteur, lignes valorisées au coût du dépôt de
+  départ, total, et **un cachet pour chaque filiale**. L'historique se filtre par période, par sens
+  (envois / réceptions), par filiale et par statut, et s'exporte en Excel.
+
+  Les catalogues étant propres à chaque filiale, c'est le **code article** qui fait le lien : à la
+  réception, un article inconnu de la filiale destinataire est créé avec le prix de vente de
+  l'expéditeur — la marchandise est déjà dans la cour, elle ne peut pas être refusée — et l'écran
+  annonce nommément les créations à vérifier.
+
 ### Corrigé
 
 - **Impressions de listes : catalogue, journal des ventes, état du stock.** « Imprimer » envoyait la
@@ -90,6 +105,7 @@ visible à l'écran ; tous pouvaient faire perdre des données.
 | `20260923000000_horodater_lignes_vente` | `created_at` sur `lignes_vente` (sans quoi son flux ne peut pas être borné) |
 | `20260924000000_fenetre_historique` | colonne `dans_fenetre` + rafraîchissement quotidien (pg_cron) |
 | `20260925000000_cumuls_tiers` | comptes clients et fournisseurs calculés par Postgres |
+| `20260926000000_transfert_stock_filiales` | bons de transfert de stock entre filiales (`transferts_stock`, `lignes_transfert_stock`) |
 
 Puis, dans le dashboard PowerSync : coller `supabase/sync-streams.yaml` → **Validate** → **Deploy**.
 Et vérifier que le rendez-vous quotidien `rafraichir_fenetre_historique()` existe (pg_cron), sans quoi
