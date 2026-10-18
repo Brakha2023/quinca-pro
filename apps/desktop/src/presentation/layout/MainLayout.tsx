@@ -11,6 +11,7 @@ import { SECTIONS_CLIENTS, SECTION_CLIENTS_DEFAUT, cheminClients } from '../page
 import { SECTIONS_EMPLOYES, SECTION_EMPLOYES_DEFAUT, cheminEmployes } from '../pages/Employes/onglets';
 import { SECTIONS_TRESORERIE, SECTION_TRESORERIE_DEFAUT, cheminTresorerie } from '../pages/Tresorerie/onglets';
 import FilialeSelector from '../components/FilialeSelector';
+import BandeauHorloge from '../components/layout/BandeauHorloge';
 import SyncStatusBadge from '../components/layout/SyncStatusBadge';
 import { useAuth } from '../auth/useAuth';
 import { useCurrentUtilisateur } from '../auth/useCurrentUtilisateur';
@@ -283,6 +284,8 @@ export default function MainLayout() {
             <SyncStatusBadge />
           </div>
         </header>
+
+        <BandeauHorloge />
 
         {/* Page Content (Outlet) */}
         <main className="flex-1 overflow-y-auto p-6">

@@ -235,6 +235,32 @@ Un détail à connaître pour qui touche à cet écran : PowerSync ne notifie pa
 table **locale** (vérifié sur `@powersync/web` 2.3.1), donc un `useQuery` ne se rafraîchirait jamais.
 Le dépôt prévient les écrans lui-même, et `useEchecsEnvoi` s'y abonne.
 
+### L'heure du poste
+
+Toutes les dates de l'application viennent de `new Date()` sur la machine : le poste doit pouvoir
+vendre sans réseau. Une machine à l'heure fausse produit donc des tickets, des mouvements de stock et
+une journée de caisse horodatés faux — et rien ne les refuse, ils s'intercalent simplement au mauvais
+endroit dans l'histoire.
+
+L'écart est mesuré sur le **jeton** que Supabase signe : son champ `iat` porte l'heure du serveur, et
+un jeton arrive à chaque connexion et à chaque renouvellement (environ toutes les heures). Aucun appel
+supplémentaire. L'en-tête `Date` des réponses REST aurait été plus direct, mais il n'est **pas lisible
+depuis un navigateur** : il n'est pas dans la liste blanche CORS et Supabase ne l'expose pas
+(`access-control-expose-headers` ne le contient pas — vérifié sur le projet). Le jeton, lui, est dans
+le corps de la réponse.
+
+| Écart | Ce qui se passe |
+| --- | --- |
+| < 2 min | rien : l'écart ne change rien de lisible sur une pièce |
+| ≥ 2 min | bandeau d'avertissement sur tous les écrans, avec le sens, l'ampleur et le geste à faire |
+| ≥ 15 min | **la caisse ne s'ouvre pas** : le point de vente affiche le motif au lieu du ticket |
+
+La mesure est conservée sur la machine : une horloge fausse le reste après extinction, et un poste
+hors ligne doit continuer d'être averti. Le bouton « J'ai réglé l'horloge » efface la mesure et rouvre
+la caisse — mais le prochain jeton tranche, et referme en quelques secondes si l'heure est toujours
+fausse. Les autres écrans restent utilisables même au-delà du seuil : ils horodatent faux eux aussi,
+le bandeau le dit, mais bloquer tout le poste ferait plus de dégâts que la dérive.
+
 ### Remises de ligne et export Excel
 
 L'**entrée en stock** et le **bon de commande fournisseur** acceptent une remise article par article,

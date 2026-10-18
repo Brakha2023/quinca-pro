@@ -7,6 +7,7 @@ import CataloguePanel from '../../features/pos/CataloguePanel';
 import PosteModal from '../../features/pos/PosteModal';
 import TicketPanel from '../../features/pos/TicketPanel';
 import { usePoste } from '../../features/pos/hooks';
+import { useDeriveHorloge } from '../../features/sync/useDeriveHorloge';
 
 /** Point de vente : catalogue à gauche, ticket à droite. Nécessite une caisse et un dépôt configurés sur le poste. */
 export default function POSPage() {
@@ -14,12 +15,28 @@ export default function POSPage() {
   const { utilisateur } = useCurrentUtilisateur();
   const proforma = usePOSStore((s) => s.proforma);
   const poste = usePoste(filialeId);
+  const { avertissement } = useDeriveHorloge();
   const [reglages, setReglages] = useState(false);
 
   if (!filialeId) {
     return (
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400">
         {estVueConsolidee ? <p className="text-lg">Sélectionnez une filiale pour vendre.</p> : <p>Profil utilisateur en cours de synchronisation…</p>}
+      </div>
+    );
+  }
+
+  /*
+   * Horloge franchement fausse : on n'ouvre pas la caisse. Un ticket porte une
+   * heure, un numéro daté et une journée de caisse ; aucun des trois ne se
+   * redresse après coup, et le client repart avec le papier.
+   */
+  if (avertissement?.niveau === 'BLOCAGE') {
+    return (
+      <div className="bg-white rounded-xl border border-red-200 shadow-sm text-center py-16 px-6" data-testid="caisse-fermee">
+        <p className="text-lg font-semibold text-red-800">Caisse fermée : {avertissement.titre.toLowerCase()}</p>
+        <p className="text-sm text-neutral-600 mt-2 max-w-xl mx-auto">{avertissement.message}</p>
+        <p className="text-sm text-neutral-500 mt-4">Les autres écrans restent utilisables, mais eux aussi horodateront faux : réglez l'heure avant de continuer.</p>
       </div>
     );
   }

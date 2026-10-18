@@ -12,7 +12,7 @@
     "check-types": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "node e2e/articles.e2e.cjs && node e2e/stock.e2e.cjs && node e2e/clients.e2e.cjs && node e2e/pos.e2e.cjs && node e2e/fournisseurs.e2e.cjs && node e2e/verrou.e2e.cjs && node e2e/employes.e2e.cjs && node e2e/tresorerie.e2e.cjs && node e2e/echecs.e2e.cjs && node e2e/revue.e2e.cjs",
+    "e2e": "node e2e/articles.e2e.cjs && node e2e/stock.e2e.cjs && node e2e/clients.e2e.cjs && node e2e/pos.e2e.cjs && node e2e/fournisseurs.e2e.cjs && node e2e/verrou.e2e.cjs && node e2e/employes.e2e.cjs && node e2e/tresorerie.e2e.cjs && node e2e/echecs.e2e.cjs && node e2e/horloge.e2e.cjs && node e2e/revue.e2e.cjs",
     "e2e:sync": "node e2e/sync.e2e.cjs"
   },
   "dependencies": {
