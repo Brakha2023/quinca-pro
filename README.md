@@ -273,6 +273,33 @@ borner) et `20260924000000_fenetre_historique`. Tant qu'elles ne sont pas passé
 une colonne absente et le dashboard le refusera. L'application, elle, se déploie quand on veut : elle
 ne demande rien au serveur sur ce point.
 
+### Le poste et le serveur parlent-ils des mêmes données ?
+
+Le poste écrit dans sa base locale selon le schéma qu'il connaît. Si le serveur n'a pas la même idée
+— une migration pas encore appliquée, une colonne renommée — l'écriture part, se fait refuser, et la
+file se bloque : l'application a l'air de fonctionner et plus rien ne remonte. C'est exactement ce
+qui s'est produit avec `remise_percent`.
+
+Au démarrage, une fois connecté, le poste vérifie les deux côtés :
+
+**Les colonnes**, sondées sur Supabase. Le document OpenAPI de PostgREST aurait tout dit d'un coup,
+mais Supabase le réserve à la clé `service_role`, que l'application n'a pas et ne doit pas avoir
+(vérifié : `Only the service_role API key can be used for this endpoint`). On demande donc à chaque
+table les colonnes qu'on attend d'elle, **sans résultat** (`head`, `limit=0`) : PostgREST valide la
+liste avant d'exécuter quoi que ce soit et refuse en nommant ce qui manque — `42703` pour une colonne,
+`PGRST205` pour une table. Vingt-neuf requêtes sans corps, une fois par session.
+
+**Les flux**, lus dans l'état de synchronisation PowerSync, qui les porte déjà (`status.syncStreams`) :
+si le YAML déployé ne sert pas `referentiel` ou `activite`, le poste travaille sur des données
+incomplètes sans le savoir. La comparaison n'a lieu qu'après la première synchronisation, sinon la
+liste est vide et tout paraîtrait manquant.
+
+Un désaccord s'affiche en bandeau, nommément (« `mouvements_stock` n'a pas la colonne
+`remise_percent` sur le serveur »), avec la cause probable et ce qu'il adviendra des écritures
+concernées — refusées, puis mises de côté sur le poste. Rien n'est bloqué : le poste doit pouvoir
+continuer à vendre. Hors ligne, aucune sonde n'est tentée et le dernier désaccord connu **reste
+affiché** : ce n'est pas le réseau qui l'a créé.
+
 ### L'heure du poste
 
 Toutes les dates de l'application viennent de `new Date()` sur la machine : le poste doit pouvoir

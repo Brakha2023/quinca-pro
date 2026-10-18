@@ -12,6 +12,7 @@ import { SECTIONS_EMPLOYES, SECTION_EMPLOYES_DEFAUT, cheminEmployes } from '../p
 import { SECTIONS_TRESORERIE, SECTION_TRESORERIE_DEFAUT, cheminTresorerie } from '../pages/Tresorerie/onglets';
 import FilialeSelector from '../components/FilialeSelector';
 import BandeauHorloge from '../components/layout/BandeauHorloge';
+import BandeauSchema from '../components/layout/BandeauSchema';
 import SyncStatusBadge from '../components/layout/SyncStatusBadge';
 import { useAuth } from '../auth/useAuth';
 import { useCurrentUtilisateur } from '../auth/useCurrentUtilisateur';
@@ -285,6 +286,7 @@ export default function MainLayout() {
           </div>
         </header>
 
+        <BandeauSchema />
         <BandeauHorloge />
 
         {/* Page Content (Outlet) */}

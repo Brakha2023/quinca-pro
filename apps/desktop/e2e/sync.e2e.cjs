@@ -8,7 +8,7 @@ if (!process.env.E2E_EMAIL || !process.env.E2E_PASSWORD) {
 }
 const { ouvrirNavigateur, BASE_URL, verifier } = require('./browser.cjs');
 (async () => {
-  const { browser, page, erreurs } = await ouvrirNavigateur();
+  const { browser, page, erreurs } = await ouvrirNavigateur({ reseauReel: true });
   await page.goto(`${BASE_URL}/#/login`, { waitUntil: 'networkidle' });
   await page.fill('input[type=email]', process.env.E2E_EMAIL);
   await page.fill('input[type=password]', process.env.E2E_PASSWORD);

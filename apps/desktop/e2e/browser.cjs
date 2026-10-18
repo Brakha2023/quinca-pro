@@ -16,9 +16,31 @@ function trouverChromium() {
   throw new Error('Chromium introuvable : exécutez `npx playwright install chromium`');
 }
 
-async function ouvrirNavigateur() {
+/**
+ * @param {{ reseauReel?: boolean }} [options] `reseauReel` laisse passer les
+ * appels vers Supabase (scénario de synchronisation réelle uniquement).
+ */
+async function ouvrirNavigateur(options = {}) {
   const browser = await chromium.launch({ executablePath: trouverChromium(), headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  if (!options.reseauReel) {
+    /*
+     * L'app sonde le schéma du serveur au démarrage et lit le journal d'audit
+     * en ligne : sans ce filet, chaque scénario interrogerait la vraie base.
+     * Un scénario qui veut piloter ces réponses pose sa propre route ensuite,
+     * elle a la priorité.
+     *
+     * Les lectures passent (schéma conforme, journal vide), mais les écritures
+     * sont refusées comme le ferait le vrai serveur devant un jeton d'essai :
+     * les accepter viderait la file d'envoi, que des scénarios vérifient.
+     */
+    await page.route('**/rest/v1/**', (route) => {
+      const lecture = ['GET', 'HEAD'].includes(route.request().method());
+      return route.fulfill(lecture
+        ? { status: 200, contentType: 'application/json', body: '[]' }
+        : { status: 401, contentType: 'application/json', body: JSON.stringify({ message: 'Invalid JWT' }) });
+    });
+  }
   const erreurs = [];
   page.on('console', (m) => {
     if (m.type() === 'error' && !m.text().includes('401')) erreurs.push(m.text().slice(0, 300));
