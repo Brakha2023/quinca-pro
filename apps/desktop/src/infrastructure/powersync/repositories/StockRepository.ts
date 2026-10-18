@@ -67,17 +67,51 @@ export function stocksQuery(filialeId: string | null, filtres: FiltresStock = {}
   };
 }
 
-/** Stock total par article (tous dépôts), avec les articles sans aucune ligne de stock (quantité 0). */
-export function stocksParArticleQuery(filialeId: string | null) {
+export interface FiltresAlertes {
+  depotId?: string | null;
+  familleId?: string | null;
+  recherche?: string;
+}
+
+/**
+ * Stock total par article, avec les articles sans aucune ligne de stock
+ * (quantité 0) — ce sont souvent eux, les ruptures.
+ *
+ * Le dépôt se filtre dans la jointure et non dans le `where` : au `where`, un
+ * article absent de ce dépôt disparaîtrait de la liste, alors qu'il y est
+ * précisément en rupture.
+ */
+export function stocksParArticleQuery(filialeId: string | null, filtres: FiltresAlertes = {}) {
+  const params: Array<string | number> = [];
+  let jointure = 'LEFT JOIN stocks s ON s.article_id = a.id';
+  if (filtres.depotId) {
+    jointure += ' AND s.depot_id = ?';
+    params.push(filtres.depotId);
+  }
+
+  const conditions = ['a.filiale_id = ?', 'a.est_actif = 1'];
+  params.push(filialeId ?? '');
+  if (filtres.familleId) {
+    conditions.push('a.famille_id = ?');
+    params.push(filtres.familleId);
+  }
+  const q = filtres.recherche?.trim();
+  if (q) {
+    conditions.push('(a.code LIKE ? OR a.designation LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`);
+  }
+
   return {
     sql: `SELECT a.id AS article_id, a.code, a.designation, a.unite, a.prix_achat, a.stock_min, a.stock_max,
+                 f.nom AS famille_nom,
                  COALESCE(SUM(s.quantite), 0) AS quantite, COALESCE(SUM(s.quantite * s.cout_moyen), 0) AS valeur
           FROM articles a
-          LEFT JOIN stocks s ON s.article_id = a.id
-          WHERE a.filiale_id = ? AND a.est_actif = 1
+          ${jointure}
+          LEFT JOIN familles_articles f ON f.id = a.famille_id
+          WHERE ${conditions.join(' AND ')}
           GROUP BY a.id
           ORDER BY a.designation`,
-    params: [filialeId ?? ''],
+    params,
   };
 }
 

@@ -6,6 +6,7 @@ import {
   mouvementsQuery,
   stocksParArticleQuery,
   stocksQuery,
+  type FiltresAlertes,
   type FiltresMouvements,
   type FiltresStock,
   type StockVueRow,
@@ -19,6 +20,7 @@ export interface StockParArticle {
   prix_achat: number;
   stock_min: number;
   stock_max: number;
+  famille_nom: string | null;
   quantite: number;
   valeur: number;
 }
@@ -43,8 +45,12 @@ export function useStocks(filialeId: string | null, filtres: FiltresStock = {}) 
   return { stocks: data, isLoading };
 }
 
-export function useStocksParArticle(filialeId: string | null) {
-  const { sql, params } = useMemo(() => stocksParArticleQuery(filialeId), [filialeId]);
+export function useStocksParArticle(filialeId: string | null, filtres: FiltresAlertes = {}) {
+  const { sql, params } = useMemo(
+    () => stocksParArticleQuery(filialeId, filtres),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
+    [filialeId, filtres.depotId, filtres.familleId, filtres.recherche],
+  );
   const { data, isLoading } = useQuery<StockParArticle>(sql, params);
   return { lignes: data, isLoading };
 }

@@ -40,6 +40,21 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   d'envoi en silence.
 - **Code du poste** visible dans Point de vente → Changer, à coller sur la machine.
 
+### Ajouté
+
+- **Alertes de stock : filtres, impression et export Excel.** Le sous-menu Stock → Alertes se filtre
+  par nature (ruptures, stocks faibles, ou les deux), par dépôt, par famille et par recherche. Le
+  bouton *Imprimer / PDF* sort un document A4 du périmètre retenu — la liste de commande, avec pour
+  chaque article la quantité à commander et son coût estimé, le total à engager, et un visa du gérant.
+  *Exporter Excel* produit le même périmètre en classeur.
+
+  La quantité à commander vise le stock maximum quand il est renseigné, sinon deux fois le minimum ; un
+  stock négatif creuse la commande d'autant au lieu d'être ignoré. Le document signale aussi les
+  articles **sans seuil**, qui ne déclencheront jamais d'alerte.
+
+  Filtrer par dépôt ne fait plus disparaître un article absent de ce dépôt : il y figure en rupture,
+  ce qui est précisément l'information recherchée.
+
 ### Corrigé
 
 - **Impressions de listes : catalogue, journal des ventes, état du stock.** « Imprimer » envoyait la

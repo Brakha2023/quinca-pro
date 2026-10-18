@@ -56,7 +56,7 @@ export default function StockPage() {
             {onglet === 'inventaire' && <InventairePanel filialeId={filialeId} filiale={infosFiliale} />}
             {onglet === 'production' && <ProductionPanel filialeId={filialeId} />}
             {onglet === 'mouvements' && <MouvementsPanel filialeId={filialeId} filiale={infosFiliale} />}
-            {onglet === 'alertes' && <AlertesPanel filialeId={filialeId} />}
+            {onglet === 'alertes' && <AlertesPanel filialeId={filialeId} filiale={infosFiliale} />}
           </div>
         </div>
       )}

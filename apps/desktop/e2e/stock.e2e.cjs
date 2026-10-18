@@ -216,8 +216,67 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('tbody tr', { hasText: 'Produit' }).first().waitFor();
   verifier((await page.locator('tbody tr').count()) === 12, 'journal : 12 mouvements (dont 4 de production et 1 retour client)');
 
+  console.log('Alertes');
+  // Deux alertes fabriquées exprès : un article jamais entré en stock (rupture)
+  // et un article au ras de son minimum (stock faible).
+  await page.evaluate(async ({ F, U }) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { ArticlesRepository } = await import('/src/infrastructure/powersync/repositories/ArticlesRepository.ts');
+    const { StockRepository } = await import('/src/infrastructure/powersync/repositories/StockRepository.ts');
+    const { articleFormSchema } = await import('/src/core/articles/index.ts');
+    const articles = new ArticlesRepository(db);
+    await articles.create(F, articleFormSchema.parse({ code: 'ALR-RUP', designation: 'Article en rupture', prix_achat: 1000, prix_vente: 1500, stock_min: 10 }));
+    const faible = await articles.create(F, articleFormSchema.parse({ code: 'ALR-FAI', designation: 'Article sous le minimum', prix_achat: 2000, prix_vente: 3000, stock_min: 10, stock_max: 40 }));
+    const depot = await db.get("SELECT id FROM depots WHERE nom = 'Principal'");
+    await new StockRepository(db).enregistrerEntree({ filialeId: F, utilisateurId: U },
+      { depot_id: depot.id, type: 'ENTREE_ACHAT', reference: 'BL-ALERTE', motif: '', lignes: [{ article_id: faible, quantite: 10, cout_unitaire: 2000 }] });
+  }, { F: filialeId, U: userId });
+
   await sousMenu.getByRole('link', { name: 'Alertes' }).click();
   await page.locator('text=Valeur du stock').waitFor();
+  const compteurAlertes = page.getByTestId('compteur-alertes');
+  await compteurAlertes.locator('text=2').first().waitFor();
+  const resume = async () => (await compteurAlertes.textContent()).replace(/\s+/g, ' ');
+  // À commander : ALR-RUP vise 2 × le mini (20 × 1 000) et ALR-FAI son maxi (30 × 2 000).
+  verifier((await resume()).includes('2 en alerte') && (await resume()).includes('80 000 F'),
+    `alertes : 2 en alerte, commande chiffrée (${await resume()})`);
+
+  console.log('Alertes : impression par filtre');
+  await page.getByTestId('filtre-nature-alerte').selectOption('RUPTURE');
+  // Le tableau « Stocks faibles » disparaît ; l'option du filtre porte le même
+  // mot, d'où la recherche sur l'en-tête de tableau seulement.
+  await page.locator('div.font-semibold', { hasText: 'Stocks faibles' }).waitFor({ state: 'detached' });
+  verifier((await resume()).includes('1 en alerte') && (await resume()).includes('20 000 F'), 'filtre « ruptures seulement » : la liste et la commande suivent');
+
+  await page.getByTestId('imprimer-alertes').click();
+  const alertes = page.locator('#zone-impression');
+  await alertes.locator('[data-testid=ligne-alerte]').first().waitFor();
+  const papierAlertes = (await alertes.textContent()).replace(/\s+/g, ' ');
+  verifier((await alertes.locator('[data-testid=ligne-alerte]').count()) === 1, 'document : seules les ruptures sont imprimées');
+  verifier(papierAlertes.includes('Alertes de stock') && papierAlertes.includes('Filiale Abidjan'), 'document : titre et en-tête de la maison');
+  verifier(papierAlertes.includes('Ruptures seulement · tous dépôts · toutes familles'), 'document : le filtre retenu est écrit sur la feuille');
+  verifier(papierAlertes.includes('ALR-RUP') && papierAlertes.includes('20 000 F'), 'document : article en rupture et coût estimé de la commande');
+  verifier(!papierAlertes.includes('Suivi de stock') && !papierAlertes.includes('Consolidation'), 'document : ni menu ni onglets de l’application');
+  await alertes.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
+  console.log('Alertes : export Excel');
+  await page.getByTestId('filtre-nature-alerte').selectOption('TOUTES');
+  await compteurAlertes.locator('text=2').first().waitFor();
+  const telechargementAlertes = page.waitForEvent('download');
+  await page.getByTestId('exporter-alertes').click();
+  const fichierAlertes = await telechargementAlertes;
+  const classeurAlertes = require('xlsx').readFile(await fichierAlertes.path());
+  const feuilleAlertes = require('xlsx').utils.sheet_to_json(classeurAlertes.Sheets[classeurAlertes.SheetNames[0]]);
+  verifier(/^alertes-stock-\d{4}-\d{2}-\d{2}\.xlsx$/.test(fichierAlertes.suggestedFilename()), `export Excel : fichier ${fichierAlertes.suggestedFilename()}`);
+  verifier(feuilleAlertes.length === 2, 'export Excel : les deux alertes');
+  const rup = feuilleAlertes.find((l) => l.Code === 'ALR-RUP');
+  verifier(rup.État === 'Rupture' && rup['À commander'] === 20 && rup['Coût estimé'] === 20000, 'export Excel : état, quantité à commander et coût relus depuis le classeur');
+
+  // Le dépôt se filtre dans la jointure : un article absent du dépôt doit
+  // apparaître en rupture, pas disparaître de la liste.
+  await page.getByTestId('filtre-depot-alerte').selectOption({ label: 'Annexe' });
+  await compteurAlertes.locator('text=3').first().waitFor();
+  verifier(true, 'filtre par dépôt : l’article absent du dépôt y est en rupture, il ne disparaît pas');
   verifier(true, 'alertes affichées');
 
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
