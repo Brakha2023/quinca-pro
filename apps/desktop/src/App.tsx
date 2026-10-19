@@ -12,6 +12,7 @@ import TresoreriePage from './presentation/pages/Tresorerie/TresoreriePage';
 import LivraisonsPage from './presentation/pages/Livraisons/LivraisonsPage';
 import AuditPage from './presentation/pages/Audit/AuditPage';
 import HistoriquesPage from './presentation/pages/Historiques/HistoriquesPage';
+import ParametresPage from './presentation/pages/Parametres/ParametresPage';
 import VentesPage from './presentation/pages/Ventes/VentesPage';
 import EmployesPage from './presentation/pages/Employes/EmployesPage';
 import LoginPage from './presentation/pages/Auth/LoginPage';
@@ -42,6 +43,8 @@ function App() {
             <Route path="historiques" element={<HistoriquesPage />} />
             <Route path="historiques/:section" element={<HistoriquesPage />} />
             <Route path="audit" element={<AuditPage />} />
+            <Route path="parametres" element={<ParametresPage />} />
+            <Route path="parametres/:section" element={<ParametresPage />} />
           </Route>
         </Route>
       </Routes>

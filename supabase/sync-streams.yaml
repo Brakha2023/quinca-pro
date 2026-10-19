@@ -45,6 +45,13 @@ streams:
     queries:
       - SELECT * FROM utilisateurs WHERE id = auth.user_id()
       - SELECT * FROM utilisateurs WHERE filiale_id IN mes_filiales
+      # Rôles et permissions : l'annuaire complet, sans filtre. Deux raisons —
+      # le poste a besoin des permissions de son porteur pour fonctionner hors
+      # ligne, et l'écran Paramètres administre tous les rôles. Deux tables
+      # courtes (quelques dizaines de lignes), rien de confidentiel : un rôle
+      # dit ce qu'on peut faire, pas ce qui s'est passé.
+      - SELECT * FROM roles
+      - SELECT * FROM roles_permissions
       # Annuaire des filiales : toutes les filiales actives, pas seulement les
       # siennes. Le transfert inter-filiale a besoin de nommer la destination,
       # et la table ne contient rien de confidentiel (RLS : lecture ouverte aux

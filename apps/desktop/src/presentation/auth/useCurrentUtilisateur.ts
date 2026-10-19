@@ -8,7 +8,10 @@ export interface UtilisateurCourant {
   nom: string;
   prenom: string | null;
   profil: Profil;
+  role_id: string | null;
   filiale_id: string | null;
+  /** Mot de passe par défaut encore en place : l'application en exige un autre. */
+  doit_changer_mot_de_passe: number | null;
 }
 
 /**
@@ -19,7 +22,7 @@ export function useCurrentUtilisateur() {
   const { utilisateurId: userId } = useAuth();
 
   const { data, isLoading } = useQuery<UtilisateurCourant>(
-    'SELECT id, email, nom, prenom, profil, filiale_id FROM utilisateurs WHERE id = ?',
+    'SELECT id, email, nom, prenom, profil, role_id, filiale_id, doit_changer_mot_de_passe FROM utilisateurs WHERE id = ?',
     [userId],
   );
 

@@ -51,10 +51,15 @@ UI (repository) ─écrit─▶ SQLite locale ─file CRUD─▶ SupabaseConnect
    - *Sync Streams* : coller `supabase/sync-streams.yaml` et déployer. Le périmètre par utilisateur
      vient de la table `acces_filiales` (migration `20260916100000`), maintenue par trigger.
    ⚠ Vérifier que `VITE_POWERSYNC_URL` pointe sur l'instance configurée (dashboard → *Client SDK Setup*).
-3. **Utilisateurs** : créer les comptes dans Supabase Auth avec les métadonnées
-   `{ "nom": "…", "prenom": "…", "profil": "DIRECTEUR|GERANT|CAISSIER|MAGASINIER", "filiale_id": "<uuid ou vide pour DIRECTEUR>" }`.
-   Le profil `utilisateurs` est créé automatiquement par trigger.
-4. Copier `apps/desktop/.env.example` en `apps/desktop/.env` et renseigner les URLs/clés.
+3. **Premier accès** : la migration `20260927000000` crée un compte superadministrateur —
+   `superadmin@cisse-freres.ci` / `SuperAdmin@2026`. ⚠ **Ce mot de passe est public (il est écrit ici).**
+   L'application exige d'en changer à la première connexion et ne laisse rien faire d'autre avant.
+4. **Utilisateurs** : créer les comptes dans Supabase Auth avec les métadonnées
+   `{ "nom": "…", "prenom": "…", "profil": "DIRECTEUR|GERANT|CAISSIER|MAGASINIER", "filiale_id": "<uuid ou vide pour DIRECTEUR>" }`,
+   et facultativement `"role": "role_gestionnaire"` pour imposer le rôle. Le profil `utilisateurs` est créé
+   automatiquement par trigger, avec le rôle nommé ou, à défaut, celui qui correspond au profil.
+   Le rôle se change ensuite depuis **Paramètres → Utilisateurs**, sans toucher au dashboard.
+5. Copier `apps/desktop/.env.example` en `apps/desktop/.env` et renseigner les URLs/clés.
 
 ## Développement
 
@@ -121,6 +126,8 @@ un PC Windows : `apps/desktop/scripts/windows/CHECKLIST-WINDOWS.md`.
   crédit, livraison, ticket), Ventes (journée, validation, annulation), Fournisseurs (achats réceptionnés, dettes,
   paiements), Trésorerie (caisses, opérations, transferts), Livraisons, Audit, Dashboard et Consolidation.
   Chaque écriture métier est une transaction SQLite locale rejouée vers Supabase ; les lectures sont temps réel.
+- **Rôles et permissions (RBAC)** : faits. Rôles créés depuis l'application, permissions fines par module, menu
+  et pages gouvernés par le rôle, compte superadministrateur livré.
 - **Phase 2 — desktop prod** : à faire (CSP Tauri, impression thermique, plugins Rust, auto-update, signature,
   build Windows testé).
 - **Phase 3 — pilotage avancé** : exports Excel, rapports périodiques, recherche accentuée.
@@ -507,6 +514,50 @@ SQL. Un transfert ne retient que sa sortie — son entrée porte la même réfé
 
 Rien n'est dupliqué : les écrans de saisie restent dans leurs modules, et l'historique rouvre leurs
 pièces (ticket de vente, bon de commande ou facture d'achat, bon de stock, fiche de production).
+
+### Rôles et permissions (module Paramètres)
+
+Menu **Paramètres** (routes `/parametres/<section>`) : *Rôles & permissions* et *Utilisateurs*.
+
+Deux notions cohabitent, et il faut les garder distinctes.
+
+| | Ce que c'est | Qui la porte | Qui l'applique |
+| --- | --- | --- | --- |
+| **Portée des données** (`utilisateurs.profil`) | ce que le poste reçoit | le rôle, recopiée sur la fiche par déclencheur | sync rules (`acces_filiales`) et RLS |
+| **Permissions** | ce qu'on peut faire dans ce périmètre | le rôle, une ligne par permission | l'application, et la RLS pour les deux permissions de paramétrage |
+
+Un rôle se crée depuis l'écran (nom, description, portée), ses permissions se cochent module par
+module, et il s'affecte à un compte. **Le menu ne montre que ce que le rôle ouvre** ; une URL tapée
+à la main est refusée avec son motif. Un compte sans rôle ouvre l'application sur un message qui dit
+à qui demander.
+
+Cinq rôles sont livrés avec l'application (migration `20260927000000`) : superadministrateur
+(toutes les permissions, par nature — on ne peut rien lui retirer), directeur général (tout sauf la
+définition des rôles), gérant de filiale (toute l'exploitation, rien des paramètres), caissier,
+magasinier. Leur code, leur portée et leur nature sont figés ; leur nom, leur description et leurs
+permissions, non. Les comptes qui existaient avant la migration reçoivent le rôle correspondant à
+leur profil.
+
+Le catalogue des permissions vit dans `apps/desktop/src/core/parametres/permissions.ts`, **pas** dans
+un CHECK Postgres : ajouter une permission ne demande pas de migration. Le serveur ne vérifie que la
+forme (`module.action`) ; un code qu'une version plus ancienne de l'application ne connaît pas est
+simplement ignoré par elle. Les jeux de permissions des rôles livrés sont en revanche écrits aux deux
+endroits (`ROLES_SYSTEME` et la migration), comme les énumérations et leurs CHECK — un test unitaire
+vérifie la cohérence du côté application.
+
+Garde-fous côté serveur, qui ne dépendent pas de l'interface : un rôle livré ne se supprime pas, un
+rôle encore porté non plus, le superadministrateur ne se désactive pas et ne reçoit aucune ligne de
+permission, et **il doit rester au moins un superadministrateur actif** (déclencheur de contrainte
+différé : un échange de rôles entre deux comptes dans la même transaction passe, la suppression du
+dernier non). Écrire sur `roles` / `roles_permissions` demande la permission `parametres.roles`,
+vérifiée par la RLS via `a_permission()`.
+
+Le tableau des droits (rôles × permissions) et la liste des comptes s'impriment en A4 avec deux
+visas, et s'exportent en Excel : ce sont les pièces qu'on fait valider et qu'on classe.
+
+**Mots de passe.** Un compte dont `doit_changer_mot_de_passe` est levé ne peut rien faire tant qu'il
+n'en a pas choisi un autre (boîte sans sortie). Le changement passe par Supabase — donc en ligne — et
+renouvelle au passage l'empreinte de déverrouillage hors ligne du poste.
 
 ## Backlog technique connu
 

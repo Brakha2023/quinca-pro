@@ -3,7 +3,8 @@ import { Outlet, useLocation, NavLink } from 'react-router-dom';
 import {
   ShoppingCartIcon, CubeIcon, UserIcon,
   TruckIcon, BanknotesIcon, ChartBarIcon, Bars3Icon, XMarkIcon, UserGroupIcon,
-  CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon, UsersIcon, ClockIcon
+  CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon, UsersIcon, ClockIcon,
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/Stock/onglets';
 import { SECTIONS_FOURNISSEURS, SECTION_FOURNISSEURS_DEFAUT, cheminFournisseurs } from '../pages/Fournisseurs/onglets';
@@ -11,12 +12,15 @@ import { SECTIONS_CLIENTS, SECTION_CLIENTS_DEFAUT, cheminClients } from '../page
 import { SECTIONS_EMPLOYES, SECTION_EMPLOYES_DEFAUT, cheminEmployes } from '../pages/Employes/onglets';
 import { SECTIONS_TRESORERIE, SECTION_TRESORERIE_DEFAUT, cheminTresorerie } from '../pages/Tresorerie/onglets';
 import { SECTIONS_HISTORIQUES, SECTION_HISTORIQUE_DEFAUT, cheminHistorique } from '../pages/Historiques/onglets';
+import { SECTIONS_PARAMETRES, SECTION_PARAMETRES_DEFAUT, cheminParametres } from '../pages/Parametres/onglets';
 import FilialeSelector from '../components/FilialeSelector';
 import BandeauHorloge from '../components/layout/BandeauHorloge';
 import BandeauSchema from '../components/layout/BandeauSchema';
 import SyncStatusBadge from '../components/layout/SyncStatusBadge';
 import { useAuth } from '../auth/useAuth';
 import { useCurrentUtilisateur } from '../auth/useCurrentUtilisateur';
+import { usePermissions } from '../auth/usePermissions';
+import { MotDePasseModal } from '../features/parametres/modales';
 import { useConfirmation } from '../confirmation/useConfirmation';
 
 const PROFIL_LABELS: Record<string, string> = {
@@ -34,6 +38,11 @@ interface MenuItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  /**
+   * Permission qui ouvre l'entrée. Sans elle, l'entrée n'apparaît pas — et la
+   * page elle-même refuse, car une URL se tape à la main.
+   */
+  permission: string;
   /** Sous-menu : `href` du parent est la première section ; le parent est actif sur tout son préfixe. */
   children?: Array<{ name: string; href: string; icon: React.ComponentType<{ className?: string }> }>;
 }
@@ -47,19 +56,20 @@ const menuSections: MenuSection[] = [
   {
     title: 'Pilotage',
     items: [
-      { name: 'Consolidation', href: '/consolidation', icon: ChartBarIcon },
+      { name: 'Consolidation', href: '/consolidation', icon: ChartBarIcon, permission: 'consolidation.lire' },
     ],
   },
   {
     title: 'Exploitation',
     items: [
-      { name: 'Point de Vente', href: '/pos', icon: ShoppingCartIcon },
-      { name: 'Ventes', href: '/ventes', icon: CreditCardIcon },
-      { name: 'Catalogue', href: '/articles', icon: CubeTransparentIcon },
+      { name: 'Point de Vente', href: '/pos', icon: ShoppingCartIcon, permission: 'pos.encaisser' },
+      { name: 'Ventes', href: '/ventes', icon: CreditCardIcon, permission: 'ventes.lire' },
+      { name: 'Catalogue', href: '/articles', icon: CubeTransparentIcon, permission: 'articles.lire' },
       {
         name: 'Stock',
         href: cheminOngletStock(ONGLET_STOCK_DEFAUT),
         icon: CubeIcon,
+        permission: 'stock.lire',
         children: ONGLETS_STOCK.map((o) => ({ name: o.label, href: cheminOngletStock(o.id), icon: o.icon })),
       },
     ],
@@ -71,21 +81,24 @@ const menuSections: MenuSection[] = [
         name: 'Clients',
         href: cheminClients(SECTION_CLIENTS_DEFAUT),
         icon: UserIcon,
+        permission: 'clients.lire',
         children: SECTIONS_CLIENTS.map((s) => ({ name: s.label, href: cheminClients(s.id), icon: s.icon })),
       },
       {
         name: 'Fournisseurs',
         href: cheminFournisseurs(SECTION_FOURNISSEURS_DEFAUT),
         icon: UserGroupIcon,
+        permission: 'fournisseurs.lire',
         children: SECTIONS_FOURNISSEURS.map((s) => ({ name: s.label, href: cheminFournisseurs(s.id), icon: s.icon })),
       },
       {
         name: 'Trésorerie',
         href: cheminTresorerie(SECTION_TRESORERIE_DEFAUT),
         icon: BanknotesIcon,
+        permission: 'tresorerie.lire',
         children: SECTIONS_TRESORERIE.map((s) => ({ name: s.label, href: cheminTresorerie(s.id), icon: s.icon })),
       },
-      { name: 'Livraisons', href: '/livraisons', icon: TruckIcon },
+      { name: 'Livraisons', href: '/livraisons', icon: TruckIcon, permission: 'livraisons.lire' },
     ],
   },
   {
@@ -95,6 +108,7 @@ const menuSections: MenuSection[] = [
         name: 'Employés',
         href: cheminEmployes(SECTION_EMPLOYES_DEFAUT),
         icon: UsersIcon,
+        permission: 'employes.lire',
         children: SECTIONS_EMPLOYES.map((s) => ({ name: s.label, href: cheminEmployes(s.id), icon: s.icon })),
       },
     ],
@@ -106,9 +120,22 @@ const menuSections: MenuSection[] = [
         name: 'Historiques',
         href: cheminHistorique(SECTION_HISTORIQUE_DEFAUT),
         icon: ClockIcon,
+        permission: 'historiques.lire',
         children: SECTIONS_HISTORIQUES.map((s) => ({ name: s.label, href: cheminHistorique(s.id), icon: s.icon })),
       },
-      { name: 'Audit', href: '/audit', icon: LockClosedIcon },
+      { name: 'Audit', href: '/audit', icon: LockClosedIcon, permission: 'audit.lire' },
+    ],
+  },
+  {
+    title: 'Administration',
+    items: [
+      {
+        name: 'Paramètres',
+        href: cheminParametres(SECTION_PARAMETRES_DEFAUT),
+        icon: Cog6ToothIcon,
+        permission: 'parametres.lire',
+        children: SECTIONS_PARAMETRES.map((s) => ({ name: s.label, href: cheminParametres(s.id), icon: s.icon })),
+      },
     ],
   },
 ];
@@ -120,6 +147,23 @@ export default function MainLayout() {
   const { session, logout } = useAuth();
   const confirmer = useConfirmation();
   const { utilisateur } = useCurrentUtilisateur();
+  const { peut, role, isLoading: droitsEnCours, sansRole } = usePermissions();
+  const [motDePasseRepousse, setMotDePasseRepousse] = useState(false);
+
+  /**
+   * Le menu ne montre que ce que le rôle ouvre. Tant que le rôle n'est pas
+   * descendu sur le poste, on n'affiche rien plutôt que de faire clignoter des
+   * entrées qui disparaîtraient ensuite.
+   */
+  const sections = droitsEnCours
+    ? []
+    : menuSections
+        .map((section) => ({ ...section, items: section.items.filter((item) => peut(item.permission)) }))
+        .filter((section) => section.items.length > 0);
+
+  // Le compte livré avec l'application arrive avec un mot de passe public :
+  // il ne doit pas rester en place, et la boîte ne se ferme pas.
+  const motDePasseAChanger = utilisateur?.doit_changer_mot_de_passe === 1 && !motDePasseRepousse;
 
   const handleLogout = async () => {
     const ok = await confirmer({
@@ -176,7 +220,7 @@ export default function MainLayout() {
         
         {/* Menu */}
         <nav className="flex-1 px-2 py-4 space-y-4 overflow-y-auto">
-          {menuSections.map((section) => (
+          {sections.map((section) => (
             <div key={section.title}>
               {isSidebarOpen && (
                 <p className="text-xs text-primary-400 uppercase tracking-wider px-3 mb-2 font-medium">
@@ -249,7 +293,7 @@ export default function MainLayout() {
                   {utilisateur ? `${utilisateur.prenom ?? ''} ${utilisateur.nom}`.trim() : session?.user.email}
                 </p>
                 <p className="text-xs text-primary-300">
-                  {utilisateur ? PROFIL_LABELS[utilisateur.profil] ?? utilisateur.profil : 'Profil en cours de synchronisation'}
+                  {role?.nom ?? (utilisateur ? PROFIL_LABELS[utilisateur.profil] ?? utilisateur.profil : 'Profil en cours de synchronisation')}
                 </p>
               </div>
             )}
@@ -297,9 +341,23 @@ export default function MainLayout() {
 
         {/* Page Content (Outlet) */}
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          {sansRole ? (
+            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 px-6" data-testid="sans-role">
+              <p className="text-lg font-medium text-neutral-800">Aucun rôle ne vous a été affecté.</p>
+              <p className="text-sm text-neutral-500 mt-2 max-w-xl mx-auto">
+                Votre compte existe, mais il n'a encore aucun droit : c'est le superadministrateur qui lui donne un rôle,
+                depuis Paramètres → Utilisateurs. Si un rôle vient de vous être donné, laissez le poste se synchroniser.
+              </p>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
+
+      {motDePasseAChanger && utilisateur && (
+        <MotDePasseModal utilisateurId={utilisateur.id} obligatoire onClose={() => setMotDePasseRepousse(true)} />
+      )}
     </div>
   );
 }

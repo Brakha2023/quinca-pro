@@ -2,6 +2,7 @@ import { usePOSStore } from '../../stores/pos.store';
 import { useState } from 'react';
 import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
+import { usePermissions } from '../../auth/usePermissions';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import CataloguePanel from '../../features/pos/CataloguePanel';
 import PosteModal from '../../features/pos/PosteModal';
@@ -13,6 +14,7 @@ import { useDeriveHorloge } from '../../features/sync/useDeriveHorloge';
 export default function POSPage() {
   const { filialeId, estVueConsolidee } = useFilialeCourante();
   const { utilisateur } = useCurrentUtilisateur();
+  const { peut } = usePermissions();
   const proforma = usePOSStore((s) => s.proforma);
   const poste = usePoste(filialeId);
   const { avertissement } = useDeriveHorloge();
@@ -65,7 +67,7 @@ export default function POSPage() {
     caisseCode: poste.caisse!.code ?? 'CAISSE',
     depotId: poste.depot!.id,
   };
-  const peutForcerStock = utilisateur?.profil === 'GERANT' || utilisateur?.profil === 'DIRECTEUR';
+  const peutForcerStock = peut('ventes.forcer_stock');
 
   return (
     <div className="h-full flex flex-col gap-3 min-h-0">

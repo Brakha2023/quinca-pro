@@ -19,6 +19,16 @@ visible à l'écran ; tous pouvaient faire perdre des données.
 
 ### Ajouté
 
+- **Rôles et permissions (module Paramètres).** Les droits ne se déduisent plus du profil : on crée un
+  rôle depuis l'application (« Chef de rayon », « Contrôleur de gestion »…), on coche ses permissions
+  module par module, et on l'affecte à un compte. Le menu ne montre que ce que le rôle ouvre, et une
+  URL tapée à la main est refusée avec son motif. Cinq rôles sont livrés (superadministrateur,
+  directeur général, gérant de filiale, caissier, magasinier) ; les comptes existants reçoivent celui
+  qui correspond à leur profil. Le tableau des droits et la liste des comptes s'impriment en A4 avec
+  deux visas et s'exportent en Excel.
+- **Compte superadministrateur livré.** `superadmin@cisse-freres.ci` / `SuperAdmin@2026` — mot de passe
+  public, que l'application exige de changer à la première connexion avant de laisser faire quoi que ce
+  soit d'autre.
 - **Cumuls calculés par Postgres.** Le stock d'un dépôt, le solde d'une caisse, puis les comptes des
   clients et des fournisseurs sont désormais calculés par le serveur, par deltas tirés des journaux et
   des pièces. Deux postes hors ligne qui vendent le même article, ou au même client, s'additionnent au
@@ -125,6 +135,9 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   réglée, commande ouverte, livraison à faire, transfert en transit restent sur le poste quel que soit
   leur âge. Les écrans d'historique l'indiquent.
 - Les codes de tiers (`CLI-`, `FOU-`, `EMP-`) passent de 5 à 6 caractères.
+- Les trois vérifications écrites en dur dans l'interface — valider une vente, vendre malgré un stock
+  insuffisant, décider du sort d'une écriture refusée — deviennent des permissions (`ventes.valider`,
+  `ventes.forcer_stock`, `sync.decider`) : elles se retirent ou s'accordent rôle par rôle.
 
 ### Base de données
 
@@ -138,6 +151,10 @@ visible à l'écran ; tous pouvaient faire perdre des données.
 | `20260924000000_fenetre_historique` | colonne `dans_fenetre` + rafraîchissement quotidien (pg_cron) |
 | `20260925000000_cumuls_tiers` | comptes clients et fournisseurs calculés par Postgres |
 | `20260926000000_transfert_stock_filiales` | bons de transfert de stock entre filiales (`transferts_stock`, `lignes_transfert_stock`) |
+| `20260927000000_roles_permissions` | rôles, permissions, compte superadministrateur livré (`roles`, `roles_permissions`, `utilisateurs.role_id`) |
+
+⚠ `20260927000000` crée un compte dont le mot de passe est public : se connecter avec
+`superadmin@cisse-freres.ci` / `SuperAdmin@2026` et en changer tout de suite (l'application l'exige).
 
 Puis, dans le dashboard PowerSync : coller `supabase/sync-streams.yaml` → **Validate** → **Deploy**.
 Et vérifier que le rendez-vous quotidien `rafraichir_fenetre_historique()` existe (pg_cron), sans quoi

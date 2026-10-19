@@ -4,7 +4,7 @@ import { LIBELLES_OPERATION, libelleTable } from '../../../core/sync';
 import { EchecsEnvoiRepository } from '../../../infrastructure/powersync/repositories/EchecsEnvoiRepository';
 import Modal from '../../components/ui/Modal';
 import { useConfirmation } from '../../confirmation/useConfirmation';
-import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
+import { usePermissions } from '../../auth/usePermissions';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useRepository } from '../../hooks/useRepository';
 import { useEchecsEnvoi } from './useEchecsEnvoi';
@@ -20,12 +20,12 @@ const horodatage = (iso: string) =>
 export default function EchecsEnvoiModal({ onClose }: { onClose: () => void }) {
   const { echecs } = useEchecsEnvoi();
   const repository = useRepository(EchecsEnvoiRepository);
-  const { utilisateur } = useCurrentUtilisateur();
+  const { peut } = usePermissions();
   const confirmer = useConfirmation();
   const notifier = useNotifier();
   const [enCours, setEnCours] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
-  const peutDecider = utilisateur?.profil === 'GERANT' || utilisateur?.profil === 'DIRECTEUR';
+  const peutDecider = peut('sync.decider');
 
   const reessayer = async (id: string) => {
     setEnCours(id);

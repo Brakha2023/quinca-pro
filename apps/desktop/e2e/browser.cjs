@@ -51,8 +51,16 @@ async function ouvrirNavigateur(options = {}) {
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:1420';
 
-/** Injecte une session Supabase factice + un profil local : permet de tester l'UI sans backend. */
-async function simulerSession(page, { profil = 'GERANT', filialeId = 'filiale-test' } = {}) {
+/**
+ * Injecte une session Supabase factice + un profil local : permet de tester
+ * l'UI sans backend.
+ *
+ * Le compte reçoit un rôle, car l'application ne montre que ce que le rôle
+ * ouvre. Par défaut ce rôle est superadministrateur — tout est ouvert, comme
+ * avant les permissions. Un scénario qui veut éprouver une restriction passe
+ * `permissions: [...]` (rôle ordinaire, droits comptés) ou `sansRole: true`.
+ */
+async function simulerSession(page, { profil = 'GERANT', filialeId = 'filiale-test', permissions = null, sansRole = false } = {}) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const userId = 'aaaaaaaa-0000-0000-0000-00000000e2e0';
   const exp = Math.floor(Date.now() / 1000) + 3600 * 24;
@@ -62,20 +70,33 @@ async function simulerSession(page, { profil = 'GERANT', filialeId = 'filiale-te
     user: { id: userId, email: 'e2e@test.ci', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() },
   };
   await page.goto(`${BASE_URL}/#/login`, { waitUntil: 'networkidle' });
-  await page.evaluate(async ({ userId, session, profil, filialeId }) => {
+  const roleId = 'bbbbbbbb-0000-0000-0000-00000000e2e0';
+  await page.evaluate(async ({ userId, session, profil, filialeId, roleId, permissions, sansRole }) => {
     const { supabase } = await import('/src/infrastructure/supabase/client.ts');
     const { db } = await import('/src/infrastructure/powersync/database.ts');
     const { definirUtilisateurCourantId } = await import('/src/infrastructure/auth/utilisateurCourant.ts');
     await db.waitForReady();
     definirUtilisateurCourantId(userId);
     await db.execute("INSERT OR REPLACE INTO filiales (id, code, nom, type, est_active) VALUES (?, 'ABJ', 'Filiale Abidjan', 'FILIALE', 1)", [filialeId]);
+    if (!sansRole) {
+      await db.execute(
+        `INSERT OR REPLACE INTO roles (id, code, nom, description, profil, est_systeme, est_superadmin, est_actif)
+         VALUES (?, 'role_e2e', ?, 'Rôle du scénario', ?, 0, ?, 1)`,
+        [roleId, permissions ? 'Rôle d’essai' : 'Superadministrateur d’essai', profil, permissions ? 0 : 1],
+      );
+      for (const permission of permissions ?? []) {
+        await db.execute('INSERT OR REPLACE INTO roles_permissions (id, role_id, permission) VALUES (?, ?, ?)', [
+          crypto.randomUUID(), roleId, permission,
+        ]);
+      }
+    }
     await db.execute(
-      "INSERT OR REPLACE INTO utilisateurs (id, email, nom, prenom, profil, filiale_id, est_actif) VALUES (?, 'e2e@test.ci', 'Koné', 'Awa', ?, ?, 1)",
-      [userId, profil, profil === 'DIRECTEUR' ? null : filialeId],
+      "INSERT OR REPLACE INTO utilisateurs (id, email, nom, prenom, profil, role_id, filiale_id, est_actif, doit_changer_mot_de_passe) VALUES (?, 'e2e@test.ci', 'Koné', 'Awa', ?, ?, ?, 1, 0)",
+      [userId, profil, sansRole ? null : roleId, profil === 'DIRECTEUR' ? null : filialeId],
     );
     localStorage.setItem(supabase.auth.storageKey, JSON.stringify(session));
-  }, { userId, session, profil, filialeId });
-  return { userId, filialeId };
+  }, { userId, session, profil, filialeId, roleId, permissions, sansRole });
+  return { userId, filialeId, roleId };
 }
 
 function verifier(condition, message) {

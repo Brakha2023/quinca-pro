@@ -31,11 +31,48 @@ export const TABLES = {
     email: 'text',
     nom: 'text',
     prenom: 'text',
+    /**
+     * Portée des données : c'est elle que lisent les sync rules et la RLS.
+     * Elle n'est plus choisie à la main — le rôle la porte, un déclencheur
+     * serveur la recopie ici à chaque affectation.
+     */
     profil: 'text',
+    /** Rôle affecté : ce que l'utilisateur a le droit de faire (voir `roles`). */
+    role_id: 'text',
     filiale_id: 'text',
     est_actif: 'integer',
+    /** Mot de passe par défaut jamais changé : l'application l'exige à la connexion. */
+    doit_changer_mot_de_passe: 'integer',
     /** Empreinte PBKDF2 du mot de passe pour le déverrouillage hors ligne (jamais le mot de passe). */
     empreinte_hors_ligne: 'text',
+    ...COMMUNES_HORODATAGE,
+  },
+  /**
+   * Rôles : un nom, une portée de données, un jeu de permissions.
+   * Table courte et sans filiale — tout le monde la reçoit, c'est l'annuaire
+   * des rôles de la maison.
+   */
+  roles: {
+    code: 'text',
+    nom: 'text',
+    description: 'text',
+    /** Portée des données du rôle, recopiée sur `utilisateurs.profil`. */
+    profil: 'text',
+    /** Livré avec l'application : son code et sa portée ne se modifient pas. */
+    est_systeme: 'integer',
+    /** Toutes les permissions, pour toujours : le compte qui administre l'app. */
+    est_superadmin: 'integer',
+    est_actif: 'integer',
+    ...COMMUNES_HORODATAGE,
+  },
+  /**
+   * Permissions accordées à un rôle, une ligne par permission.
+   * Le catalogue des codes vit dans `core/parametres/permissions.ts` : un code
+   * inconnu d'une version plus ancienne de l'app est simplement ignoré.
+   */
+  roles_permissions: {
+    role_id: 'text',
+    permission: 'text',
     ...COMMUNES_HORODATAGE,
   },
   depots: {
@@ -492,6 +529,8 @@ export type Row<T extends TableName> = { id: string } & {
 
 export type FilialeRow = Row<'filiales'>;
 export type UtilisateurRow = Row<'utilisateurs'>;
+export type RoleRow = Row<'roles'>;
+export type RolePermissionRow = Row<'roles_permissions'>;
 export type DepotRow = Row<'depots'>;
 export type CaisseRow = Row<'caisses'>;
 export type FamilleArticleRow = Row<'familles_articles'>;

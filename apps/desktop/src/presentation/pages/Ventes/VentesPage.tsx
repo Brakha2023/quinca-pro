@@ -3,7 +3,7 @@ import { CheckIcon, EyeIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { STATUTS_VENTE, type ModePaiement, type StatutVente } from '@quinca/shared-types';
 import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, recapJournalVentes } from '../../../core/ventes';
 import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
-import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
+import { usePermissions } from '../../auth/usePermissions';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import NoteHistorique from '../../components/ui/NoteHistorique';
 import { controleInlineClass } from '../../components/ui/FormField';
@@ -21,7 +21,7 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 /** Ventes de la filiale : journée de caisse, validation de fin de journée, historique, annulations. */
 export default function VentesPage() {
   const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
-  const { utilisateur } = useCurrentUtilisateur();
+  const { peut } = usePermissions();
   const repository = useRepository(VentesRepository);
   const notifier = useNotifier();
   const confirmer = useConfirmation();
@@ -37,7 +37,7 @@ export default function VentesPage() {
   const [apercu, setApercu] = useState(false);
 
   const { ventes, isLoading } = useVentes(filialeId, { dateDebut, dateFin, caisseId: caisseId || null, statut: statut || null, recherche });
-  const peutValider = utilisateur?.profil === 'GERANT' || utilisateur?.profil === 'DIRECTEUR';
+  const peutValider = peut('ventes.valider');
 
   // Les mêmes totaux que le journal imprimé : une seule règle, dans `core/ventes`.
   const stats = useMemo(() => recapJournalVentes(ventes), [ventes]);
