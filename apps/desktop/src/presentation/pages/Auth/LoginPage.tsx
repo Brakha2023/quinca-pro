@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/useAuth';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFileEnvoi } from '../../auth/useFileEnvoi';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
+import Drapeaux from './Drapeaux';
 
 export default function LoginPage() {
   const { session, utilisateurId, verrouille, login } = useAuth();
@@ -107,9 +108,8 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 pt-6 border-t border-neutral-200">
-          <p className="text-xs text-neutral-500 text-center">
-            Version 1.0 · Architecture PowerSync · Local-First
-          </p>
+          <Drapeaux />
+          <p className="mt-3 text-xs text-neutral-500 text-center">Version {__APP_VERSION__}</p>
         </div>
       </div>
     </div>

@@ -1,12 +1,21 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import wasm from 'vite-plugin-wasm';
 
 const host = process.env.TAURI_DEV_HOST;
 
+// La version affichée vient du manifeste, pas d'une constante recopiée à la main :
+// un numéro écrit en dur dans l'interface finit toujours par mentir.
+const { version } = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+) as { version: string };
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), wasm()],
+
+  define: { __APP_VERSION__: JSON.stringify(version) },
 
   // PowerSync : SQLite tourne dans un Web Worker (WASM), le worker doit être un module ES.
   worker: {
