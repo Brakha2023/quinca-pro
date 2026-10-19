@@ -167,6 +167,11 @@ lignes avec quantité signée, **stock avant et après**, coût unitaire et vale
 quand les coûts sont renseignés, le code-barres de la référence et deux signatures. Un transfert
 génère deux mouvements par article : le bon ne compte la ligne qu'une fois.
 
+Depuis octobre 2026, **une sortie garde le coût moyen du dépôt au moment où elle part** (transfert,
+déstockage, casse, production, vente). Sans lui, un bon de casse ne disait pas ce qu'il avait coûté, et
+le coût moyen d'aujourd'hui ne le dirait plus jamais exactement. Les pièces écrites avant ce changement
+n'ont pas de coût : les historiques retombent alors sur le coût moyen actuel du dépôt, faute de mieux.
+
 ### Cumuls : qui calcule quoi
 
 Le stock d'un dépôt et le solde d'une caisse sont **calculés par Postgres**, par application de deltas
@@ -486,6 +491,22 @@ Le **reçu de caisse** (versement, retrait, entrée, dépense) reprend le modèl
 tiers, date, code reçu, montant encadré en FCFA, désignation, observation, double signature et opérateur.
 Il ajoute le **montant en toutes lettres** (ce qui fait foi en cas de rature) et un **code-barres Code 39**
 de la pièce, dessiné en SVG sans police ni bibliothèque.
+
+### Historiques
+
+Menu **Historiques** (routes `/historiques/<section>`, sous-menu latéral) : les pièces déjà passées,
+réunies au même endroit. Sept sections — ventes, commandes fournisseurs, entrées en stock (achat),
+transferts inter-dépôt, productions, déstockages et casses, inventaires — qui répondent toutes de la
+même façon : une liste de **pièces** (pas de lignes), filtrée par période, par dépôt là où il veut dire
+quelque chose et par recherche libre, avec le total en bas, **imprimable en A4** et **exportable en
+Excel** — et d'où l'on rouvre la pièce d'origine pour la rééditer.
+
+Les quatre sections tirées du journal des mouvements regroupent les lignes par **référence** : un bon
+d'entrée de deux cents articles fait une ligne de liste, pas deux cents. Le regroupement se fait en
+SQL. Un transfert ne retient que sa sortie — son entrée porte la même référence et doublerait le bon.
+
+Rien n'est dupliqué : les écrans de saisie restent dans leurs modules, et l'historique rouvre leurs
+pièces (ticket de vente, bon de commande ou facture d'achat, bon de stock, fiche de production).
 
 ## Backlog technique connu
 

@@ -302,7 +302,10 @@ export class StockRepository extends BaseRepository {
       [
         this.nouvelId(), ligne.article_id, depotId, ctx.filialeId, type,
         Math.abs(resultat.quantite), resultat.quantite_avant, resultat.quantite_apres,
-        ligne.cout_unitaire ?? (type === 'TRANSFERT_ENTREE' ? resultat.cout_moyen : null),
+        // Une sortie vaut le coût moyen du dépôt au moment où elle part. Sans
+        // lui, un bon de casse ou de transfert ne dit pas ce qu'il a coûté, et
+        // le coût moyen d'aujourd'hui ne le dira plus jamais exactement.
+        ligne.cout_unitaire ?? resultat.cout_moyen,
         reference, motif, options.fournisseurId ?? null, options.remisePercent ?? 0, ctx.utilisateurId, now,
       ],
     );

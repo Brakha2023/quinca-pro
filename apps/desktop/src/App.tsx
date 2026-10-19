@@ -11,6 +11,7 @@ import StockPage from './presentation/pages/Stock/StockPage';
 import TresoreriePage from './presentation/pages/Tresorerie/TresoreriePage';
 import LivraisonsPage from './presentation/pages/Livraisons/LivraisonsPage';
 import AuditPage from './presentation/pages/Audit/AuditPage';
+import HistoriquesPage from './presentation/pages/Historiques/HistoriquesPage';
 import VentesPage from './presentation/pages/Ventes/VentesPage';
 import EmployesPage from './presentation/pages/Employes/EmployesPage';
 import LoginPage from './presentation/pages/Auth/LoginPage';
@@ -38,6 +39,8 @@ function App() {
             <Route path="employes" element={<EmployesPage />} />
             <Route path="employes/:section" element={<EmployesPage />} />
             <Route path="consolidation" element={<ConsolidationPage />} />
+            <Route path="historiques" element={<HistoriquesPage />} />
+            <Route path="historiques/:section" element={<HistoriquesPage />} />
             <Route path="audit" element={<AuditPage />} />
           </Route>
         </Route>

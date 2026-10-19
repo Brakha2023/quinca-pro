@@ -8,6 +8,9 @@ import { StockRepository, type ContexteMouvement } from './StockRepository';
 export interface FiltresProductions {
   depotId?: string | null;
   recherche?: string;
+  /** Bornes de journée (AAAA-MM-JJ), inclusives. */
+  debut?: string | null;
+  fin?: string | null;
   limite?: number;
 }
 
@@ -15,6 +18,8 @@ export function productionsQuery(filialeId: string | null, filtres: FiltresProdu
   const conditions = ['p.filiale_id = ?'];
   const params: Array<string | number> = [filialeId ?? ''];
   if (filtres.depotId) { conditions.push('p.depot_id = ?'); params.push(filtres.depotId); }
+  if (filtres.debut) { conditions.push('p.date_debut >= ?'); params.push(new Date(`${filtres.debut}T00:00:00`).toISOString()); }
+  if (filtres.fin) { conditions.push('p.date_debut <= ?'); params.push(new Date(`${filtres.fin}T23:59:59.999`).toISOString()); }
   const q = filtres.recherche?.trim();
   if (q) {
     conditions.push('(p.numero LIKE ? OR p.equipe LIKE ? OR EXISTS (SELECT 1 FROM lignes_production l WHERE l.production_id = p.id AND (l.designation LIKE ? OR l.code_article LIKE ?)))');
@@ -23,6 +28,7 @@ export function productionsQuery(filialeId: string | null, filtres: FiltresProdu
   params.push(filtres.limite ?? 200);
   return {
     sql: `SELECT p.*, d.nom AS depot_nom, u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom,
+                 (SELECT COUNT(*) FROM lignes_production l WHERE l.production_id = p.id) AS nombre_lignes,
                  (SELECT COALESCE(SUM(quantite), 0) FROM lignes_production l WHERE l.production_id = p.id AND l.sens = 'PRODUIT') AS quantite_produite,
                  (SELECT COALESCE(SUM(pertes), 0) FROM lignes_production l WHERE l.production_id = p.id AND l.sens = 'PRODUIT') AS pertes,
                  (SELECT GROUP_CONCAT(designation, ', ') FROM lignes_production l WHERE l.production_id = p.id AND l.sens = 'PRODUIT') AS produits

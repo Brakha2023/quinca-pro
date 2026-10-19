@@ -203,7 +203,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(true, 'saisie : écart −4 et coût de revient 500 F (4 × 4500 / 36) calculés en direct');
   await page.getByRole('button', { name: 'Enregistrer la production' }).click();
   await page.locator('[aria-live]', { hasText: 'Production PRD-' }).waitFor();
-  await page.getByRole('button', { name: 'Historique' }).click();
+  // Scopé à la page : la barre latérale porte aussi un « Historiques ».
+  await page.locator('main').getByRole('button', { name: 'Historique', exact: true }).click();
   await page.locator('tbody tr', { hasText: 'Brique 15' }).first().waitFor();
   verifier((await page.locator('tbody tr').count()) === 2, 'historique : 2 productions');
   await page.locator('tbody tr').first().getByTitle('Détail').click();

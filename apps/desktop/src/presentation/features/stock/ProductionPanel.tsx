@@ -24,11 +24,12 @@ import { useContexteMouvement } from './useContexteMouvement';
 interface LigneMatiereUI { article: Article; quantite: number }
 interface LigneProduitUI { article: Article; quantite_prevue: number; quantite: number; pertes: number }
 
-interface ProductionVueRow extends ProductionRow {
+export interface ProductionVueRow extends ProductionRow {
   depot_nom: string | null;
   utilisateur_nom: string | null;
   utilisateur_prenom: string | null;
   quantite_produite: number;
+  nombre_lignes: number;
   pertes: number;
   produits: string | null;
 }
@@ -212,7 +213,8 @@ function SaisieProduction({ filialeId }: { filialeId: string }) {
   );
 }
 
-function DetailProduction({ production, onClose }: { production: ProductionVueRow; onClose: () => void }) {
+/** Détail d'une production : matières consommées et articles produits. */
+export function DetailProduction({ production, onClose }: { production: ProductionVueRow; onClose: () => void }) {
   const { data } = useQuery<LigneProductionRow>(LIGNES_PRODUCTION_QUERY, [production.id]);
   const lignes = data.map(ligneProductionFromRow);
   const matieres = lignes.filter((l) => l.sens === 'MATIERE');

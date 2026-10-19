@@ -3,13 +3,14 @@ import { Outlet, useLocation, NavLink } from 'react-router-dom';
 import {
   ShoppingCartIcon, CubeIcon, UserIcon,
   TruckIcon, BanknotesIcon, ChartBarIcon, Bars3Icon, XMarkIcon, UserGroupIcon,
-  CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon, UsersIcon
+  CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon, UsersIcon, ClockIcon
 } from '@heroicons/react/24/outline';
 import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/Stock/onglets';
 import { SECTIONS_FOURNISSEURS, SECTION_FOURNISSEURS_DEFAUT, cheminFournisseurs } from '../pages/Fournisseurs/onglets';
 import { SECTIONS_CLIENTS, SECTION_CLIENTS_DEFAUT, cheminClients } from '../pages/Clients/onglets';
 import { SECTIONS_EMPLOYES, SECTION_EMPLOYES_DEFAUT, cheminEmployes } from '../pages/Employes/onglets';
 import { SECTIONS_TRESORERIE, SECTION_TRESORERIE_DEFAUT, cheminTresorerie } from '../pages/Tresorerie/onglets';
+import { SECTIONS_HISTORIQUES, SECTION_HISTORIQUE_DEFAUT, cheminHistorique } from '../pages/Historiques/onglets';
 import FilialeSelector from '../components/FilialeSelector';
 import BandeauHorloge from '../components/layout/BandeauHorloge';
 import BandeauSchema from '../components/layout/BandeauSchema';
@@ -101,7 +102,12 @@ const menuSections: MenuSection[] = [
   {
     title: 'Rapports & Sécurité',
     items: [
-     
+      {
+        name: 'Historiques',
+        href: cheminHistorique(SECTION_HISTORIQUE_DEFAUT),
+        icon: ClockIcon,
+        children: SECTIONS_HISTORIQUES.map((s) => ({ name: s.label, href: cheminHistorique(s.id), icon: s.icon })),
+      },
       { name: 'Audit', href: '/audit', icon: LockClosedIcon },
     ],
   },

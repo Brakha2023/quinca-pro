@@ -55,6 +55,19 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   Filtrer par dépôt ne fait plus disparaître un article absent de ce dépôt : il y figure en rupture,
   ce qui est précisément l'information recherchée.
 
+- **Menu Historiques.** Les pièces déjà passées sont réunies sous un même menu : ventes, commandes
+  fournisseurs, entrées en stock (achat), transferts inter-dépôt, productions, déstockages et casses,
+  inventaires. Chaque section donne la même chose — une liste de pièces filtrée par période, par dépôt
+  et par recherche, le total en bas, *Imprimer / PDF* et *Exporter Excel* — et rouvre la pièce
+  d'origine d'un clic pour la rééditer.
+
+  Les écrans de saisie n'ont pas bougé : l'historique relit, il ne saisit pas.
+
+- **Les sorties de stock gardent leur valeur.** Un transfert, un déstockage ou une casse n'enregistrait
+  aucun coût : le bon ne disait pas ce qu'il avait coûté, et le coût moyen d'aujourd'hui ne le dirait
+  plus jamais exactement. Chaque sortie retient désormais le coût moyen du dépôt au moment où elle
+  part — une casse de trois sacs se chiffre enfin.
+
 - **Facture d'achat fournisseur.** Un achat réceptionné produit désormais sa facture A4 : n° et
   code-barres, date et heure, opérateur, dépôt, nature de la pièce, cartouche fournisseur (RC, CC,
   adresse, contact), lignes valorisées, totaux (brut HT, remise, net HT, TVA, net à payer), **net à
