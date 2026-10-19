@@ -515,6 +515,57 @@ SQL. Un transfert ne retient que sa sortie — son entrée porte la même réfé
 Rien n'est dupliqué : les écrans de saisie restent dans leurs modules, et l'historique rouvre leurs
 pièces (ticket de vente, bon de commande ou facture d'achat, bon de stock, fiche de production).
 
+### Tableau de bord (Dashboard et Consolidation)
+
+Le **même** tableau de bord pour deux lecteurs : un gérant le lit sur sa filiale
+(`/`), un directeur sur le groupe entier (`/consolidation`). Mêmes calculs, même
+disposition, même code — deux tableaux de bord qui se ressemblent finiraient par ne
+plus dire la même chose du même chiffre.
+
+Une période commande tout l'écran (aujourd'hui · 7 jours · ce mois · 12 mois) ;
+chaque tuile et chaque graphique parlent de la même tranche de temps, et les
+évolutions se comparent à la **période précédente de même durée** (un mois entamé au
+15 se compare aux quinze jours d'avant, pas au mois entier).
+
+**Huit chiffres**, dans l'ordre des questions d'un patron de quincaillerie : chiffre
+d'affaires TTC · marge commerciale · résultat estimé · trésorerie, puis créances
+clients · dettes fournisseurs · valeur du stock · bons de livraison en attente.
+Chacun porte ce qui l'explique : nombre de ventes et panier moyen, taux de marge et
+coût d'achat, part dormante du stock, livraisons en retard. Un bandeau rassemble ce
+qui réclame une décision aujourd'hui (ruptures, retards, impayés anciens, trésorerie
+négative, dépenses qui dépassent la marge).
+
+| Grandeur | Comment elle se calcule |
+| --- | --- |
+| **Marge commerciale** | CA hors taxes − coût d'achat de la marchandise sortie. Le coût vient du **journal des mouvements** : chaque `SORTIE_VENTE` garde le coût moyen que portait le dépôt **au moment de la vente** (voir « Entrées en stock »). Les pièces antérieures à cette règle retombent sur le coût moyen actuel. Un retour client se retranche. |
+| **Résultat estimé** | Marge − dépenses d'exploitation passées en caisse (transport, loyer, salaires, fournitures, électricité, entretien, repas, autres). Ni les règlements fournisseurs — déjà dans le coût d'achat — ni les transferts, versements et retraits, qui ne sont pas des charges. **Estimé** : il ne voit pas une charge réglée autrement, ni un amortissement. |
+| **États du stock** | Un article, un seul état, par ordre d'urgence : **rupture** (quantité nulle) → **dormant** (en stock, sans mouvement depuis 90 jours) → **sous le minimum** → **actif**. Un article dormant *et* sous son minimum reste dormant : le recommander serait l'erreur. |
+| **Ancienneté des impayés** | Sur les **factures** (ventes dont il reste à payer), seules à porter une date : 0-30 / 31-60 / 61-90 / plus de 90 jours. Le total peut différer du solde des comptes clients, qui comprend aussi les reports d'ouverture — l'écart est affiché, pas masqué. |
+
+**Quatre graphiques**, en HTML et CSS, sans dépendance :
+
+- **chiffre d'affaires et marge** — une barre par jour (ou par mois sur douze mois),
+  coupée en deux : le coût d'achat en bas, la marge en haut. La hauteur donne
+  l'activité, la part haute le gain. Une journée vendue à perte descend sous la ligne
+  de zéro ; un repli « Voir les données » donne le tableau chiffré ;
+- **état du stock** — deux barres, par valeur et par nombre d'articles. Deux, parce
+  qu'une seule mentirait : une rupture ne vaut rien et n'apparaîtrait jamais sur une
+  barre valorisée, alors que c'est l'état le plus urgent ;
+- **chiffre d'affaires par famille** et **qui achète** — barres horizontales, une
+  seule couleur, la queue repliée dans « Autres » ;
+- **ancienneté des impayés** — quatre colonnes, un seul bleu qui fonce avec l'âge :
+  les tranches sont ordonnées, pas distinctes.
+
+Les couleurs ne sont pas choisies à l'œil : chaque jeu a passé un contrôle de
+lisibilité (bande de clarté, saturation, écart entre voisines sous daltonisme,
+contraste sur fond blanc) — voir `features/pilotage/graphismes.ts`. Tout graphique
+répond au survol **et au clavier**, et aucune valeur n'est accessible au seul survol.
+
+La vue groupe ajoute la comparaison des filiales entre elles et le détail ligne à
+ligne (d'où l'on ouvre une filiale). Les deux vues s'impriment en A4 — chiffres
+seulement, pas de graphiques : sur du papier noir et blanc, une barre orange et une
+barre bleue se ressemblent — et la vue groupe s'exporte en Excel.
+
 ### Rôles et permissions (module Paramètres)
 
 Menu **Paramètres** (routes `/parametres/<section>`) : *Rôles & permissions* et *Utilisateurs*.

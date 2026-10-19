@@ -1,74 +1,146 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
+import {
+  classement, consolider, indicateurs, repartirParAnciennete, repartitionStock, serieCaMarge,
+  type Fenetre, type FactureImpayee, type Indicateurs, type IndicateursBruts, type LigneStockPilotage,
+} from '../../../core/pilotage';
+import {
+  CA_PAR_FAMILLE_QUERY, FACTURES_IMPAYEES_QUERY, INDICATEURS_QUERY, STOCK_PILOTAGE_QUERY, TOP_CLIENTS_QUERY,
+  parametresIndicateurs, parametresSerie, serieQuery,
+} from '../../../infrastructure/powersync/repositories/PilotageRepository';
 
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
-const debutJour = (jour: string) => new Date(`${jour}T00:00:00`).toISOString();
-const finJour = (jour: string) => new Date(`${jour}T23:59:59.999`).toISOString();
+/**
+ * Le tableau de bord lit la base locale : il fonctionne hors ligne, et se
+ * recalcule à chaque vente qui arrive. Un gérant ne voit qu'une filiale — les
+ * sync rules s'en chargent —, un directeur les voit toutes.
+ */
 
-export interface IndicateursFiliale {
-  filiale_id: string;
-  filiale_code: string;
-  filiale_nom: string;
-  ca_jour: number;
-  ventes_jour: number;
-  encaisse_jour: number;
-  ca_mois: number;
-  ventes_mois: number;
-  creances: number;
-  dettes: number;
-  valeur_stock: number;
-  alertes_stock: number;
-  tresorerie: number;
+/** Indicateurs de toutes les filiales visibles sur ce poste. */
+export function useIndicateurs(fenetre: Fenetre) {
+  const { data, isLoading } = useQuery<IndicateursBruts>(
+    INDICATEURS_QUERY,
+    parametresIndicateurs(fenetre.debut, fenetre.fin),
+  );
+  const liste = useMemo(() => data.map(indicateurs), [data]);
+  return { liste, isLoading };
 }
 
 /**
- * Indicateurs par filiale (toutes celles visibles localement : une pour un
- * gérant, toutes pour un directeur). Ventes annulées exclues.
+ * Les chiffres du périmètre regardé : une filiale, ou le groupe entier.
+ * `filialeId` nul vaut « tout ce que ce poste reçoit ».
  */
-export function useIndicateursFiliales(jour: string = jourIso(new Date())) {
-  const debutMois = `${jour.slice(0, 7)}-01`;
-  const params = [debutJour(jour), finJour(jour), debutJour(jour), finJour(jour), debutJour(jour), finJour(jour), debutJour(debutMois), finJour(jour), debutJour(debutMois), finJour(jour)];
-  const { data, isLoading } = useQuery<IndicateursFiliale>(
-    `SELECT f.id AS filiale_id, f.code AS filiale_code, f.nom AS filiale_nom,
-       (SELECT COALESCE(SUM(total_ttc), 0) FROM ventes v WHERE v.filiale_id = f.id AND v.statut != 'ANNULEE' AND v.date_vente BETWEEN ? AND ?) AS ca_jour,
-       (SELECT COUNT(*) FROM ventes v WHERE v.filiale_id = f.id AND v.statut != 'ANNULEE' AND v.date_vente BETWEEN ? AND ?) AS ventes_jour,
-       (SELECT COALESCE(SUM(montant_percu - monnaie), 0) FROM ventes v WHERE v.filiale_id = f.id AND v.statut != 'ANNULEE' AND v.date_vente BETWEEN ? AND ?) AS encaisse_jour,
-       (SELECT COALESCE(SUM(total_ttc), 0) FROM ventes v WHERE v.filiale_id = f.id AND v.statut != 'ANNULEE' AND v.date_vente BETWEEN ? AND ?) AS ca_mois,
-       (SELECT COUNT(*) FROM ventes v WHERE v.filiale_id = f.id AND v.statut != 'ANNULEE' AND v.date_vente BETWEEN ? AND ?) AS ventes_mois,
-       (SELECT COALESCE(SUM(CASE WHEN solde_actuel > 0 THEN solde_actuel ELSE 0 END), 0) FROM clients c WHERE c.filiale_id = f.id AND c.est_actif = 1) AS creances,
-       (SELECT COALESCE(SUM(CASE WHEN solde_actuel > 0 THEN solde_actuel ELSE 0 END), 0) FROM fournisseurs fo WHERE fo.filiale_id = f.id AND fo.est_actif = 1) AS dettes,
-       (SELECT COALESCE(SUM(s.quantite * s.cout_moyen), 0) FROM stocks s WHERE s.filiale_id = f.id) AS valeur_stock,
-       (SELECT COUNT(*) FROM stocks s JOIN articles a ON a.id = s.article_id WHERE s.filiale_id = f.id AND a.est_actif = 1 AND s.quantite <= a.stock_min) AS alertes_stock,
-       (SELECT COALESCE(SUM(solde_actuel), 0) FROM caisses ca WHERE ca.filiale_id = f.id AND ca.est_active = 1) AS tresorerie
-     FROM filiales f WHERE f.est_active = 1 ORDER BY f.type DESC, f.nom`,
-    params,
+export function usePerimetre(fenetre: Fenetre, filialeId: string | null) {
+  const { liste, isLoading } = useIndicateurs(fenetre);
+  const retenus = useMemo(
+    () => (filialeId ? liste.filter((i) => i.filiale_id === filialeId) : liste),
+    [liste, filialeId],
   );
-  return { indicateurs: data, isLoading };
+  const total = useMemo<Indicateurs>(
+    () => (retenus.length === 1 ? retenus[0]! : consolider(retenus)),
+    [retenus],
+  );
+  return { total, filiales: liste, isLoading };
 }
 
-export interface PointCa { jour: string; ca: number; ventes: number }
-
-/** CA TTC par jour sur les N derniers jours (jours sans vente inclus, à 0). */
-export function useCaParJour(filialeId: string | null, nbJours = 7) {
-  const jours = useMemo(() => Array.from({ length: nbJours }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (nbJours - 1 - i)); return jourIso(d); }), [nbJours]);
-  const { data } = useQuery<{ jour: string; ca: number; ventes: number }>(
-    `SELECT substr(date_vente, 1, 10) AS jour, COALESCE(SUM(total_ttc), 0) AS ca, COUNT(*) AS ventes
-     FROM ventes WHERE statut != 'ANNULEE' AND date_vente >= ? AND (? = '' OR filiale_id = ?) GROUP BY substr(date_vente, 1, 10)`,
-    [debutJour(jours[0]), filialeId ?? '', filialeId ?? ''],
+export function useSerieCaMarge(fenetre: Fenetre, filialeId: string | null) {
+  const sql = useMemo(() => serieQuery(fenetre.granularite), [fenetre.granularite]);
+  const { data } = useQuery<{ cle: string; ca_ht: number; cout: number; ventes: number }>(
+    sql,
+    parametresSerie(fenetre.debut, fenetre.fin, filialeId),
   );
-  return useMemo<PointCa[]>(() => jours.map((jour) => { const p = data.find((d) => d.jour === jour); return { jour, ca: p?.ca ?? 0, ventes: p?.ventes ?? 0 }; }), [jours, data]);
+  return useMemo(() => serieCaMarge(data, fenetre), [data, fenetre]);
+}
+
+export function useRepartitionStock(filialeId: string | null) {
+  const { data } = useQuery<LigneStockPilotage & { stock_min: number }>(STOCK_PILOTAGE_QUERY, [
+    filialeId ?? '', filialeId ?? '',
+  ]);
+  const lignes = useMemo(
+    () => data.map((l) => ({
+      article_id: l.article_id, code: l.code, designation: l.designation,
+      quantite: l.quantite ?? 0, stock_min: l.stock_min ?? 0, valeur: l.valeur ?? 0,
+      dernier_mouvement: l.dernier_mouvement,
+    })),
+    [data],
+  );
+  return { repartition: useMemo(() => repartitionStock(lignes), [lignes]), lignes };
+}
+
+export function useAncienneteCreances(filialeId: string | null) {
+  const { data } = useQuery<FactureImpayee & { date: string }>(FACTURES_IMPAYEES_QUERY, [
+    filialeId ?? '', filialeId ?? '',
+  ]);
+  const factures = useMemo(
+    () => data.map((f) => ({ id: f.id, numero: f.numero, client: f.client, date: f.date, reste: f.reste ?? 0 })),
+    [data],
+  );
+  return useMemo(() => repartirParAnciennete(factures), [factures]);
+}
+
+export function useCaParFamille(fenetre: Fenetre, filialeId: string | null, limite = 6) {
+  const { data } = useQuery<{ cle: string; libelle: string; valeur: number; quantite: number }>(
+    CA_PAR_FAMILLE_QUERY,
+    [fenetre.debut, fenetre.fin, filialeId ?? '', filialeId ?? ''],
+  );
+  return useMemo(
+    () => classement(data.map((l) => ({ cle: l.cle, libelle: l.libelle, valeur: l.valeur ?? 0 })), limite),
+    [data, limite],
+  );
+}
+
+export function useTopClients(fenetre: Fenetre, filialeId: string | null, limite = 6) {
+  const { data } = useQuery<{ cle: string; libelle: string; valeur: number; ventes: number }>(
+    TOP_CLIENTS_QUERY,
+    [fenetre.debut, fenetre.fin, filialeId ?? '', filialeId ?? ''],
+  );
+  return useMemo(
+    () => classement(
+      data.map((l) => ({ cle: l.cle, libelle: l.libelle, valeur: l.valeur ?? 0, detail: `${l.ventes} vente(s)` })),
+      limite,
+    ),
+    [data, limite],
+  );
 }
 
 export interface TopArticle { code: string; designation: string; quantite: number; ca: number }
 
-export function useTopArticles(filialeId: string | null, jour: string = jourIso(new Date()), limite = 5) {
-  const debutMois = `${jour.slice(0, 7)}-01`;
+export function useTopArticles(fenetre: Fenetre, filialeId: string | null, limite = 5) {
   const { data } = useQuery<TopArticle>(
     `SELECT l.code_article AS code, l.designation, SUM(l.quantite) AS quantite, SUM(l.total_ttc) AS ca
      FROM lignes_vente l JOIN ventes v ON v.id = l.vente_id
      WHERE v.statut != 'ANNULEE' AND v.date_vente BETWEEN ? AND ? AND (? = '' OR v.filiale_id = ?)
      GROUP BY l.code_article, l.designation ORDER BY ca DESC LIMIT ?`,
-    [debutJour(debutMois), finJour(jour), filialeId ?? '', filialeId ?? '', limite],
+    [fenetre.debut, fenetre.fin, filialeId ?? '', filialeId ?? '', limite],
   );
   return data;
+}
+
+export interface LecturePilotage {
+  total: Indicateurs;
+  filiales: Indicateurs[];
+  serie: ReturnType<typeof useSerieCaMarge>;
+  repartition: ReturnType<typeof useRepartitionStock>['repartition'];
+  lignesStock: ReturnType<typeof useRepartitionStock>['lignes'];
+  anciennete: ReturnType<typeof useAncienneteCreances>;
+  familles: ReturnType<typeof useCaParFamille>;
+  clients: ReturnType<typeof useTopClients>;
+  isLoading: boolean;
+}
+
+/**
+ * Tout le tableau de bord en une lecture.
+ *
+ * L'écran et la feuille imprimée affichent **les mêmes chiffres** : ils ne
+ * doivent donc pas les lire deux fois. Une seconde lecture repartirait de zéro
+ * — les requêtes de PowerSync rendent une première réponse vide — et le
+ * document sortirait de l'imprimante avec des colonnes à zéro.
+ */
+export function useTableauDeBord(fenetre: Fenetre, filialeId: string | null): LecturePilotage {
+  const { total, filiales, isLoading } = usePerimetre(fenetre, filialeId);
+  const serie = useSerieCaMarge(fenetre, filialeId);
+  const { repartition, lignes: lignesStock } = useRepartitionStock(filialeId);
+  const anciennete = useAncienneteCreances(filialeId);
+  const familles = useCaParFamille(fenetre, filialeId);
+  const clients = useTopClients(fenetre, filialeId);
+  return { total, filiales, serie, repartition, lignesStock, anciennete, familles, clients, isLoading };
 }

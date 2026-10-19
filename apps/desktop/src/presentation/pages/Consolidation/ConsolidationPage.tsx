@@ -1,58 +1,183 @@
+import { useMemo, useState } from 'react';
+import { ArrowDownTrayIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { formaterFcfa, formaterPourcentage } from '../../../core/commun/prix';
+import { fenetrePilotage, type Periode } from '../../../core/pilotage';
+import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
-import GraphiqueCa from '../../features/pilotage/GraphiqueCa';
-import { useCaParJour, useIndicateursFiliales, useTopArticles } from '../../features/pilotage/hooks';
-import { formaterFcfa } from '../../hooks/useFormatage';
+import { usePermissions } from '../../auth/usePermissions';
+import SelecteurPeriode from '../../features/pilotage/SelecteurPeriode';
+import TableauDeBord from '../../features/pilotage/TableauDeBord';
+import TableauDeBordDocument from '../../features/pilotage/TableauDeBordDocument';
+import { useTableauDeBord } from '../../features/pilotage/hooks';
+import { useNotifier } from '../../notifications/useNotifier';
 
-/** Vue groupe (directeur) : indicateurs par filiale et totaux consolidés, calculés localement. */
+/**
+ * Tableau de bord du directeur : le groupe entier.
+ *
+ * Même écran que celui du gérant, sur toutes les filiales à la fois — avec, en
+ * plus, ce qui n'a de sens qu'à l'échelle du groupe : les filiales comparées
+ * entre elles, et le détail ligne à ligne d'où l'on ouvre l'une d'elles.
+ */
 export default function ConsolidationPage() {
   const { estDirecteur, filialeId, filiale, setFilialeId } = useFilialeCourante();
-  const { indicateurs, isLoading } = useIndicateursFiliales();
-  const points = useCaParJour(null);
-  const top = useTopArticles(null, undefined, 8);
-  const somme = (k: keyof (typeof indicateurs)[number]) => indicateurs.reduce((s, i) => s + (Number(i[k]) || 0), 0);
+  const { peut } = usePermissions();
+  const notifier = useNotifier();
+  const [periode, setPeriode] = useState<Periode>('MOIS');
+  const [apercu, setApercu] = useState(false);
 
-  if (!estDirecteur) {
-    return <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400"><p className="text-lg">La consolidation est réservée à la direction.</p><p className="text-sm mt-1">Votre filiale : {filiale?.nom}</p></div>;
+  const fenetre = useMemo(() => fenetrePilotage(periode), [periode]);
+  // La consolidation regarde tout ce que le poste reçoit, quelle que soit la
+  // filiale sélectionnée ailleurs : c'est sa raison d'être.
+  const lecture = useTableauDeBord(fenetre, null);
+  const { total, filiales, isLoading } = lecture;
+
+  // La page lit des chiffres de toutes les filiales : sans la permission de
+  // consolidation, elle n'a rien à montrer.
+  if (!peut('consolidation.lire')) {
+    return (
+      <div className="rounded-xl border border-neutral-200 bg-white py-16 text-center shadow-sm">
+        <p className="text-lg text-neutral-700">La consolidation ne vous est pas ouverte.</p>
+        <p className="mt-1 text-sm text-neutral-500">Votre filiale : {filiale?.nom ?? '—'}</p>
+      </div>
+    );
   }
+
+  const exporter = async () => {
+    try {
+      const chemin = await exporterExcel('tableau-de-bord', [{
+        nom: 'Filiales',
+        lignes: filiales.map((f) => ({
+          Filiale: f.filiale_nom,
+          Code: f.filiale_code,
+          'CA TTC': f.ca_ttc,
+          'CA HT': f.ca_ht,
+          "Coût d'achat": f.cout_ventes,
+          Marge: f.marge,
+          'Taux de marge (%)': f.taux_marge,
+          Dépenses: f.charges,
+          'Résultat estimé': f.resultat,
+          Ventes: f.ventes,
+          'Panier moyen': f.panier_moyen,
+          Encaissé: f.encaisse,
+          Créances: f.creances,
+          Dettes: f.dettes,
+          'Valeur du stock': f.valeur_stock,
+          Trésorerie: f.tresorerie,
+          'Livraisons en attente': f.livraisons_attente,
+          'Livraisons en retard': f.livraisons_retard,
+        })),
+      }]);
+      if (chemin) notifier('succes', `Export enregistré : ${chemin}`);
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Export impossible.');
+    }
+  };
+
+  const cellule = 'px-4 py-3 text-right font-mono text-sm whitespace-nowrap';
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-bold text-neutral-900">Vue consolidée — Groupe</h1><p className="text-sm text-neutral-500 mt-1">Toutes les filiales · données synchronisées localement</p></div>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
-          ['CA du jour', formaterFcfa(somme('ca_jour')), 'text-primary-700'], ['CA du mois', formaterFcfa(somme('ca_mois')), 'text-neutral-900'],
-          ['Créances clients', formaterFcfa(somme('creances')), 'text-red-600'], ['Dettes fournisseurs', formaterFcfa(somme('dettes')), 'text-orange-700'],
-          ['Trésorerie (caisses)', formaterFcfa(somme('tresorerie')), 'text-green-700'],
-        ].map(([l, v, t]) => <div key={l} className="bg-white p-5 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">{l}</p><p className={`text-2xl font-bold font-mono mt-2 ${t}`}>{v}</p></div>)}
-      </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-200"><h3 className="text-lg font-semibold text-neutral-900">Performance par filiale</h3></div>
-        <table className="w-full">
-          <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-6 py-3 text-left">Filiale</th><th className="px-6 py-3 text-right">CA jour</th><th className="px-6 py-3 text-right">CA mois</th><th className="px-6 py-3 text-center">Ventes mois</th><th className="px-6 py-3 text-right">Créances</th><th className="px-6 py-3 text-right">Dettes</th><th className="px-6 py-3 text-right">Stock</th><th className="px-6 py-3 text-center">Alertes</th><th className="px-6 py-3 text-right">Caisses</th></tr></thead>
-          <tbody className="divide-y divide-neutral-100">
-            {indicateurs.map((i) => (
-              <tr key={i.filiale_id} className={`hover:bg-neutral-50 cursor-pointer ${filialeId === i.filiale_id ? 'bg-primary-50' : ''}`} onClick={() => setFilialeId(i.filiale_id)} title="Ouvrir cette filiale">
-                <td className="px-6 py-4"><p className="font-medium text-neutral-900">{i.filiale_nom}</p><p className="text-xs text-neutral-500">{i.filiale_code}</p></td>
-                <td className="px-6 py-4 text-right font-mono">{formaterFcfa(i.ca_jour)}</td>
-                <td className="px-6 py-4 text-right font-mono font-bold text-primary-700">{formaterFcfa(i.ca_mois)}</td>
-                <td className="px-6 py-4 text-center">{i.ventes_mois}</td>
-                <td className="px-6 py-4 text-right font-mono text-red-600">{formaterFcfa(i.creances)}</td>
-                <td className="px-6 py-4 text-right font-mono text-orange-700">{formaterFcfa(i.dettes)}</td>
-                <td className="px-6 py-4 text-right font-mono">{formaterFcfa(i.valeur_stock)}</td>
-                <td className="px-6 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${i.alertes_stock ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>{i.alertes_stock}</span></td>
-                <td className="px-6 py-4 text-right font-mono text-green-700">{formaterFcfa(i.tresorerie)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-neutral-200 shadow-sm"><h3 className="text-lg font-semibold text-neutral-800 mb-4">CA groupe — 7 derniers jours</h3><GraphiqueCa points={points} /></div>
-        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm"><h3 className="text-lg font-semibold text-neutral-800 mb-4">Top articles du mois (groupe)</h3>
-          {top.length === 0 ? <p className="text-sm text-neutral-400">Aucune vente ce mois-ci.</p> : <ol className="space-y-2">{top.map((t, n) => <li key={t.code} className="flex items-center gap-3 text-sm"><span className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">{n + 1}</span><span className="flex-1 truncate">{t.designation}</span><span className="font-mono font-semibold">{formaterFcfa(t.ca)}</span></li>)}</ol>}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">Vue consolidée — Groupe</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            {filiales.length} filiale(s) · {fenetre.libelle} · calculé sur ce poste, hors ligne comprise
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <SelecteurPeriode periode={periode} onChange={setPeriode} />
+          <button type="button" onClick={() => setApercu(true)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100" data-testid="imprimer-tableau-de-bord">
+            <PrinterIcon className="h-4 w-4" /> Imprimer / PDF
+          </button>
+          <button type="button" onClick={exporter} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100" data-testid="exporter-tableau-de-bord">
+            <ArrowDownTrayIcon className="h-4 w-4" /> Exporter Excel
+          </button>
         </div>
       </div>
+
+      <TableauDeBord fenetre={fenetre} filialeId={null} lecture={lecture} comparerFiliales />
+
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="border-b border-neutral-200 px-6 py-4">
+          <h3 className="text-base font-semibold text-neutral-900">Le détail, filiale par filiale</h3>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            {estDirecteur ? 'Cliquez une ligne pour ouvrir cette filiale.' : 'Lecture seule.'}
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-600">
+              <tr>
+                <th className="px-4 py-3 text-left">Filiale</th>
+                <th className="px-4 py-3 text-right">CA TTC</th>
+                <th className="px-4 py-3 text-right">Marge</th>
+                <th className="px-4 py-3 text-right">Taux</th>
+                <th className="px-4 py-3 text-right">Résultat</th>
+                <th className="px-4 py-3 text-right">Créances</th>
+                <th className="px-4 py-3 text-right">Dettes</th>
+                <th className="px-4 py-3 text-right">Stock</th>
+                <th className="px-4 py-3 text-right">Caisses</th>
+                <th className="px-4 py-3 text-center">BL</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {filiales.map((f) => (
+                <tr
+                  key={f.filiale_id}
+                  onClick={() => estDirecteur && setFilialeId(f.filiale_id)}
+                  className={`${estDirecteur ? 'cursor-pointer' : ''} hover:bg-neutral-50 ${filialeId === f.filiale_id ? 'bg-primary-50' : ''}`}
+                  title={estDirecteur ? 'Ouvrir cette filiale' : undefined}
+                  data-testid={`filiale-${f.filiale_code}`}
+                >
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-neutral-900">{f.filiale_nom}</p>
+                    <p className="text-xs text-neutral-500">{f.filiale_code} · {f.ventes} vente(s)</p>
+                  </td>
+                  <td className={`${cellule} font-bold text-primary-700`}>{formaterFcfa(f.ca_ttc)}</td>
+                  <td className={`${cellule} ${f.marge < 0 ? 'text-red-600' : ''}`}>{formaterFcfa(f.marge)}</td>
+                  <td className={`${cellule} text-neutral-500`}>{formaterPourcentage(f.taux_marge)}</td>
+                  <td className={`${cellule} ${f.resultat < 0 ? 'text-red-600' : 'text-green-700'}`}>{formaterFcfa(f.resultat)}</td>
+                  <td className={`${cellule} text-red-600`}>{formaterFcfa(f.creances)}</td>
+                  <td className={`${cellule} text-orange-700`}>{formaterFcfa(f.dettes)}</td>
+                  <td className={cellule}>{formaterFcfa(f.valeur_stock)}</td>
+                  <td className={`${cellule} text-green-700`}>{formaterFcfa(f.tresorerie)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${f.livraisons_retard > 0 ? 'bg-red-100 text-red-700' : f.livraisons_attente > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                      {f.livraisons_attente}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t-2 border-neutral-300 bg-neutral-50 font-semibold">
+              <tr data-testid="total-groupe">
+                <td className="px-4 py-3 text-sm">Groupe · {total.ventes} vente(s)</td>
+                <td className={cellule}>{formaterFcfa(total.ca_ttc)}</td>
+                <td className={cellule}>{formaterFcfa(total.marge)}</td>
+                <td className={`${cellule} text-neutral-500`}>{formaterPourcentage(total.taux_marge)}</td>
+                <td className={cellule}>{formaterFcfa(total.resultat)}</td>
+                <td className={cellule}>{formaterFcfa(total.creances)}</td>
+                <td className={cellule}>{formaterFcfa(total.dettes)}</td>
+                <td className={cellule}>{formaterFcfa(total.valeur_stock)}</td>
+                <td className={cellule}>{formaterFcfa(total.tresorerie)}</td>
+                <td className="px-4 py-3 text-center text-sm">{total.livraisons_attente}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {isLoading && <div className="py-12 text-center text-neutral-400">Chargement…</div>}
+      </div>
+
+      {apercu && (
+        <TableauDeBordDocument
+          fenetre={fenetre}
+          filialeId={null}
+          lecture={lecture}
+          filiales={filiales}
+          filiale={{ nom: 'Cissé & Frères — Groupe' }}
+          onClose={() => setApercu(false)}
+        />
+      )}
     </div>
   );
 }

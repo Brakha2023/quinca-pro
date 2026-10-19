@@ -1,0 +1,217 @@
+import { useMemo } from 'react';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { formaterFcfa, formaterPourcentage } from '../../../core/commun/prix';
+import {
+  classement, dormantsLesPlusLourds, evolution, fenetrePrecedente, pointsDeVigilance, type Fenetre,
+} from '../../../core/pilotage';
+import AncienneteCreances from './AncienneteCreances';
+import BarresClassement from './BarresClassement';
+import EtatStock from './EtatStock';
+import HistogrammeCaMarge from './HistogrammeCaMarge';
+import Indicateur from './Indicateur';
+import { usePerimetre, type LecturePilotage } from './hooks';
+
+/**
+ * Le tableau de bord, une seule fois pour deux lecteurs.
+ *
+ * Un gérant le lit sur sa filiale, un directeur sur le groupe entier : même
+ * disposition, mêmes calculs, seul le périmètre change. C'est voulu — deux
+ * tableaux de bord qui se ressemblent finissent par ne plus dire la même
+ * chose du même chiffre.
+ *
+ * L'ordre de lecture est celui des questions d'un patron de quincaillerie :
+ * ce que j'ai vendu, ce que j'ai gagné, ce qu'on me doit et ce que je dois,
+ * puis où dort mon argent.
+ */
+
+interface Props {
+  fenetre: Fenetre;
+  /** Nul : tout ce que ce poste reçoit (vue groupe). */
+  filialeId: string | null;
+  /** Lue une seule fois par la page, et partagée avec la feuille imprimée. */
+  lecture: LecturePilotage;
+  /** Vue groupe : la comparaison entre filiales a un sens. */
+  comparerFiliales?: boolean;
+}
+
+export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFiliales = false }: Props) {
+  const { total, filiales, serie, repartition, lignesStock, anciennete, familles, clients } = lecture;
+  // La période d'avant ne sert qu'aux évolutions : elle reste ici.
+  const precedente = useMemo(() => fenetrePrecedente(fenetre), [fenetre]);
+  const { total: avant } = usePerimetre(precedente, filialeId);
+
+  const vigilance = pointsDeVigilance(total, repartition.ruptures);
+  const dormants = useMemo(() => dormantsLesPlusLourds(lignesStock, 5), [lignesStock]);
+
+  const parFiliale = useMemo(
+    () => classement(filiales.map((f) => ({
+      cle: f.filiale_id,
+      libelle: f.filiale_nom,
+      valeur: f.ca_ttc,
+      detail: `marge ${formaterPourcentage(f.taux_marge)}`,
+    })), 8),
+    [filiales],
+  );
+
+  const reference = precedente.libelle;
+  const ecartCreances = Math.abs(total.creances - anciennete.total);
+
+  return (
+    <div className="space-y-6">
+      {/* Ce que j'ai vendu, ce que j'ai gagné. */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Indicateur
+          label="Chiffre d'affaires TTC"
+          valeur={formaterFcfa(total.ca_ttc)}
+          evolution={evolution(total.ca_ttc, avant.ca_ttc)}
+          reference={reference}
+          sens="HAUT_BON"
+          ton="text-primary-700"
+          sous={`${total.ventes} vente(s) · panier moyen ${formaterFcfa(total.panier_moyen)}`}
+          testId="kpi-ca"
+        />
+        <Indicateur
+          label="Marge commerciale"
+          valeur={formaterFcfa(total.marge)}
+          evolution={evolution(total.marge, avant.marge)}
+          reference={reference}
+          sens="HAUT_BON"
+          ton={total.marge < 0 ? 'text-red-600' : 'text-neutral-900'}
+          sous={`${formaterPourcentage(total.taux_marge)} du CA HT · coût d'achat ${formaterFcfa(total.cout_ventes)}`}
+          testId="kpi-marge"
+        />
+        <Indicateur
+          label="Résultat estimé"
+          valeur={formaterFcfa(total.resultat)}
+          sens="HAUT_BON"
+          ton={total.resultat < 0 ? 'text-red-600' : 'text-green-700'}
+          sous={`marge moins ${formaterFcfa(total.charges)} de dépenses passées en caisse`}
+          testId="kpi-resultat"
+        />
+        <Indicateur
+          label="Trésorerie"
+          valeur={formaterFcfa(total.tresorerie)}
+          ton={total.tresorerie < 0 ? 'text-red-600' : 'text-green-700'}
+          sous={`encaissé sur la période ${formaterFcfa(total.encaisse)}`}
+          testId="kpi-tresorerie"
+        />
+      </div>
+
+      {/* Ce qu'on me doit, ce que je dois, ce que je détiens. */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Indicateur
+          label="Créances clients"
+          valeur={formaterFcfa(total.creances)}
+          sens="BAS_BON"
+          ton={total.creances > 0 ? 'text-red-600' : 'text-neutral-900'}
+          sous={anciennete.au_dela_de_90 > 0 ? `dont ${formaterFcfa(anciennete.au_dela_de_90)} à plus de 90 jours` : `${total.clients_servis} client(s) servi(s)`}
+          testId="kpi-creances"
+        />
+        <Indicateur
+          label="Dettes fournisseurs"
+          valeur={formaterFcfa(total.dettes)}
+          sens="BAS_BON"
+          ton={total.dettes > 0 ? 'text-orange-700' : 'text-neutral-900'}
+          sous={`${total.commandes_ouvertes} commande(s) encore ouverte(s)`}
+          testId="kpi-dettes"
+        />
+        <Indicateur
+          label="Valeur du stock"
+          valeur={formaterFcfa(total.valeur_stock)}
+          sous={repartition.valeur_dormante > 0 ? `dont ${formaterFcfa(repartition.valeur_dormante)} dormant` : `${repartition.articles} article(s)`}
+          testId="kpi-stock"
+        />
+        <Indicateur
+          label="Bons de livraison en attente"
+          valeur={`${total.livraisons_attente}`}
+          ton={total.livraisons_retard > 0 ? 'text-red-600' : 'text-neutral-900'}
+          sous={total.livraisons_retard > 0 ? `${total.livraisons_retard} en retard sur la date prévue` : 'aucun retard'}
+          testId="kpi-livraisons"
+        />
+      </div>
+
+      {vigilance.nombre > 0 && (
+        <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900" data-testid="vigilance">
+          <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span>
+            {[
+              vigilance.ruptures && `${repartition.ruptures} article(s) en rupture`,
+              vigilance.livraisons_retard && `${total.livraisons_retard} livraison(s) en retard`,
+              vigilance.tresorerie_negative && 'trésorerie négative',
+              vigilance.marge_negative && 'marge négative sur la période',
+              vigilance.resultat_negatif && !vigilance.marge_negative && 'les dépenses dépassent la marge',
+              anciennete.au_dela_de_90 > 0 && `${formaterFcfa(anciennete.au_dela_de_90)} d'impayés de plus de 90 jours`,
+            ].filter(Boolean).join(' · ')}
+          </span>
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <h3 className="text-base font-semibold text-neutral-800">Chiffre d'affaires et marge</h3>
+          <p className="mb-4 mt-0.5 text-xs text-neutral-500">
+            La hauteur donne l'activité, la part orange ce qu'elle a rapporté — {fenetre.libelle}.
+          </p>
+          <HistogrammeCaMarge serie={serie} />
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-neutral-800">Où dort l'argent du stock</h3>
+          <p className="mb-4 mt-0.5 text-xs text-neutral-500">
+            {formaterFcfa(repartition.valeur)} en magasin, {repartition.articles} article(s).
+          </p>
+          <EtatStock repartition={repartition} />
+          {dormants.length > 0 && (
+            <div className="mt-4 border-t border-neutral-100 pt-3">
+              <p className="mb-2 text-xs font-medium text-neutral-500">Les dormants les plus lourds</p>
+              <ul className="space-y-1 text-xs">
+                {dormants.map((d) => (
+                  <li key={d.article_id} className="flex items-baseline justify-between gap-2">
+                    <span className="truncate text-neutral-700">{d.designation}</span>
+                    <span className="flex-shrink-0 font-mono text-neutral-500">{formaterFcfa(d.valeur)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-neutral-800">Chiffre d'affaires par famille</h3>
+          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Hors taxes · {fenetre.libelle}</p>
+          <BarresClassement lignes={familles.lignes} maximum={familles.maximum} mesure="du CA HT" vide="Aucune vente sur la période." />
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-neutral-800">Qui achète</h3>
+          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Les plus gros clients de la période, TTC</p>
+          <BarresClassement lignes={clients.lignes} maximum={clients.maximum} mesure="du CA TTC" vide="Aucune vente sur la période." />
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-neutral-800">Ancienneté des impayés</h3>
+          <p className="mb-4 mt-0.5 text-xs text-neutral-500">
+            {formaterFcfa(anciennete.total)} sur {anciennete.factures} facture(s) non soldée(s)
+          </p>
+          <AncienneteCreances repartition={anciennete} />
+          {ecartCreances > 1 && (
+            <p className="mt-3 text-xs text-neutral-400">
+              Le total des comptes clients ({formaterFcfa(total.creances)}) comprend aussi les reports d'ouverture,
+              qui ne portent pas de date de facture.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {comparerFiliales && filiales.length > 1 && (
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-neutral-800">Les filiales entre elles</h3>
+          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Chiffre d'affaires TTC de la période, et taux de marge</p>
+          <BarresClassement lignes={parFiliale.lignes} maximum={parFiliale.maximum} mesure="du CA du groupe" />
+        </div>
+      )}
+    </div>
+  );
+}

@@ -19,6 +19,15 @@ visible à l'écran ; tous pouvaient faire perdre des données.
 
 ### Ajouté
 
+- **Tableau de bord du gérant et du directeur.** Le même écran pour deux périmètres —
+  une filiale, ou le groupe entier —, commandé par une période unique (aujourd'hui,
+  7 jours, ce mois, 12 mois) avec l'évolution par rapport à la période précédente de
+  même durée. Huit chiffres : chiffre d'affaires, **marge commerciale**, **résultat
+  estimé**, trésorerie, créances, dettes fournisseurs, valeur du stock et bons de
+  livraison en attente — plus un bandeau de ce qui réclame une décision. Quatre
+  graphiques : chiffre d'affaires et marge barre par barre, état du stock (rupture,
+  dormant, sous le minimum, actif), chiffre d'affaires par famille et par client,
+  ancienneté des impayés. Le tout s'imprime en A4, et la vue groupe s'exporte en Excel.
 - **Rôles et permissions (module Paramètres).** Les droits ne se déduisent plus du profil : on crée un
   rôle depuis l'application (« Chef de rayon », « Contrôleur de gestion »…), on coche ses permissions
   module par module, et on l'affecte à un compte. Le menu ne montre que ce que le rôle ouvre, et une
@@ -135,6 +144,10 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   réglée, commande ouverte, livraison à faire, transfert en transit restent sur le poste quel que soit
   leur âge. Les écrans d'historique l'indiquent.
 - Les codes de tiers (`CLI-`, `FOU-`, `EMP-`) passent de 5 à 6 caractères.
+- La **marge** n'était calculée nulle part : elle l'est désormais à partir du coût
+  d'achat que chaque sortie de vente garde depuis la livraison précédente. Les pièces
+  enregistrées avant cette règle retombent sur le coût moyen actuel du dépôt, faute de
+  mieux, et les écrans le disent.
 - Les trois vérifications écrites en dur dans l'interface — valider une vente, vendre malgré un stock
   insuffisant, décider du sort d'une écriture refusée — deviennent des permissions (`ventes.valider`,
   `ventes.forcer_stock`, `sync.decider`) : elles se retirent ou s'accordent rôle par rôle.

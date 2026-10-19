@@ -37,3 +37,23 @@ export function margePourcent(prixAchat: number, prixVente: number): number {
 export function formaterFcfa(montant: number | null | undefined): string {
   return `${Math.round(montant ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F`;
 }
+
+/**
+ * Montant abrégé, pour une graduation d'axe ou une étiquette qui n'a pas la
+ * place : `1 250 000 F` devient `1,3 M`. Jamais sur une somme à vérifier —
+ * là, c'est `formaterFcfa` et rien d'autre.
+ */
+export function formaterCompact(montant: number | null | undefined): string {
+  const v = Math.round(montant ?? 0);
+  const signe = v < 0 ? '-' : '';
+  const n = Math.abs(v);
+  if (n >= 1_000_000_000) return `${signe}${(n / 1_000_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Md`;
+  if (n >= 1_000_000) return `${signe}${(n / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M`;
+  if (n >= 1_000) return `${signe}${(n / 1_000).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} k`;
+  return `${signe}${n}`;
+}
+
+/** Pourcentage à la française : virgule décimale, espace avant le signe. */
+export function formaterPourcentage(valeur: number | null | undefined, decimales = 1): string {
+  return `${(valeur ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: decimales })} %`;
+}

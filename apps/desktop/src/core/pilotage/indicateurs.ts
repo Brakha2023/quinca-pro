@@ -1,0 +1,147 @@
+import { arrondirFcfa } from '../commun/prix';
+
+/**
+ * Les chiffres du tableau de bord.
+ *
+ * Le SQL ne sait que sommer : il rend des **bruts**. Tout ce qui se déduit —
+ * marge, taux, résultat, panier moyen, évolution — se calcule ici, une fois,
+ * pour la filiale comme pour le groupe. Un gérant et un directeur lisent ainsi
+ * exactement le même chiffre, calculé par le même code.
+ *
+ * ### Ce que « bénéfice » veut dire ici
+ *
+ * Deux niveaux, et il ne faut pas les confondre :
+ *
+ *   * la **marge commerciale** — ce que la marchandise rapporte : chiffre
+ *     d'affaires hors taxes moins ce que cette marchandise a coûté à l'achat.
+ *     Le coût est celui que portait le dépôt **au moment de la sortie**, lu
+ *     dans le journal des mouvements, pas le coût moyen d'aujourd'hui ;
+ *   * le **résultat d'exploitation**, estimé : la marge moins les dépenses
+ *     passées en caisse sur la période (transport, loyer, salaires, etc.).
+ *     Estimé, parce qu'il ne voit que ce qui est passé par une caisse — une
+ *     charge réglée autrement, ou un amortissement, lui échappe.
+ */
+
+/** Ce que le SQL rend, filiale par filiale. Rien n'y est déduit. */
+export interface IndicateursBruts {
+  filiale_id: string;
+  filiale_code: string;
+  filiale_nom: string;
+  /** Chiffre d'affaires hors taxes, remises déduites, ventes annulées exclues. */
+  ca_ht: number;
+  ca_ttc: number;
+  ventes: number;
+  /** Encaissé sur la période (hors monnaie rendue). */
+  encaisse: number;
+  /** Coût d'achat de la marchandise sortie, retours clients déduits. */
+  cout_ventes: number;
+  /** Dépenses d'exploitation passées en caisse (ni règlements fournisseurs, ni transferts). */
+  charges: number;
+  creances: number;
+  dettes: number;
+  valeur_stock: number;
+  tresorerie: number;
+  /** Bons de livraison ni livrés ni annulés. */
+  livraisons_attente: number;
+  /** Parmi eux, ceux dont la date prévue est passée. */
+  livraisons_retard: number;
+  /** Commandes fournisseurs encore ouvertes (brouillon, envoyée, partielle). */
+  commandes_ouvertes: number;
+  /** Clients ayant acheté sur la période. */
+  clients_servis: number;
+}
+
+export interface Indicateurs extends IndicateursBruts {
+  /** CA HT − coût d'achat de la marchandise vendue. */
+  marge: number;
+  /** Marge rapportée au CA HT, en %. Nul si rien n'a été vendu. */
+  taux_marge: number;
+  /** Marge − charges d'exploitation. */
+  resultat: number;
+  /** CA TTC par vente. */
+  panier_moyen: number;
+  /** Ce qui reste à encaisser sur les ventes de la période. */
+  reste_a_encaisser: number;
+}
+
+const BRUTS_VIDES: Omit<IndicateursBruts, 'filiale_id' | 'filiale_code' | 'filiale_nom'> = {
+  ca_ht: 0, ca_ttc: 0, ventes: 0, encaisse: 0, cout_ventes: 0, charges: 0,
+  creances: 0, dettes: 0, valeur_stock: 0, tresorerie: 0,
+  livraisons_attente: 0, livraisons_retard: 0, commandes_ouvertes: 0, clients_servis: 0,
+};
+
+const nombre = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+/** Lit une ligne SQL — où tout peut être nul — et en déduit le reste. */
+export function indicateurs(bruts: Partial<IndicateursBruts>): Indicateurs {
+  const b: IndicateursBruts = {
+    filiale_id: bruts.filiale_id ?? '',
+    filiale_code: bruts.filiale_code ?? '',
+    filiale_nom: bruts.filiale_nom ?? '',
+    ...BRUTS_VIDES,
+    ...Object.fromEntries(Object.keys(BRUTS_VIDES).map((k) => [k, nombre(bruts[k as keyof IndicateursBruts])])),
+  } as IndicateursBruts;
+
+  const marge = arrondirFcfa(b.ca_ht - b.cout_ventes);
+  return {
+    ...b,
+    marge,
+    taux_marge: b.ca_ht > 0 ? Math.round((marge / b.ca_ht) * 1000) / 10 : 0,
+    resultat: arrondirFcfa(marge - b.charges),
+    panier_moyen: b.ventes > 0 ? arrondirFcfa(b.ca_ttc / b.ventes) : 0,
+    reste_a_encaisser: arrondirFcfa(Math.max(b.ca_ttc - b.encaisse, 0)),
+  };
+}
+
+/**
+ * Le groupe, c'est la somme des filiales — sauf les taux, qui se recalculent.
+ * Faire la moyenne de deux pourcentages donnerait un chiffre que personne ne
+ * peut retrouver à la main.
+ */
+export function consolider(liste: Indicateurs[], nom = 'Groupe'): Indicateurs {
+  const somme = (champ: keyof IndicateursBruts) => liste.reduce((t, i) => t + nombre(i[champ]), 0);
+  return indicateurs({
+    filiale_id: '',
+    filiale_code: 'GROUPE',
+    filiale_nom: nom,
+    ...(Object.fromEntries(Object.keys(BRUTS_VIDES).map((k) => [k, somme(k as keyof IndicateursBruts)])) as Omit<
+      IndicateursBruts, 'filiale_id' | 'filiale_code' | 'filiale_nom'
+    >),
+  });
+}
+
+/**
+ * Variation d'une période à l'autre, en %. `null` quand la période précédente
+ * est à zéro : on ne compare pas à rien, et « +∞ % » n'apprend rien.
+ */
+export function evolution(actuel: number, precedent: number): number | null {
+  if (precedent === 0) return null;
+  return Math.round(((actuel - precedent) / Math.abs(precedent)) * 1000) / 10;
+}
+
+/** Ce qui réclame une décision aujourd'hui, compté une fois pour toutes. */
+export interface PointsDeVigilance {
+  creances: boolean;
+  dettes: boolean;
+  tresorerie_negative: boolean;
+  livraisons_retard: boolean;
+  marge_negative: boolean;
+  resultat_negatif: boolean;
+  ruptures: boolean;
+  /** Nombre d'alertes levées. */
+  nombre: number;
+}
+
+export function pointsDeVigilance(i: Indicateurs, rupturesStock = 0): PointsDeVigilance {
+  const leves = {
+    creances: i.creances > 0,
+    dettes: i.dettes > 0,
+    tresorerie_negative: i.tresorerie < 0,
+    livraisons_retard: i.livraisons_retard > 0,
+    // Une marge négative n'a de sens que si l'on a vendu : sinon elle vaut zéro.
+    marge_negative: i.ca_ht > 0 && i.marge < 0,
+    resultat_negatif: i.ca_ht > 0 && i.resultat < 0,
+    ruptures: rupturesStock > 0,
+  };
+  return { ...leves, nombre: Object.values(leves).filter(Boolean).length };
+}
