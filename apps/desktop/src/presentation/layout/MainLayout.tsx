@@ -4,7 +4,7 @@ import {
   ShoppingCartIcon, CubeIcon, UserIcon,
   TruckIcon, BanknotesIcon, ChartBarIcon, Bars3Icon, XMarkIcon, UserGroupIcon,
   CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon, UsersIcon, ClockIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon, ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/Stock/onglets';
 import { SECTIONS_FOURNISSEURS, SECTION_FOURNISSEURS_DEFAUT, cheminFournisseurs } from '../pages/Fournisseurs/onglets';
@@ -147,7 +147,7 @@ export default function MainLayout() {
   const { session, logout } = useAuth();
   const confirmer = useConfirmation();
   const { utilisateur } = useCurrentUtilisateur();
-  const { peut, role, isLoading: droitsEnCours, sansRole } = usePermissions();
+  const { peut, role, isLoading: droitsEnCours, secours } = usePermissions();
   const [motDePasseRepousse, setMotDePasseRepousse] = useState(false);
 
   /**
@@ -341,17 +341,26 @@ export default function MainLayout() {
 
         {/* Page Content (Outlet) */}
         <main className="flex-1 overflow-y-auto p-6">
-          {sansRole ? (
-            <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 px-6" data-testid="sans-role">
-              <p className="text-lg font-medium text-neutral-800">Aucun rôle ne vous a été affecté.</p>
-              <p className="text-sm text-neutral-500 mt-2 max-w-xl mx-auto">
-                Votre compte existe, mais il n'a encore aucun droit : c'est le superadministrateur qui lui donne un rôle,
-                depuis Paramètres → Utilisateurs. Si un rôle vient de vous être donné, laissez le poste se synchroniser.
-              </p>
-            </div>
-          ) : (
-            <Outlet />
+          {secours && (
+            <p className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-testid="bandeau-secours">
+              <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span>
+                {secours === 'ROLES_ABSENTS' ? (
+                  <>
+                    <strong>Les rôles ne sont pas encore arrivés sur ce poste.</strong> En attendant, vous travaillez avec
+                    les droits de votre profil. Si cela dure, c'est que les règles de synchronisation n'ont pas été
+                    redéployées côté serveur (PowerSync → Sync Streams → Deploy).
+                  </>
+                ) : (
+                  <>
+                    <strong>Aucun rôle ne vous a été affecté.</strong> En attendant, vous travaillez avec les droits de
+                    votre profil. Demandez au superadministrateur de vous donner un rôle, depuis Paramètres → Utilisateurs.
+                  </>
+                )}
+              </span>
+            </p>
           )}
+          <Outlet />
         </main>
       </div>
 

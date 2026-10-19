@@ -154,6 +154,9 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
   verifier(await valeur('kpi-tresorerie') === '11000F', 'trésorerie : 15 000 encaissés moins le loyer');
   verifier(await valeur('kpi-creances') === '45000F', 'créances : la vente à crédit du jour (15 000) et la vieille facture (30 000)');
   verifier(await valeur('kpi-stock') === '240000F', 'valeur du stock');
+  // La répartition du stock est une seconde requête vivante : elle revient
+  // après la première peinture, et la tuile ne la porte qu'ensuite.
+  await page.waitForFunction(() => /50/.test(document.querySelector('[data-testid=etat-stock-DORMANT]')?.textContent || ''));
   verifier((await tuile('kpi-stock')).includes('50 000 F dormant'), 'le dormant est chiffré sur la tuile');
   verifier(await valeur('kpi-livraisons') === '2', 'deux bons de livraison en attente');
   verifier((await tuile('kpi-livraisons')).includes('1 en retard'), 'dont un en retard');

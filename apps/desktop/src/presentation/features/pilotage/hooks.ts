@@ -124,6 +124,7 @@ export interface LecturePilotage {
   anciennete: ReturnType<typeof useAncienneteCreances>;
   familles: ReturnType<typeof useCaParFamille>;
   clients: ReturnType<typeof useTopClients>;
+  articles: TopArticle[];
   isLoading: boolean;
 }
 
@@ -142,5 +143,6 @@ export function useTableauDeBord(fenetre: Fenetre, filialeId: string | null): Le
   const anciennete = useAncienneteCreances(filialeId);
   const familles = useCaParFamille(fenetre, filialeId);
   const clients = useTopClients(fenetre, filialeId);
-  return { total, filiales, serie, repartition, lignesStock, anciennete, familles, clients, isLoading };
+  const articles = useTopArticles(fenetre, filialeId, 6);
+  return { total, filiales, serie, repartition, lignesStock, anciennete, familles, clients, articles, isLoading };
 }

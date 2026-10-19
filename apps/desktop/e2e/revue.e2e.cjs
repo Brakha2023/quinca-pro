@@ -162,9 +162,14 @@ const PAGES_SIMPLES = ['', 'articles', 'ventes', 'livraisons', 'consolidation', 
   await p2.reload({ waitUntil: 'networkidle' });
   await p2.locator('main h1', { hasText: 'Vue consolidée' }).waitFor();
   await p2.locator('tbody tr', { hasText: 'Filiale Bouaké' }).waitFor();
+  // Les cartes du bas viennent d'autres requêtes vivantes que le tableau :
+  // on attend la dernière avant de photographier le texte de la page.
+  await p2.locator('[data-testid=article-vendu-CIM-50]').waitFor();
   const groupe = (await p2.textContent('main')).replace(/\s+/g, ' ');
-  verifier((await p2.locator('tbody tr').count()) === 2, 'consolidation : une ligne par filiale');
-  verifier(groupe.includes('100 000 F'), 'consolidation : CA du jour cumulé sur les deux filiales');
+  // Le tableau des filiales a ses propres repères : d'autres tableaux vivent
+  // sur la page (le relevé des données de l'histogramme, replié).
+  verifier((await p2.locator('[data-testid^=filiale-]').count()) === 2, 'consolidation : une ligne par filiale');
+  verifier(groupe.includes('100 000 F'), 'consolidation : chiffre d’affaires cumulé sur les deux filiales');
   verifier(groupe.includes('30 000 F') && groupe.includes('20 000 F'), 'consolidation : créances et dettes du groupe');
   verifier(groupe.includes('150 000 F'), 'consolidation : trésorerie des caisses cumulée');
   verifier(groupe.includes('Ciment 50kg'), 'consolidation : top articles du groupe');

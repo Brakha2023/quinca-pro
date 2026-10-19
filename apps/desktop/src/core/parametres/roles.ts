@@ -195,3 +195,25 @@ export function matricePermissions(
     })),
   );
 }
+
+/**
+ * Les permissions de secours, quand le rôle n'est pas lisible sur le poste.
+ *
+ * Deux cas la demandent, et aucun ne justifie de vider l'application :
+ *
+ *   * les rôles ne sont pas encore descendus sur la machine (synchronisation
+ *     en cours, ou règles de synchronisation pas encore déployées) ;
+ *   * le compte n'a reçu aucun rôle — un compte créé à la main, par exemple.
+ *
+ * Dans les deux cas on retombe sur ce que le **profil** ouvrait avant
+ * l'arrivée des rôles : c'est exactement ce que la migration a donné aux
+ * comptes existants, et le serveur reste de toute façon la seule barrière.
+ * Mieux vaut un poste qui travaille avec les droits de son profil qu'un écran
+ * vide au comptoir un samedi matin.
+ *
+ * Jamais le superadministrateur : on ne se donne pas tout par défaut.
+ */
+export function permissionsDeSecours(profil: Profil): readonly string[] {
+  const role = ROLES_SYSTEME.find((r) => r.profil === profil && !r.est_superadmin);
+  return role && role.permissions !== '*' ? role.permissions : [];
+}

@@ -579,8 +579,16 @@ Deux notions cohabitent, et il faut les garder distinctes.
 
 Un rôle se crée depuis l'écran (nom, description, portée), ses permissions se cochent module par
 module, et il s'affecte à un compte. **Le menu ne montre que ce que le rôle ouvre** ; une URL tapée
-à la main est refusée avec son motif. Un compte sans rôle ouvre l'application sur un message qui dit
-à qui demander.
+à la main est refusée avec son motif.
+
+**Quand le rôle manque, l'application ne se ferme pas.** Les rôles arrivent par la synchronisation :
+un poste neuf, ou des règles de synchronisation pas encore redéployées, les voient arriver avec un
+peu de retard. Dans cet intervalle le poste retombe sur les permissions du **profil** — exactement ce
+que la migration a donné aux comptes existants — et un bandeau dit laquelle des deux situations c'est :
+les rôles ne sont pas encore arrivés (et où regarder : PowerSync → Sync Streams → Deploy), ou aucun
+rôle n'a été affecté à ce compte. Le secours fait travailler, il ne fait pas administrer : il n'accorde
+jamais `parametres.roles`, et jamais les droits du superadministrateur. Le serveur reste de toute
+façon la seule barrière réelle.
 
 Cinq rôles sont livrés avec l'application (migration `20260927000000`) : superadministrateur
 (toutes les permissions, par nature — on ne peut rien lui retirer), directeur général (tout sauf la

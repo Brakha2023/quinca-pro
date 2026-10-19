@@ -54,7 +54,7 @@ export default function BarresClassement({ lignes, maximum, mesure = 'du total',
             data-testid={`classement-${l.cle}`}
           >
             <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="truncate text-neutral-800">
+              <span className="truncate text-neutral-800" title={l.libelle}>
                 {l.libelle}
                 {l.detail && <span className="ml-2 text-xs text-neutral-400">{l.detail}</span>}
               </span>

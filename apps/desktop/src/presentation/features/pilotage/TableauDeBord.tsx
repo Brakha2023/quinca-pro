@@ -35,7 +35,7 @@ interface Props {
 }
 
 export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFiliales = false }: Props) {
-  const { total, filiales, serie, repartition, lignesStock, anciennete, familles, clients } = lecture;
+  const { total, filiales, serie, repartition, lignesStock, anciennete, familles, clients, articles } = lecture;
   // La période d'avant ne sert qu'aux évolutions : elle reste ici.
   const precedente = useMemo(() => fenetrePrecedente(fenetre), [fenetre]);
   const { total: avant } = usePerimetre(precedente, filialeId);
@@ -177,11 +177,30 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
         </div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h3 className="text-base font-semibold text-neutral-800">Chiffre d'affaires par famille</h3>
           <p className="mb-4 mt-0.5 text-xs text-neutral-500">Hors taxes · {fenetre.libelle}</p>
           <BarresClassement lignes={familles.lignes} maximum={familles.maximum} mesure="du CA HT" vide="Aucune vente sur la période." />
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-neutral-800">Articles les plus vendus</h3>
+          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Toutes taxes · {fenetre.libelle}</p>
+          {articles.length === 0 ? (
+            <p className="py-8 text-center text-sm text-neutral-400">Aucune vente sur la période.</p>
+          ) : (
+            <ol className="space-y-2">
+              {articles.map((a, n) => (
+                <li key={a.code} className="flex items-center gap-3 text-sm" data-testid={`article-vendu-${a.code}`}>
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700">{n + 1}</span>
+                  <span className="flex-1 truncate text-neutral-800" title={`${a.code} — ${a.designation}`}>{a.designation}</span>
+                  <span className="flex-shrink-0 text-xs text-neutral-400">{a.quantite}</span>
+                  <span className="flex-shrink-0 font-mono text-sm font-semibold text-neutral-900">{formaterFcfa(a.ca)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">

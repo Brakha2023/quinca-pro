@@ -249,6 +249,17 @@ export default function RolesPanel({ filiale, peutModifier }: Props) {
                 </tr>
               );
             })}
+            {roles.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-3 py-10 text-center text-sm text-neutral-500" data-testid="roles-absents">
+                  Aucun rôle n'est arrivé sur ce poste.
+                  <span className="mt-1 block text-xs text-neutral-400">
+                    Les rôles se synchronisent comme le reste. S'ils n'arrivent pas, les règles de synchronisation
+                    n'ont pas été redéployées côté serveur (PowerSync → Sync Streams → Deploy).
+                  </span>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

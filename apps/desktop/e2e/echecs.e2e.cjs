@@ -86,6 +86,9 @@ const ACCEPTE = { status: 201, contentType: 'application/json', body: '' };
   await page.reload({ waitUntil: 'networkidle' });
   const badge = page.locator('[data-testid=etat-sync]');
   await badge.waitFor();
+  // Le compte des écritures mises de côté est une requête vivante : elle revient
+  // après la première peinture, et le bandeau affiche « Hors ligne » jusque-là.
+  await page.waitForFunction(() => document.querySelector('[data-testid=etat-sync]')?.dataset.nature === 'MIS_DE_COTE');
   verifier((await badge.getAttribute('data-nature')) === 'MIS_DE_COTE', `bandeau en alerte : « ${(await badge.textContent()).trim()} »`);
   verifier((await badge.textContent()).includes(`${refus.avant} écriture(s) mise(s) de côté`), 'bandeau : nombre d’écritures en attente de décision');
 

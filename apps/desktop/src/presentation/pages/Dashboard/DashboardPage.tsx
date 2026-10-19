@@ -6,7 +6,7 @@ import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import SelecteurPeriode from '../../features/pilotage/SelecteurPeriode';
 import TableauDeBord from '../../features/pilotage/TableauDeBord';
 import TableauDeBordDocument from '../../features/pilotage/TableauDeBordDocument';
-import { useTableauDeBord, useTopArticles } from '../../features/pilotage/hooks';
+import { useTableauDeBord } from '../../features/pilotage/hooks';
 import { useVentes } from '../../features/ventes/hooks';
 import { formaterDateHeure } from '../../features/ventes/VenteDetailsModal';
 
@@ -25,7 +25,6 @@ export default function DashboardPage() {
 
   const fenetre = useMemo(() => fenetrePilotage(periode), [periode]);
   const lecture = useTableauDeBord(fenetre, filialeId);
-  const top = useTopArticles(fenetre, filialeId, 6);
   const { ventes } = useVentes(filialeId, { jour: new Date().toISOString().slice(0, 10), limite: 8 });
 
   if (!filialeId) {
@@ -60,47 +59,27 @@ export default function DashboardPage() {
 
       <TableauDeBord fenetre={fenetre} filialeId={filialeId} lecture={lecture} />
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm lg:col-span-2">
-          <div className="border-b border-neutral-200 px-6 py-4">
-            <h3 className="text-base font-semibold text-neutral-800">Dernières ventes du jour</h3>
-          </div>
-          {ventes.length === 0 ? (
-            <p className="px-6 py-8 text-sm text-neutral-400">Aucune vente aujourd'hui.</p>
-          ) : (
-            <table className="w-full">
-              <tbody className="divide-y divide-neutral-100">
-                {ventes.map((v) => (
-                  <tr key={v.id} className={v.statut === 'ANNULEE' ? 'opacity-50' : ''}>
-                    <td className="px-6 py-3 text-sm text-neutral-600">{formaterDateHeure(v.date_vente)}</td>
-                    <td className="px-6 py-3 font-mono text-sm text-primary-700">{v.numero}</td>
-                    <td className="px-6 py-3 text-sm">{v.client_nom ?? 'Comptoir'}</td>
-                    <td className="px-6 py-3 text-sm text-neutral-600">{[v.utilisateur_prenom, v.utilisateur_nom].filter(Boolean).join(' ')}</td>
-                    <td className="px-6 py-3 text-right font-mono text-sm font-semibold">{formaterFcfa(v.total_ttc)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        <div className="border-b border-neutral-200 px-6 py-4">
+          <h3 className="text-base font-semibold text-neutral-800">Dernières ventes du jour</h3>
         </div>
-
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="mb-4 text-base font-semibold text-neutral-800">Articles les plus vendus</h3>
-          {top.length === 0 ? (
-            <p className="text-sm text-neutral-400">Aucune vente sur la période.</p>
-          ) : (
-            <ol className="space-y-2">
-              {top.map((t, n) => (
-                <li key={t.code} className="flex items-center gap-3 text-sm">
-                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700">{n + 1}</span>
-                  <span className="flex-1 truncate">{t.designation}</span>
-                  <span className="flex-shrink-0 text-neutral-500">{t.quantite}</span>
-                  <span className="flex-shrink-0 font-mono font-semibold">{formaterFcfa(t.ca)}</span>
-                </li>
+        {ventes.length === 0 ? (
+          <p className="px-6 py-8 text-sm text-neutral-400">Aucune vente aujourd'hui.</p>
+        ) : (
+          <table className="w-full">
+            <tbody className="divide-y divide-neutral-100">
+              {ventes.map((v) => (
+                <tr key={v.id} className={v.statut === 'ANNULEE' ? 'opacity-50' : ''}>
+                  <td className="px-6 py-3 text-sm text-neutral-600">{formaterDateHeure(v.date_vente)}</td>
+                  <td className="px-6 py-3 font-mono text-sm text-primary-700">{v.numero}</td>
+                  <td className="px-6 py-3 text-sm">{v.client_nom ?? 'Comptoir'}</td>
+                  <td className="px-6 py-3 text-sm text-neutral-600">{[v.utilisateur_prenom, v.utilisateur_nom].filter(Boolean).join(' ')}</td>
+                  <td className="px-6 py-3 text-right font-mono text-sm font-semibold">{formaterFcfa(v.total_ttc)}</td>
+                </tr>
               ))}
-            </ol>
-          )}
-        </div>
+            </tbody>
+          </table>
+        )}
       </div>
 
       {apercu && (

@@ -194,9 +194,27 @@ async function poserRolesLivres(page) {
     await db.execute('UPDATE utilisateurs SET role_id = NULL WHERE id = ?', ['aaaaaaaa-0000-0000-0000-00000000e2e0']);
   });
   await p2.goto(`${BASE_URL}/#/`);
-  await p2.locator('[data-testid=sans-role]').waitFor();
-  verifier((await texteDe(p2, '[data-testid=sans-role]')).includes('superadministrateur'), 'il est dit à qui demander un rôle');
-  verifier((await texteDe(p2, 'nav')).trim() === '', 'et le menu reste vide');
+  await p2.locator('[data-testid=bandeau-secours]').waitFor();
+  const secours = await texteDe(p2, '[data-testid=bandeau-secours]');
+  verifier(secours.includes('Aucun rôle ne vous a été affecté'), 'le bandeau dit qu’aucun rôle n’est affecté');
+  verifier(secours.includes('droits de votre profil'), 'et qu’on travaille en attendant avec les droits du profil');
+  // Un écran vide au comptoir un samedi matin n'est pas une option : le poste
+  // retombe sur ce que son profil ouvrait avant les rôles.
+  const menuSecours = await texteDe(p2, 'nav');
+  verifier(menuSecours.includes('Point de Vente') && menuSecours.includes('Trésorerie'), 'le menu du profil reste accessible');
+  verifier(!menuSecours.includes('Paramètres'), 'mais pas les paramètres : le secours fait travailler, pas administrer');
+
+  console.log('Quand les rôles ne sont pas arrivés sur le poste');
+  await p2.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    await db.execute('DELETE FROM roles_permissions');
+    await db.execute('DELETE FROM roles');
+  });
+  await p2.goto(`${BASE_URL}/#/`);
+  await p2.locator('[data-testid=bandeau-secours]').waitFor();
+  await p2.waitForFunction(() => /pas encore arriv/.test(document.querySelector('[data-testid=bandeau-secours]').textContent));
+  const absents = await texteDe(p2, '[data-testid=bandeau-secours]');
+  verifier(absents.includes('Sync Streams'), 'le bandeau dit où regarder quand les rôles n’arrivent pas');
 
   console.log('Le mot de passe livré ne reste pas en place');
   await p2.evaluate(async () => {

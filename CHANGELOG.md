@@ -152,6 +152,14 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   insuffisant, décider du sort d'une écriture refusée — deviennent des permissions (`ventes.valider`,
   `ventes.forcer_stock`, `sync.decider`) : elles se retirent ou s'accordent rôle par rôle.
 
+### Corrigé
+
+- **Un poste dont les rôles n'étaient pas encore arrivés se retrouvait vide** — menu compris, pour le
+  superadministrateur comme pour les autres. Les rôles se synchronisent comme le reste et peuvent
+  arriver après le premier démarrage ; faute de mieux, le poste retombe désormais sur les permissions
+  de son profil et un bandeau dit laquelle des deux situations c'est (rôles pas encore descendus, ou
+  aucun rôle affecté). Un écran vide au comptoir n'est pas une option.
+
 ### Base de données
 
 À appliquer **avant** de déployer les postes (les quatre premières l'ont été le 18/10/2026) :

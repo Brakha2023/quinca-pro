@@ -206,8 +206,8 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   console.log('Pages alimentées par les ventes');
   await page.goto(`${BASE_URL}/#/`);
   await page.locator('main h1', { hasText: 'Filiale Abidjan' }).waitFor();
-  await page.locator('text=CA du jour').waitFor();
-  verifier((await page.textContent('main')).includes('Top articles'), 'dashboard : KPIs et top articles');
+  await page.locator('[data-testid=kpi-ca-valeur]').waitFor();
+  verifier((await page.textContent('main')).includes('Articles les plus vendus'), 'tableau de bord : indicateurs et articles les plus vendus');
   await page.goto(`${BASE_URL}/#/tresorerie`);
   await page.locator('tbody tr', { hasText: 'Vente' }).first().waitFor();
   verifier((await page.locator('tbody tr').count()) >= 3, 'trésorerie : recettes de ventes journalisées');

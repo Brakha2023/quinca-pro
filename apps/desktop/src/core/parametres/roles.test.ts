@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PERMISSIONS } from './permissions';
 import {
   PORTEES, ROLES_SYSTEME, codeModifiable, libellePortee, matricePermissions, motifNonSupprimable,
-  normaliserCodeRole, permissionsModifiables, porteeModifiable, recapRoles, roleDesactivable,
+  normaliserCodeRole, permissionsDeSecours, permissionsModifiables, porteeModifiable, recapRoles, roleDesactivable,
   roleFormSchema, roleFromRow, roleSansFiliale, type Role,
 } from './roles';
 
@@ -166,5 +166,29 @@ describe('matricePermissions', () => {
   it('nomme le module de chaque ligne, pour l’impression', () => {
     const ligne = matricePermissions(roles, accordees).find((l) => l.permission.code === 'stock.lire')!;
     expect(ligne.module).toBe('Stock');
+  });
+});
+
+describe('permissionsDeSecours', () => {
+  it('rend ce que le profil ouvrait avant les rôles', () => {
+    expect(permissionsDeSecours('CAISSIER')).toContain('pos.encaisser');
+    expect(permissionsDeSecours('MAGASINIER')).toContain('stock.inventaire');
+    expect(permissionsDeSecours('GERANT')).toContain('ventes.valider');
+  });
+
+  it('ne donne jamais la définition des rôles, même à la direction', () => {
+    // Le secours fait travailler, il ne fait pas administrer.
+    expect(permissionsDeSecours('DIRECTEUR')).not.toContain('parametres.roles');
+    expect(permissionsDeSecours('DIRECTEUR')).toContain('parametres.lire');
+  });
+
+  it('retombe sur le rôle de direction, jamais sur le superadministrateur', () => {
+    const direction = permissionsDeSecours('DIRECTEUR');
+    expect(direction.length).toBeGreaterThan(0);
+    expect(direction).toEqual(ROLES_SYSTEME.find((r) => r.code === 'role_directeur')!.permissions);
+  });
+
+  it('ouvre au gérant tout ce qui n’est pas paramétrage', () => {
+    expect(permissionsDeSecours('GERANT').some((p) => p.startsWith('parametres.'))).toBe(false);
   });
 });
