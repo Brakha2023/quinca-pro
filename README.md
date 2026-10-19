@@ -406,6 +406,24 @@ rien n'est reçu) et **Relance fournisseur** (e-mail composé à partir des comm
 l'avoir éventuel, ouvert dans la messagerie du poste via le plugin Tauri `opener`).
 Les documents A4 passent par `DocumentImprimable` (aperçu plein écran, seule la zone d'impression sort).
 
+### Facture d'achat fournisseur
+
+Toute pièce fournisseur qui a reçu de la marchandise produit une **facture d'achat** A4 : n° de pièce
+et code-barres, date et heure, opérateur, dépôt, nature (achat direct ou réception sur bon de
+commande), cartouche fournisseur (RC, CC, adresse, contact), lignes avec prix unitaire HT et total HT,
+cachet / signature, bloc des totaux (brut HT, remise, net HT, TVA, net à payer), **net à payer en
+toutes lettres** — c'est lui qui fait foi en cas de rature — et conditions de règlement à cocher
+(espèce, chèque, virement), comptant ou crédit étant déjà connu du compte fournisseur.
+
+Elle ne facture que ce qui est **reçu**, jamais ce qui est commandé : c'est la marchandise entrée en
+stock qui fait naître la dette, et une commande livrée à moitié ne se paie pas en entier — le document
+le dit alors en toutes lettres (« réception partielle »). Un achat direct est reçu d'un bloc, les deux
+quantités se confondent.
+
+Elle s'imprime aussitôt après la saisie d'un achat, et se réédite depuis la fiche du fournisseur ou
+depuis **Bons de commande** (un bon non réceptionné n'a encore que son bon ; dès la première
+réception, les deux documents sont proposés).
+
 ### Clients
 
 Sections (routes `/clients/<section>`, sous-menu latéral) : **Répertoire** (situation des comptes : solde

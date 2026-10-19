@@ -9,9 +9,14 @@ import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import LignesBonEditor, { type LigneBonUI } from '../stock/LignesBonEditor';
+import { FactureAchatImprimable } from './FactureAchatDocument';
 
-/** Saisie d'un achat réceptionné : les lignes entrent en stock, le total devient une dette fournisseur. */
-export default function AchatModal({ filialeId, fournisseur, onClose }: { filialeId: string; fournisseur: Fournisseur; onClose: () => void }) {
+/**
+ * Saisie d'un achat réceptionné : les lignes entrent en stock, le total devient
+ * une dette fournisseur, et la **facture d'achat** s'imprime dans la foulée —
+ * c'est la pièce qu'on classe avec le bon de livraison du fournisseur.
+ */
+export default function AchatModal({ filialeId, filiale, fournisseur, onClose }: { filialeId: string; filiale: { nom: string; adresse?: string | null; telephone?: string | null }; fournisseur: Fournisseur; onClose: () => void }) {
   const repository = useRepository(FournisseursRepository);
   const notifier = useNotifier();
   const { utilisateur } = useCurrentUtilisateur();
@@ -22,6 +27,7 @@ export default function AchatModal({ filialeId, fournisseur, onClose }: { filial
   const [tva, setTva] = useState(0);
   const [lignes, setLignes] = useState<LigneBonUI[]>([]);
   const [enCours, setEnCours] = useState(false);
+  const [facture, setFacture] = useState<string | null>(null);
   const depotEffectif = depotId || depots[0]?.id || '';
   const totaux = totauxAchat({ tva_percent: tva, lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, remise_percent: 0, cout_unitaire: l.cout_unitaire === '' ? 0 : l.cout_unitaire })) });
 
@@ -33,9 +39,10 @@ export default function AchatModal({ filialeId, fournisseur, onClose }: { filial
     if (!parsed.success) { notifier('erreur', parsed.error.issues[0].message); return; }
     setEnCours(true);
     try {
-      const { numero } = await repository.enregistrerAchat({ filialeId, utilisateurId: utilisateur?.id ?? null }, parsed.data);
+      const { id, numero } = await repository.enregistrerAchat({ filialeId, utilisateurId: utilisateur?.id ?? null }, parsed.data);
       notifier('succes', `Achat ${numero} réceptionné : ${formaterFcfa(totaux.total_ttc)} portés en dette fournisseur.`);
-      onClose();
+      // La facture reste à l'écran pour être imprimée ; la fermer ferme la saisie.
+      setFacture(id);
     } catch (error) {
       notifier('erreur', error instanceof Error ? error.message : 'Enregistrement impossible.');
     } finally {
@@ -62,6 +69,7 @@ export default function AchatModal({ filialeId, fournisseur, onClose }: { filial
         </div>
         <LignesBonEditor filialeId={filialeId} depotId={depotEffectif} lignes={lignes} onChange={setLignes} avecCout />
       </div>
+      {facture && <FactureAchatImprimable commandeId={facture} filiale={filiale} onClose={onClose} />}
     </Modal>
   );
 }

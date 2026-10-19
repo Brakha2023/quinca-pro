@@ -3,7 +3,7 @@ import { useQuery } from '@powersync/react';
 import type { CommandeFournisseurRow, FournisseurRow, LigneCommandeFournisseurRow, ReglementFournisseurRow } from '@quinca/shared-types';
 import { commandeFromRow, fournisseurFromRow, ligneCommandeFromRow, reglementFournisseurFromRow } from '../../../core/fournisseurs';
 import {
-  ACHATS_FOURNISSEUR_QUERY, LIGNES_COMMANDE_QUERY, REGLEMENTS_FOURNISSEUR_QUERY, commandesQuery, fournisseursQuery, reglementsFournisseursQuery,
+  ACHATS_FOURNISSEUR_QUERY, COMMANDE_QUERY, LIGNES_COMMANDE_QUERY, REGLEMENTS_FOURNISSEUR_QUERY, commandesQuery, fournisseursQuery, reglementsFournisseursQuery,
   type FiltresCommandes, type FiltresFournisseurs, type FiltresReglementsFournisseurs,
 } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 
@@ -49,6 +49,12 @@ export function useCommandes(filialeId: string | null, filtres: FiltresCommandes
   );
   const { data, isLoading } = useQuery<CommandeVueRow>(sql, params);
   return { commandes: data, isLoading };
+}
+
+/** Une pièce fournisseur, noms joints : la facture s'édite depuis elle. */
+export function useCommande(id: string | null) {
+  const { data } = useQuery<CommandeVueRow>(COMMANDE_QUERY, [id ?? '']);
+  return data[0] ?? null;
 }
 
 export function useLignesCommande(commandeId: string | null) {

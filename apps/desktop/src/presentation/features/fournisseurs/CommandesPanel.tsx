@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { EyeIcon, PlusIcon, PrinterIcon, TrashIcon, TruckIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, TruckIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutCommandeFournisseur } from '@quinca/shared-types';
 import type { Article } from '../../../core/articles';
-import { LIBELLES_STATUT_COMMANDE, bonCommandeSchema, receptionSchema, totalLigneCommande, totauxCommande, type Fournisseur, type LigneCommandeFournisseur } from '../../../core/fournisseurs';
+import { LIBELLES_STATUT_COMMANDE, bonCommandeSchema, documentsCommande, receptionSchema, totalLigneCommande, totauxCommande, type Fournisseur, type LigneCommandeFournisseur } from '../../../core/fournisseurs';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import FormField, { controleInlineClass, inputClass } from '../../components/ui/FormField';
@@ -18,6 +18,7 @@ import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { remiseSaisie } from '../stock/LignesBonEditor';
 import ArticlePicker from '../stock/ArticlePicker';
 import { formaterDateHeure } from '../ventes/VenteDetailsModal';
+import { FactureAchatImprimable } from './FactureAchatDocument';
 import SelectFournisseur from './SelectFournisseur';
 import { useCommandes, useFournisseur, useFournisseurs, useLignesCommande, type CommandeVueRow } from './hooks';
 
@@ -247,12 +248,14 @@ function BonImprimable({ commande, lignes, fournisseur, filiale, onClose }: { co
   );
 }
 
-function DetailCommandeModal({ commande, lignes, onClose, onImprimer }: { commande: CommandeVueRow; lignes: LigneCommandeFournisseur[]; onClose: () => void; onImprimer: () => void }) {
+function DetailCommandeModal({ commande, lignes, onClose, onImprimer, onFacturer }: { commande: CommandeVueRow; lignes: LigneCommandeFournisseur[]; onClose: () => void; onImprimer: () => void; onFacturer: () => void }) {
   const statut = (commande.statut ?? 'ENVOYEE') as StatutCommandeFournisseur;
+  const documents = documentsCommande({ type: commande.type === 'BON_COMMANDE' ? 'BON_COMMANDE' : 'COMMANDE', total_recu_ttc: commande.total_recu_ttc ?? 0, statut });
   return (
     <Modal titre={`Commande ${commande.numero}`} sousTitre={`${commande.fournisseur_nom} · ${formaterDateHeure(commande.date_commande)}`} largeur="max-w-3xl" onClose={onClose} pied={
       <>
-        <button type="button" onClick={onImprimer} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-4 h-4" /> Imprimer le bon</button>
+        {documents.includes('BON') && <button type="button" onClick={onImprimer} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-4 h-4" /> Imprimer le bon</button>}
+        {documents.includes('FACTURE') && <button type="button" onClick={onFacturer} className={`${documents.includes('BON') ? '' : 'mr-auto '}flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg`} data-testid="facture-depuis-detail"><DocumentTextIcon className="w-4 h-4" /> Facture d'achat</button>}
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Fermer</button>
       </>
     }>
@@ -281,7 +284,7 @@ function DetailCommandeModal({ commande, lignes, onClose, onImprimer }: { comman
   );
 }
 
-type ModalState = { type: 'nouveau' } | { type: 'detail'; c: CommandeVueRow } | { type: 'imprimer'; c: CommandeVueRow } | { type: 'reception'; c: CommandeVueRow } | null;
+type ModalState = { type: 'nouveau' } | { type: 'detail'; c: CommandeVueRow } | { type: 'imprimer'; c: CommandeVueRow } | { type: 'facture'; c: CommandeVueRow } | { type: 'reception'; c: CommandeVueRow } | null;
 
 /** Bons de commande fournisseurs : création, impression, réception (partielle ou totale), annulation. */
 export default function CommandesPanel({ filialeId, filiale }: Props) {
@@ -326,6 +329,8 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
             {commandes.map((c) => {
               const statut = (c.statut ?? 'ENVOYEE') as StatutCommandeFournisseur;
               const ouverte = statut === 'ENVOYEE' || statut === 'PARTIELLE';
+              // Un bon s'imprime dès sa création ; la facture attend la marchandise.
+              const documents = documentsCommande({ type: c.type === 'BON_COMMANDE' ? 'BON_COMMANDE' : 'COMMANDE', total_recu_ttc: c.total_recu_ttc ?? 0, statut });
               return (
                 <tr key={c.id} className="hover:bg-neutral-50">
                   <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(c.date_commande)}</td>
@@ -340,7 +345,8 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
                   <td className="px-3 py-2 text-center">
                     <div className="flex items-center justify-center gap-0.5">
                       <button onClick={() => setModal({ type: 'detail', c })} className="p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Détail"><EyeIcon className="w-4 h-4" /></button>
-                      <button onClick={() => setModal({ type: 'imprimer', c })} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer le bon"><PrinterIcon className="w-4 h-4" /></button>
+                      {documents.includes('BON') && <button onClick={() => setModal({ type: 'imprimer', c })} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer le bon de commande"><PrinterIcon className="w-4 h-4" /></button>}
+                      {documents.includes('FACTURE') && <button onClick={() => setModal({ type: 'facture', c })} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer la facture d'achat" data-testid={`facture-${c.numero}`}><DocumentTextIcon className="w-4 h-4" /></button>}
                       {ouverte && <button onClick={() => setModal({ type: 'reception', c })} className="p-1.5 rounded hover:bg-primary-50 text-primary-700" title="Réceptionner"><TruckIcon className="w-4 h-4" /></button>}
                       {statut === 'ENVOYEE' && <button onClick={() => annuler(c)} className="p-1.5 rounded hover:bg-red-50 text-red-600" title="Annuler le bon"><XCircleIcon className="w-4 h-4" /></button>}
                     </div>
@@ -355,8 +361,9 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
       </div>
 
       {modal?.type === 'nouveau' && <NouveauBonModal filialeId={filialeId} fournisseurId={fournisseurId} onClose={() => setModal(null)} />}
-      {modal?.type === 'detail' && <DetailCommandeModal commande={modal.c} lignes={lignes} onClose={() => setModal(null)} onImprimer={() => setModal({ type: 'imprimer', c: modal.c })} />}
+      {modal?.type === 'detail' && <DetailCommandeModal commande={modal.c} lignes={lignes} onClose={() => setModal(null)} onImprimer={() => setModal({ type: 'imprimer', c: modal.c })} onFacturer={() => setModal({ type: 'facture', c: modal.c })} />}
       {modal?.type === 'imprimer' && <BonImprimable commande={modal.c} lignes={lignes} fournisseur={fournisseurActif} filiale={filiale} onClose={() => setModal(null)} />}
+      {modal?.type === 'facture' && <FactureAchatImprimable commandeId={modal.c.id} filiale={filiale} onClose={() => setModal(null)} />}
       {modal?.type === 'reception' && <ReceptionModal filialeId={filialeId} commande={modal.c} lignes={lignes} onClose={() => setModal(null)} />}
     </div>
   );

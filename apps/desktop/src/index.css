@@ -44,6 +44,12 @@
 .document .document-totaux { margin-left: auto; width: 60mm; }
 .document .document-totaux td:last-child { font-weight: bold; }
 .document .document-signature { width: 70mm; height: 30mm; }
+/* Facture d'achat : conditions de règlement à cocher à la main, comme sur le formulaire. */
+.document .document-cases { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; }
+.document .document-case { display: inline-flex; align-items: center; gap: 5px; }
+.document .document-case i { display: inline-block; width: 12px; height: 12px; border: 1px solid #000; font-style: normal; line-height: 11px; text-align: center; font-weight: bold; }
+.document .document-arrete { margin: 8px 0 0; font-size: 11px; }
+
 /* Bon de transfert entre filiales : deux cachets côte à côte, comme sur le papier. */
 .document .document-cachets { display: flex; gap: 12px; margin-top: 8px; }
 .document .document-cachet { flex: 1; border: 1px solid #000; min-height: 28mm; }

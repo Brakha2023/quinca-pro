@@ -86,7 +86,24 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.getByRole('button', { name: 'Réceptionner', exact: true }).click();
   await page.locator('[aria-live]', { hasText: 'réceptionné' }).waitFor();
   verifier(true, 'achat saisi via l’UI');
+
+  // La facture d'achat s'affiche dans la foulée : c'est la pièce qu'on classe
+  // avec le bon de livraison du fournisseur.
+  const facture = page.locator('#zone-impression');
+  await facture.locator('[data-testid=ligne-facture]').first().waitFor();
+  const papierFacture = (await facture.textContent()).replace(/\s+/g, ' ');
+  verifier(papierFacture.includes("Facture d'achat fournisseur"), 'facture d’achat : titre du document');
+  verifier(papierFacture.includes('SODIPRO') && papierFacture.includes('Filiale Abidjan'), 'facture : fournisseur et en-tête de la maison');
+  verifier(papierFacture.includes('Conditionnement') && papierFacture.includes('Achat'), 'facture : nature de la pièce au cartouche');
+  verifier((await facture.getByTestId('facture-net').textContent()).replace(/\s/g, '') === '90000F', 'facture : net à payer (20 × 4 500)');
+  verifier(papierFacture.includes('Quatre-vingt-dix mille francs CFA'), 'facture : net à payer en toutes lettres, en tête de phrase');
+  verifier(papierFacture.includes('Conditions de règlement'), 'facture : conditions de règlement à cocher');
+  verifier((await facture.locator('svg.code-barres rect').count()) > 20, 'facture : code-barres du numéro de pièce');
+  verifier(!papierFacture.includes('Point de Vente') && !papierFacture.includes('Consolidation'), 'facture : ni menu ni bandeau de l’application');
+  // Fermer l'aperçu referme la saisie d'achat ; la fiche fournisseur reste dessous.
+  await facture.getByRole('button', { name: "Fermer l'aperçu" }).click();
   await page.keyboard.press('Escape');
+
   await page.locator('tbody tr', { hasText: 'SODIPRO' }).locator('text=359 000 F').waitFor();
   verifier(true, 'dette mise à jour en temps réel (269 000 + 90 000)');
 
@@ -164,6 +181,19 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('[aria-live]', { hasText: 'Partielle' }).waitFor();
   await page.locator('tbody tr', { hasText: 'Partielle' }).waitFor();
   verifier(true, 'réception partielle via l’UI (4/10)');
+
+  // La facture ne porte que la marchandise reçue : 4 × 5 500 − 10 % = 19 800,
+  // et non les 10 commandés. C'est le reçu qui fait la dette.
+  await page.locator('tbody tr', { hasText: 'Partielle' }).getByTitle("Imprimer la facture d'achat").click();
+  const facturePartielle = page.locator('#zone-impression');
+  await facturePartielle.locator('[data-testid=ligne-facture]').first().waitFor();
+  const papierPartiel = (await facturePartielle.textContent()).replace(/\s+/g, ' ');
+  verifier((await facturePartielle.getByTestId('facture-net').textContent()).replace(/\s/g, '') === '19800F',
+    'facture d’une réception partielle : seules les quantités reçues sont facturées');
+  verifier(papierPartiel.includes('Réception partielle'), 'facture : la réception partielle est annoncée sur la feuille');
+  verifier(papierPartiel.includes('Réception sur bon de commande'), 'facture : nature « réception sur bon de commande »');
+  verifier(papierPartiel.includes('Dix-neuf mille huit cents francs CFA'), 'facture partielle : montant en lettres accordé au net à payer');
+  await facturePartielle.getByRole('button', { name: "Fermer l'aperçu" }).click();
 
   await sousMenu.getByRole('link', { name: 'Relance fournisseur' }).click();
   await page.locator('[data-testid=select-fournisseur]').selectOption(r.fid);

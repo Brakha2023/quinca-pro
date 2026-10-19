@@ -34,6 +34,16 @@ export const REGLEMENTS_FOURNISSEUR_QUERY = `
   WHERE r.fournisseur_id = ? ORDER BY r.date_reglement DESC`;
 export const LIGNES_COMMANDE_QUERY = 'SELECT * FROM lignes_commande_fournisseur WHERE commande_id = ? ORDER BY created_at';
 
+/** Une pièce fournisseur avec ses noms joints : sert à rééditer sa facture. */
+export const COMMANDE_QUERY = `
+  SELECT c.*, f.raison_sociale AS fournisseur_nom, d.nom AS depot_nom, u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom,
+         (SELECT COUNT(*) FROM lignes_commande_fournisseur l WHERE l.commande_id = c.id) AS nombre_lignes
+  FROM commandes_fournisseurs c
+  JOIN fournisseurs f ON f.id = c.fournisseur_id
+  LEFT JOIN depots d ON d.id = c.depot_id
+  LEFT JOIN utilisateurs u ON u.id = c.utilisateur_id
+  WHERE c.id = ?`;
+
 export interface FiltresCommandes {
   fournisseurId?: string | null;
   /** Bons de commande ouverts (envoyés ou partiellement reçus). */

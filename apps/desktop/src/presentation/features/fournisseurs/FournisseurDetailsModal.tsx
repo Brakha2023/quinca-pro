@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { BanknotesIcon, PencilSquareIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, PencilSquareIcon, PrinterIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { LIBELLES_TYPE_REGLEMENT } from '../../../core/clients';
-import { LIBELLES_STATUT_COMMANDE } from '../../../core/fournisseurs';
+import { LIBELLES_STATUT_COMMANDE, estFacturable } from '../../../core/fournisseurs';
 import Modal from '../../components/ui/Modal';
 import { formaterFcfa, formaterDate } from '../../hooks/useFormatage';
 import AchatModal from './AchatModal';
+import { FactureAchatImprimable } from './FactureAchatDocument';
 import FournisseurFormModal from './FournisseurFormModal';
 import ReglementFournisseurModal from './ReglementFournisseurModal';
 import { useAchatsFournisseur, useFournisseur, useReglementsFournisseur } from './hooks';
@@ -14,11 +15,12 @@ function Kpi({ label, value, tone = 'text-neutral-900' }: { label: string; value
 }
 
 /** Fiche fournisseur : situation, achats réceptionnés, règlements, actions. */
-export default function FournisseurDetailsModal({ filialeId, fournisseurId, onClose }: { filialeId: string; fournisseurId: string; onClose: () => void }) {
+export default function FournisseurDetailsModal({ filialeId, filiale, fournisseurId, onClose }: { filialeId: string; filiale: { nom: string; adresse?: string | null; telephone?: string | null }; fournisseurId: string; onClose: () => void }) {
   const fournisseur = useFournisseur(fournisseurId);
   const achats = useAchatsFournisseur(fournisseurId);
   const reglements = useReglementsFournisseur(fournisseurId);
   const [modal, setModal] = useState<'modifier' | 'achat' | 'reglement' | null>(null);
+  const [facture, setFacture] = useState<string | null>(null);
   if (!fournisseur) return null;
 
   return (
@@ -40,9 +42,10 @@ export default function FournisseurDetailsModal({ filialeId, fournisseurId, onCl
           <section>
             <h4 className="text-sm font-semibold text-neutral-800 mb-2">Achats ({achats.length})</h4>
             {achats.length === 0 ? <p className="text-sm text-neutral-400">Aucun achat.</p> : (
-              <table className="w-full text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Numéro</th><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Payé</th><th className="px-3 py-2 text-right">Reste</th></tr></thead>
+              <table className="w-full text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Numéro</th><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Payé</th><th className="px-3 py-2 text-right">Reste</th><th className="px-3 py-2 text-center">Facture</th></tr></thead>
                 <tbody className="divide-y divide-neutral-100">{achats.map((a) => (
-                  <tr key={a.id}><td className="px-3 py-2 font-mono">{a.numero}</td><td className="px-3 py-2">{formaterDate(a.date_commande)}</td><td className="px-3 py-2">{LIBELLES_STATUT_COMMANDE[a.statut]}</td><td className="px-3 py-2 text-right font-mono">{formaterFcfa(a.total_ttc)}</td><td className="px-3 py-2 text-right font-mono text-green-700">{formaterFcfa(a.montant_paye)}</td><td className={`px-3 py-2 text-right font-mono ${a.reste_a_payer > 0 ? 'text-red-600' : ''}`}>{formaterFcfa(a.reste_a_payer)}</td></tr>
+                  <tr key={a.id}><td className="px-3 py-2 font-mono">{a.numero}</td><td className="px-3 py-2">{formaterDate(a.date_commande)}</td><td className="px-3 py-2">{LIBELLES_STATUT_COMMANDE[a.statut]}</td><td className="px-3 py-2 text-right font-mono">{formaterFcfa(a.total_ttc)}</td><td className="px-3 py-2 text-right font-mono text-green-700">{formaterFcfa(a.montant_paye)}</td><td className={`px-3 py-2 text-right font-mono ${a.reste_a_payer > 0 ? 'text-red-600' : ''}`}>{formaterFcfa(a.reste_a_payer)}</td>
+                  <td className="px-3 py-2 text-center">{estFacturable(a) && <button type="button" onClick={() => setFacture(a.id)} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-600" title="Imprimer la facture d'achat" data-testid={`facture-achat-${a.numero}`}><PrinterIcon className="w-4 h-4" /></button>}</td></tr>
                 ))}</tbody></table>
             )}
           </section>
@@ -58,7 +61,8 @@ export default function FournisseurDetailsModal({ filialeId, fournisseurId, onCl
         </div>
       </Modal>
       {modal === 'modifier' && <FournisseurFormModal filialeId={filialeId} fournisseur={fournisseur} onClose={() => setModal(null)} />}
-      {modal === 'achat' && <AchatModal filialeId={filialeId} fournisseur={fournisseur} onClose={() => setModal(null)} />}
+      {modal === 'achat' && <AchatModal filialeId={filialeId} filiale={filiale} fournisseur={fournisseur} onClose={() => setModal(null)} />}
+      {facture && <FactureAchatImprimable commandeId={facture} filiale={filiale} onClose={() => setFacture(null)} />}
       {modal === 'reglement' && <ReglementFournisseurModal filialeId={filialeId} fournisseur={fournisseur} onClose={() => setModal(null)} />}
     </>
   );

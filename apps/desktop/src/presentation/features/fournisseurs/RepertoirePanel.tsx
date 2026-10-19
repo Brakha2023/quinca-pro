@@ -118,9 +118,9 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         {!isLoading && fournisseurs.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun fournisseur.</div>}
       </div>
 
-      {modal?.type === 'details' && <FournisseurDetailsModal filialeId={filialeId} fournisseurId={modal.id} onClose={() => setModal(null)} />}
+      {modal?.type === 'details' && <FournisseurDetailsModal filialeId={filialeId} filiale={filiale} fournisseurId={modal.id} onClose={() => setModal(null)} />}
       {modal?.type === 'modifier' && <FournisseurFormModal filialeId={filialeId} fournisseur={modal.f} onClose={() => setModal(null)} />}
-      {modal?.type === 'achat' && <AchatModal filialeId={filialeId} fournisseur={modal.f} onClose={() => setModal(null)} />}
+      {modal?.type === 'achat' && <AchatModal filialeId={filialeId} filiale={filiale} fournisseur={modal.f} onClose={() => setModal(null)} />}
       {modal?.type === 'reglement' && <ReglementFournisseurModal filialeId={filialeId} fournisseur={modal.f} onClose={() => setModal(null)} />}
       {modal?.type === 'balance' && (
         <DocumentImprimable titre="Balance générale fournisseurs" filiale={filiale} onClose={() => setModal(null)}>

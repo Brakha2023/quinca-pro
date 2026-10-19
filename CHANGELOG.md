@@ -55,6 +55,15 @@ visible à l'écran ; tous pouvaient faire perdre des données.
   Filtrer par dépôt ne fait plus disparaître un article absent de ce dépôt : il y figure en rupture,
   ce qui est précisément l'information recherchée.
 
+- **Facture d'achat fournisseur.** Un achat réceptionné produit désormais sa facture A4 : n° et
+  code-barres, date et heure, opérateur, dépôt, nature de la pièce, cartouche fournisseur (RC, CC,
+  adresse, contact), lignes valorisées, totaux (brut HT, remise, net HT, TVA, net à payer), **net à
+  payer en toutes lettres** et conditions de règlement à cocher. Elle s'imprime aussitôt la saisie
+  validée, et se réédite depuis la fiche du fournisseur ou depuis les bons de commande.
+
+  Elle ne porte que la marchandise **reçue** : une commande livrée à moitié ne se facture pas en
+  entier, et le document annonce la réception partielle.
+
 - **Liste des caisses : tableau, filtres, impression et export Excel.** Les cartes ne tenaient plus
   dès qu'une maison a dix ou quinze caisses. Trésorerie → Liste des caisses est désormais un **état des
   caisses** : une ligne par caisse avec solde d'ouverture, entrées, sorties, solde de clôture et solde
