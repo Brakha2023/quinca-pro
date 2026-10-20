@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>QuincaPro — Guide de l'utilisateur</title>
+<style>
+  @page { size: A4; margin: 19mm 17mm 20mm 17mm; }
+
+  :root {
+    --bleu: #1d4ed8;
+    --bleu-fonce: #1e3a8a;
+    --bleu-pale: #eff6ff;
+    --orange: #ea580c;
+    --encre: #171717;
+    --encre-2: #404040;
+    --encre-3: #737373;
+    --trait: #e5e5e5;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10.2pt;
+    line-height: 1.55;
+    color: var(--encre-2);
+  }
+
+  /* ---------- Couverture ---------- */
+  .couverture {
+    height: 258mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    page-break-after: always;
+  }
+  .logo {
+    width: 26mm; height: 26mm;
+    background: var(--bleu); color: #fff;
+    border-radius: 6mm;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22pt; font-weight: 700; letter-spacing: .5pt;
+    margin-bottom: 12mm;
+  }
+  .couverture h1 { font-size: 34pt; margin: 0; color: var(--encre); letter-spacing: -.5pt; }
+  .couverture .sous { font-size: 15pt; color: var(--bleu); margin-top: 3mm; font-weight: 500; }
+  .couverture .maison { font-size: 11.5pt; color: var(--encre-3); margin-top: 14mm; line-height: 1.8; }
+  .couverture .bande { height: 2.4mm; background: var(--bleu); width: 40mm; margin: 9mm 0; border-radius: 1.2mm; }
+  .couverture .pied { margin-top: 16mm; font-size: 9.5pt; color: var(--encre-3); }
+
+  /* ---------- Titres ---------- */
+  h2 {
+    font-size: 17pt; color: var(--encre); margin: 0 0 5mm;
+    padding-bottom: 2.5mm; border-bottom: .6mm solid var(--bleu);
+    page-break-after: avoid; page-break-before: always;
+  }
+  h2 .num {
+    display: inline-block; min-width: 9mm;
+    color: var(--bleu); font-variant-numeric: tabular-nums;
+  }
+  h2.suite { page-break-before: auto; }
+  h3 {
+    font-size: 11.8pt; color: var(--bleu-fonce); margin: 7mm 0 2mm;
+    page-break-after: avoid;
+  }
+  h4 { font-size: 10.4pt; color: var(--encre); margin: 5mm 0 1.5mm; page-break-after: avoid; }
+  p { margin: 0 0 3mm; }
+  .chapeau { font-size: 10.8pt; color: var(--encre-3); margin-bottom: 5mm; }
+
+  /* ---------- Listes ---------- */
+  ul, ol { margin: 0 0 3.5mm; padding-left: 5.5mm; }
+  li { margin-bottom: 1.6mm; }
+  li::marker { color: var(--bleu); }
+
+  /* ---------- Pas à pas ---------- */
+  .pasapas {
+    border-left: 1mm solid var(--bleu);
+    background: var(--bleu-pale);
+    padding: 4mm 5mm 2.5mm 5mm;
+    margin: 4mm 0 5mm;
+    border-radius: 0 2mm 2mm 0;
+    page-break-inside: avoid;
+  }
+  .pasapas .etiquette {
+    font-size: 8pt; font-weight: 700; letter-spacing: .8pt; text-transform: uppercase;
+    color: var(--bleu); margin-bottom: 2.5mm;
+  }
+  .pasapas ol { counter-reset: etape; list-style: none; padding-left: 0; margin-bottom: 0; }
+  .pasapas ol > li {
+    counter-increment: etape; position: relative;
+    padding-left: 8mm; margin-bottom: 2.4mm;
+  }
+  .pasapas ol > li::before {
+    content: counter(etape);
+    position: absolute; left: 0; top: .2mm;
+    width: 5.2mm; height: 5.2mm; border-radius: 50%;
+    background: var(--bleu); color: #fff;
+    font-size: 8pt; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- Encadrés ---------- */
+  .note, .alerte {
+    padding: 3.5mm 4.5mm; margin: 4mm 0; border-radius: 2mm;
+    font-size: 9.6pt; page-break-inside: avoid;
+  }
+  .note { background: #fafafa; border: .3mm solid var(--trait); }
+  .alerte { background: #fff7ed; border: .3mm solid #fed7aa; }
+  .note .titre, .alerte .titre {
+    font-weight: 700; font-size: 8pt; letter-spacing: .8pt; text-transform: uppercase;
+    display: block; margin-bottom: 1.5mm;
+  }
+  .note .titre { color: var(--encre-3); }
+  .alerte .titre { color: var(--orange); }
+  .note p:last-child, .alerte p:last-child { margin-bottom: 0; }
+
+  /* ---------- Tableaux ---------- */
+  table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; font-size: 9.3pt; }
+  caption {
+    caption-side: top; text-align: left; font-size: 9pt; color: var(--encre-3);
+    padding-bottom: 1.5mm;
+  }
+  th {
+    text-align: left; font-size: 8pt; letter-spacing: .5pt; text-transform: uppercase;
+    color: var(--encre-3); font-weight: 700;
+    border-bottom: .5mm solid var(--encre); padding: 1.8mm 2mm;
+  }
+  td { padding: 1.8mm 2mm; border-bottom: .2mm solid var(--trait); vertical-align: top; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  td.chemin { white-space: nowrap; font-weight: 500; color: var(--encre); }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+
+  /* ---------- Divers ---------- */
+  .touche {
+    display: inline-block; padding: .3mm 1.6mm; min-width: 6mm; text-align: center;
+    border: .3mm solid #a3a3a3; border-bottom-width: .7mm; border-radius: 1.2mm;
+    background: #fff; font-size: 8.6pt; font-weight: 600; color: var(--encre);
+    font-family: inherit;
+  }
+  .chemin-ui { font-weight: 600; color: var(--bleu-fonce); white-space: nowrap; }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.8pt;
+    background: #f5f5f5; padding: .3mm 1.2mm; border-radius: 1mm; color: var(--encre);
+  }
+  .sommaire { font-size: 10.5pt; }
+  .sommaire ol { list-style: none; padding-left: 0; counter-reset: chap; }
+  .sommaire > ol > li {
+    counter-increment: chap; margin-bottom: 2.2mm;
+    display: flex; gap: 3mm; align-items: baseline;
+  }
+  .sommaire > ol > li::before {
+    content: counter(chap) ".";
+    color: var(--bleu); font-weight: 700; min-width: 7mm; font-variant-numeric: tabular-nums;
+  }
+  .sommaire .titre-chap { font-weight: 600; color: var(--encre); }
+  .sommaire .desc { color: var(--encre-3); font-size: 9.6pt; }
+  .deux-col { column-count: 2; column-gap: 8mm; }
+  .deux-col ul { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<!-- ============ COUVERTURE ============ -->
+<section class="couverture">
+  <div class="logo">QCF</div>
+  <h1>QuincaPro</h1>
+  <div class="sous">Guide de l'utilisateur</div>
+  <div class="bande"></div>
+  <div class="maison">
+    <strong>CISSÉ &amp; FRÈRES</strong><br />
+    Quincaillerie — SASU<br />
+    Gestion commerciale multi-filiales
+  </div>
+  <div class="pied">
+    Version 0.2.0 — 20 octobre 2026<br />
+    Ce guide suit l'application écran par écran. Gardez-le à portée du poste.
+  </div>
+</section>
+
+<!-- ============ SOMMAIRE ============ -->
+<h2><span class="num">—</span>Sommaire</h2>
+<div class="sommaire">
+<ol>
+  <li><div><span class="titre-chap">Installer et démarrer</span><br /><span class="desc">Installation sur Windows, première connexion, mot de passe.</span></div></li>
+  <li><div><span class="titre-chap">Comprendre l'application</span><br /><span class="desc">Le travail hors ligne, la synchronisation, le verrouillage du poste.</span></div></li>
+  <li><div><span class="titre-chap">Se repérer</span><br /><span class="desc">Le menu, le périmètre, les boutons que l'on retrouve partout.</span></div></li>
+  <li><div><span class="titre-chap">Paramètres — rôles et utilisateurs</span><br /><span class="desc">Créer un rôle, cocher ses droits, l'affecter à quelqu'un.</span></div></li>
+  <li><div><span class="titre-chap">Le point de vente</span><br /><span class="desc">Encaisser, les raccourcis, le ticket et la facture.</span></div></li>
+  <li><div><span class="titre-chap">Ventes et catalogue</span><br /><span class="desc">Relire une vente, l'annuler, tenir les articles et les prix.</span></div></li>
+  <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Entrées, sorties, transferts, inventaire, production, alertes.</span></div></li>
+  <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire, proforma, compte client, versements, relances.</span></div></li>
+  <li><div><span class="titre-chap">Fournisseurs</span><br /><span class="desc">Commandes, réceptions, factures d'achat, règlements.</span></div></li>
+  <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses, transferts entre filiales.</span></div></li>
+  <li><div><span class="titre-chap">Livraisons et personnel</span><br /><span class="desc">Bons de livraison, effectif, pointage, paie.</span></div></li>
+  <li><div><span class="titre-chap">Tableau de bord</span><br /><span class="desc">Les huit chiffres, les quatre graphiques, la consolidation.</span></div></li>
+  <li><div><span class="titre-chap">Historiques et audit</span><br /><span class="desc">Retrouver une pièce, la rééditer, savoir qui a fait quoi.</span></div></li>
+  <li><div><span class="titre-chap">Imprimer et exporter</span><br /><span class="desc">Ticket 80 mm, documents A4, PDF, classeurs Excel.</span></div></li>
+  <li><div><span class="titre-chap">Que faire si…</span><br /><span class="desc">Les situations courantes et leur réponse.</span></div></li>
+  <li><div><span class="titre-chap">Annexes</span><br /><span class="desc">Les cinq rôles livrés, la liste des permissions, les raccourcis.</span></div></li>
+</ol>
+</div>
+
+<!-- ============ 1. INSTALLER ============ -->
+<h2><span class="num">1.</span>Installer et démarrer</h2>
+<p class="chapeau">QuincaPro s'installe sur un PC Windows et fonctionne ensuite seul, même sans
+connexion. Cette opération ne se fait qu'une fois par poste.</p>
+
+<h3>1.1 — Installer sur un poste Windows</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Copiez le fichier <code>QuincaPro_0.2.0_x64-setup.exe</code> sur le PC (clé USB ou réseau interne).</li>
+    <li>Double-cliquez dessus. Windows affiche <em>« Windows a protégé votre ordinateur »</em> : c'est normal, l'application n'est pas signée auprès de Microsoft. Cliquez <em>Informations complémentaires</em>, puis <em>Exécuter quand même</em>.</li>
+    <li>Laissez l'installation se faire. Sur un Windows ancien, l'installeur télécharge au passage le composant WebView2 : une connexion Internet est nécessaire <strong>cette fois-là seulement</strong>.</li>
+    <li>QuincaPro apparaît dans le menu Démarrer. Lancez-le.</li>
+  </ol>
+</div>
+
+<div class="alerte">
+  <span class="titre">À ne pas faire circuler</span>
+  <p>Cet installeur contient les clés d'accès au serveur de la maison. Il reste à l'intérieur de
+  l'entreprise : on ne l'envoie ni par WhatsApp, ni par e-mail à l'extérieur, et on ne le dépose sur
+  aucun site de partage.</p>
+</div>
+
+<h3>1.2 — La toute première connexion</h3>
+<p>L'application est livrée avec un compte d'administration. Il sert à créer les autres comptes,
+puis on ne s'en sert plus au quotidien.</p>
+
+<table>
+  <tr><th>Identifiant</th><th>Mot de passe livré</th></tr>
+  <tr><td><code>superadmin@cisse-freres.ci</code></td><td><code>SuperAdmin@2026</code></td></tr>
+</table>
+
+<div class="alerte">
+  <span class="titre">Ce mot de passe est public</span>
+  <p>Il est écrit dans ce guide, donc tout le monde le connaît. L'application <strong>exige</strong>
+  d'en choisir un autre dès la première connexion : la fenêtre ne se ferme pas tant que ce n'est pas
+  fait, et rien d'autre n'est accessible avant. C'est voulu.</p>
+</div>
+
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Saisissez l'adresse et le mot de passe ci-dessus, puis <em>Se connecter</em>.</li>
+    <li>La fenêtre de changement de mot de passe s'ouvre aussitôt. Choisissez un mot de passe solide et notez-le hors de l'application.</li>
+    <li>Le menu complet apparaît. Allez dans <span class="chemin-ui">Paramètres → Utilisateurs</span> pour créer les comptes du personnel (voir le chapitre 4).</li>
+  </ol>
+</div>
+
+<h3>1.3 — Les connexions suivantes</h3>
+<p>Chaque employé a son propre compte. L'adresse et le mot de passe lui sont remis par le gérant
+ou par la direction. Une fois qu'un compte s'est connecté <strong>au moins une fois en ligne</strong>
+sur un poste, il pourra s'y reconnecter plus tard même sans réseau.</p>
+
+<!-- ============ 2. COMPRENDRE ============ -->
+<h2><span class="num">2.</span>Comprendre l'application</h2>
+<p class="chapeau">QuincaPro ne ressemble pas à un site web. Tout ce que vous voyez est déjà sur
+le PC : l'application travaille d'abord en local, et discute avec le serveur quand elle le peut.
+Trois conséquences qu'il faut connaître.</p>
+
+<h3>2.1 — La coupure de réseau n'arrête pas le travail</h3>
+<p>Si la connexion tombe, un bandeau annonce <strong>« Hors ligne »</strong> et la caisse continue
+exactement comme avant : on vend, on encaisse, on entre du stock, on pointe les présences. Les
+écritures s'accumulent sur le poste. Dès que le réseau revient, elles partent toutes seules.</p>
+
+<div class="note">
+  <span class="titre">À savoir</span>
+  <p>« Hors ligne » n'est pas une panne, c'est un état de marche normal. Il ne faut ni redémarrer
+  l'application, ni réessayer, ni appeler quelqu'un. On continue.</p>
+</div>
+
+<h3>2.2 — Le badge de synchronisation</h3>
+<p>En haut à droite de chaque écran, un badge dit où en est l'échange avec le serveur.</p>
+
+<table>
+  <tr><th>Ce qui s'affiche</th><th>Ce que cela veut dire</th><th>Que faire</th></tr>
+  <tr><td><strong>Synchronisé il y a N min</strong></td><td>Tout est à jour des deux côtés.</td><td>Rien.</td></tr>
+  <tr><td><strong>Hors ligne</strong></td><td>Pas de réseau. Les écritures attendent sur le poste.</td><td>Continuer à travailler.</td></tr>
+  <tr><td><strong>N opération(s) en attente</strong></td><td>Le réseau est là, l'envoi est en cours.</td><td>Patienter, cela se vide seul.</td></tr>
+  <tr><td><strong>Écriture mise de côté</strong></td><td>Le serveur a refusé une écriture et en donne la raison.</td><td>Un responsable décide : réessayer ou abandonner.</td></tr>
+</table>
+
+<h3>2.3 — Verrouiller le poste au lieu de se déconnecter</h3>
+<p>Le bouton en bas du menu <strong>verrouille</strong> le poste : le mot de passe sera redemandé
+pour reprendre. Les écritures non envoyées restent en place et partiront quand même. C'est le geste
+à faire en quittant la caisse — pas une déconnexion qui viderait le poste.</p>
+<p>Un poste verrouillé peut être <strong>déverrouillé par un autre compte de la même filiale</strong>,
+même sans réseau — à condition que ce compte se soit déjà connecté une fois sur cette machine. Un
+relais de caisse ne dépend donc pas d'Internet.</p>
+
+<h3>2.4 — L'heure du poste compte</h3>
+<p>Un ticket mal daté ne se rattrape pas. À chaque connexion, l'application compare l'heure du PC
+à celle du serveur.</p>
+<ul>
+  <li><strong>Plus de 2 minutes d'écart</strong> — un bandeau avertit : faites régler l'heure de Windows.</li>
+  <li><strong>Plus de 15 minutes d'écart</strong> — la caisse <strong>ne s'ouvre pas</strong> tant que l'heure n'est pas corrigée.</li>
+</ul>
+
+<h3>2.5 — Douze mois sur le poste, tout sur le serveur</h3>
+<p>Le poste ne garde que les douze derniers mois d'activité, pour rester rapide. Font exception
+toutes les pièces <strong>non soldées</strong> : une créance impayée, une commande ouverte, une
+livraison à faire, un transfert en transit restent présents quel que soit leur âge. Les écrans
+d'historique le rappellent.</p>
+
+<!-- ============ 3. SE REPÉRER ============ -->
+<h2><span class="num">3.</span>Se repérer</h2>
+<p class="chapeau">Tous les écrans sont bâtis pareil : le menu à gauche, le périmètre en haut du
+menu, le contenu au centre, le badge de synchronisation en haut à droite.</p>
+
+<h3>3.1 — Le menu</h3>
+<p>Le menu est rangé en six familles. <strong>Vous ne voyez que ce que votre rôle vous ouvre</strong> :
+un caissier n'a ni Employés ni Paramètres, et c'est normal.</p>
+
+<table>
+  <caption>Les six familles du menu et ce qu'elles contiennent</caption>
+  <tr><th>Famille</th><th>Entrées</th></tr>
+  <tr><td class="chemin">Pilotage</td><td>Consolidation (le tableau de bord)</td></tr>
+  <tr><td class="chemin">Exploitation</td><td>Point de Vente · Ventes · Catalogue · Stock</td></tr>
+  <tr><td class="chemin">Tiers &amp; Finances</td><td>Clients · Fournisseurs · Trésorerie · Livraisons</td></tr>
+  <tr><td class="chemin">Ressources humaines</td><td>Employés</td></tr>
+  <tr><td class="chemin">Rapports &amp; Sécurité</td><td>Historiques · Audit</td></tr>
+  <tr><td class="chemin">Administration</td><td>Paramètres</td></tr>
+</table>
+
+<p>Les entrées <strong>Stock</strong>, <strong>Clients</strong>, <strong>Fournisseurs</strong>,
+<strong>Trésorerie</strong>, <strong>Employés</strong>, <strong>Historiques</strong> et
+<strong>Paramètres</strong> se déplient en sous-écrans. C'est là que se trouve le détail du travail.</p>
+
+<h3>3.2 — Le périmètre</h3>
+<p>Tout en haut du menu, le sélecteur de périmètre indique sur quelle filiale vous travaillez.</p>
+<ul>
+  <li>Un <strong>gérant, caissier ou magasinier</strong> ne voit que sa filiale : le sélecteur ne propose rien d'autre.</li>
+  <li>Un compte de <strong>direction</strong> peut choisir une filiale précise ou <strong>Groupe (consolidé)</strong>, qui additionne tout.</li>
+</ul>
+
+<h3>3.3 — Les boutons que l'on retrouve partout</h3>
+<table>
+  <tr><th>Bouton</th><th>Ce qu'il fait</th></tr>
+  <tr><td class="chemin">Imprimer / PDF</td><td>Sort un document A4 propre du périmètre affiché — pas la copie de l'écran. « Enregistrer au format PDF » dans la boîte d'impression donne un PDF.</td></tr>
+  <tr><td class="chemin">Exporter Excel</td><td>Produit un classeur du même périmètre. Windows demande où l'enregistrer.</td></tr>
+  <tr><td class="chemin">Filtres</td><td>Période, dépôt, famille, recherche… Ce que vous filtrez à l'écran est exactement ce qui sortira à l'impression et à l'export.</td></tr>
+</table>
+
+<!-- ============ 4. PARAMÈTRES ============ -->
+<h2><span class="num">4.</span>Paramètres — rôles et utilisateurs</h2>
+<p class="chapeau">C'est ici que l'on décide qui a le droit de quoi. Deux onglets :
+<strong>Rôles &amp; permissions</strong> définit les droits, <strong>Utilisateurs</strong> dit qui
+porte quel rôle.</p>
+
+<h3>4.1 — Le principe en une phrase</h3>
+<p>Un <strong>rôle</strong> est un paquet de droits auquel on donne un nom (« Chef de rayon »,
+« Contrôleur de gestion »). On l'affecte à un compte, et ce compte ne voit plus que ce que son rôle
+ouvre. Cinq rôles sont déjà livrés ; vous pouvez en créer autant que vous voulez.</p>
+
+<h3>4.2 — Créer un rôle sur mesure</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Allez dans <span class="chemin-ui">Paramètres → Rôles &amp; permissions</span>.</li>
+    <li>Cliquez <em>Nouveau rôle</em>. Donnez-lui un nom en clair : « Chef de rayon ». Le code technique (<code>role_chef_de_rayon</code>) se remplit tout seul.</li>
+    <li>Choisissez la <strong>portée des données</strong> : <em>Gérant de filiale</em>, <em>Caissier</em>, <em>Magasinier</em> (une seule filiale) ou <em>Directeur</em> (toutes les filiales). C'est ce qui décide des données que le poste recevra.</li>
+    <li>Cochez les permissions, module par module. Chaque ligne dit en clair ce qu'elle ouvre.</li>
+    <li>Enregistrez. Le rôle est disponible immédiatement pour l'affectation.</li>
+  </ol>
+</div>
+
+<div class="note">
+  <span class="titre">Portée et permissions, deux choses différentes</span>
+  <p>La <strong>portée</strong> décide de ce que le poste <em>reçoit</em> (une filiale, ou toutes).
+  Les <strong>permissions</strong> décident de ce que la personne <em>peut faire</em> avec. On peut
+  avoir la portée d'un gérant sans avoir le droit d'annuler une vente.</p>
+</div>
+
+<h3>4.3 — Affecter un rôle à quelqu'un</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Allez dans <span class="chemin-ui">Paramètres → Utilisateurs</span>.</li>
+    <li>Cliquez sur la personne concernée.</li>
+    <li>Choisissez son rôle dans la liste, et sa filiale si le rôle en demande une.</li>
+    <li>Enregistrez. Au prochain démarrage de son poste, son menu suit son nouveau rôle.</li>
+  </ol>
+</div>
+
+<h3>4.4 — Les garde-fous</h3>
+<ul>
+  <li>Les <strong>cinq rôles livrés</strong> ne se suppriment pas et leur code ne se change pas ; leurs permissions, si.</li>
+  <li>Un rôle <strong>porté par au moins un compte</strong> ne peut pas être supprimé. Désaffectez d'abord.</li>
+  <li>Il doit toujours rester <strong>au moins un superadministrateur actif</strong> : l'application refuse l'opération qui vous enfermerait dehors.</li>
+  <li>Seul le superadministrateur peut <strong>définir les rôles</strong>. Le directeur général affecte, mais ne redéfinit pas les droits.</li>
+</ul>
+
+<div class="alerte">
+  <span class="titre">Si l'écran des rôles est vide</span>
+  <p>Un bandeau orange annonce que les rôles ne sont pas encore arrivés sur ce poste. Vous travaillez
+  alors avec les droits de votre profil, et tout le reste fonctionne. C'est une affaire de
+  synchronisation côté serveur, à signaler à l'administrateur — pas une panne de votre poste.</p>
+</div>
+
+<!-- ============ 5. POINT DE VENTE ============ -->
+<h2><span class="num">5.</span>Le point de vente</h2>
+<p class="chapeau">L'écran le plus utilisé de la maison. Le catalogue à gauche, le ticket en cours
+à droite. Tout se fait au clavier si on le souhaite.</p>
+
+<h3>5.1 — Encaisser une vente</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Ouvrez <span class="chemin-ui">Point de Vente</span>. Le dépôt de vente et la caisse sont rappelés en haut.</li>
+    <li>Appuyez sur <span class="touche">F2</span> pour aller dans la recherche. Tapez le code ou le nom de l'article, ou passez la douchette sur le code-barres.</li>
+    <li><span class="touche">Entrée</span> ajoute l'article si le code est exact, ou si la recherche ne donne qu'un seul résultat. Sinon, cliquez la carte voulue.</li>
+    <li>Ajustez les quantités dans le ticket. Accordez une remise si votre rôle le permet.</li>
+    <li>Rattachez un client si la vente est à crédit ou s'il faut une facture nominative.</li>
+    <li>Appuyez sur <span class="touche">F11</span> pour encaisser. Choisissez le mode de règlement, saisissez le montant reçu : le rendu de monnaie s'affiche.</li>
+    <li>Imprimez le <strong>ticket 80 mm</strong> ou la <strong>facture A4</strong>, puis <span class="touche">F10</span> pour la vente suivante.</li>
+  </ol>
+</div>
+
+<h3>5.2 — Les raccourcis</h3>
+<table>
+  <tr><th>Touche</th><th>Effet</th></tr>
+  <tr><td><span class="touche">F2</span></td><td>Aller dans la recherche d'article (et sélectionner ce qui s'y trouve).</td></tr>
+  <tr><td><span class="touche">F10</span></td><td>Nouvelle vente — vide le ticket en cours.</td></tr>
+  <tr><td><span class="touche">F11</span></td><td>Encaisser — ouvre la fenêtre de règlement.</td></tr>
+</table>
+
+<h3>5.3 — Les modes de règlement</h3>
+<table>
+  <tr><th>Mode</th><th>Effet sur la caisse et le compte client</th></tr>
+  <tr><td class="chemin">Espèces</td><td>Entre en caisse immédiatement.</td></tr>
+  <tr><td class="chemin">Mobile Money</td><td>Entre en caisse, mode de paiement distingué dans le journal.</td></tr>
+  <tr><td class="chemin">Virement</td><td>Entre en caisse, mode de paiement distingué dans le journal.</td></tr>
+  <tr><td class="chemin">Crédit</td><td>N'entre pas en caisse : la somme devient une <strong>créance</strong> sur le client. Un client doit donc être rattaché.</td></tr>
+</table>
+
+<h3>5.4 — Deux formats d'impression</h3>
+<p>Le <strong>ticket 80 mm</strong> part sur l'imprimante thermique ; la <strong>facture A4</strong>
+part sur la bureautique, avec le cartouche client, le détail des lignes, le montant en toutes
+lettres et les cases de règlement. Le format habituel du poste se choisit dans les réglages du
+point de vente : c'est lui qui devient le bouton principal.</p>
+
+<div class="note">
+  <span class="titre">Réimprimer plus tard</span>
+  <p><span class="chemin-ui">Ventes</span> → ouvrez le ticket → <em>Facture A4</em>. Une vente annulée
+  ressort avec le bandeau <strong>« FACTURE ANNULÉE »</strong> : on ne peut pas s'en servir comme
+  d'une facture valable.</p>
+</div>
+
+<h3>5.5 — Stock insuffisant</h3>
+<p>Si la quantité manque, l'application le dit. Selon votre rôle, soit la vente est bloquée, soit
+vous pouvez passer outre — le stock devient alors négatif et la régularisation est attendue. Ce
+droit (<em>Vendre malgré un stock insuffisant</em>) s'accorde rôle par rôle.</p>
+
+<h3>5.6 — Le code du poste</h3>
+<p><span class="chemin-ui">Point de Vente → Changer</span> affiche le <strong>code du poste</strong>,
+tiré une fois par machine. Il entre dans les numéros de pièces et garantit que deux caisses ne
+tirent jamais le même numéro. Collez-le sur l'unité centrale : il sert au dépannage.</p>
+
+<!-- ============ 6. VENTES & CATALOGUE ============ -->
+<h2><span class="num">6.</span>Ventes et catalogue</h2>
+
+<h3>6.1 — Ventes</h3>
+<p><span class="chemin-ui">Ventes</span> liste les tickets de la période, avec le récapitulatif de
+caisse en bas : chiffre d'affaires, encaissé ventilé par mode de paiement, vendu à crédit, ventes
+en attente de validation, et ventes annulées — hors totaux.</p>
+<ul>
+  <li><strong>Ouvrir un ticket</strong> montre son détail et permet de le rééditer.</li>
+  <li><strong>Valider</strong> une vente en attente, si votre rôle l'autorise.</li>
+  <li><strong>Annuler</strong> une vente validée remet la marchandise en stock et solde la créance. Droit distinct, rarement accordé.</li>
+  <li><em>Imprimer / PDF</em> sort le journal des ventes A4, avec emplacement de visa.</li>
+</ul>
+
+<h3>6.2 — Catalogue</h3>
+<p><span class="chemin-ui">Catalogue</span> tient les articles de la filiale : code, désignation,
+famille, prix de vente, seuils de stock.</p>
+<ul>
+  <li><strong>Détail</strong> d'un article : stock par dépôt, activité commerciale, et <em>Imprimer la fiche</em>.</li>
+  <li><strong>Modifier les prix</strong> est un droit à part : les prix peuvent s'afficher sans pouvoir se changer.</li>
+  <li><strong>Importer Excel</strong> charge un export de l'ancien logiciel. Le nombre d'articles importés est annoncé, et chaque ligne rejetée est expliquée.</li>
+  <li><em>Imprimer / PDF</em> sort le catalogue complet, qui se poursuit de page en page.</li>
+</ul>
+
+<div class="note">
+  <span class="titre">Une limite connue</span>
+  <p>La recherche ne tient pas compte des accents : « koné » et « kone » ne donnent pas le même
+  résultat. Ce n'est pas un défaut de Windows, c'est une limite de cette version.</p>
+</div>
+
+<!-- ============ 7. STOCK ============ -->
+<h2><span class="num">7.</span>Le stock</h2>
+<p class="chapeau">Neuf sous-écrans, un par geste du magasin. Chacun produit une pièce qui
+s'imprime et s'exporte.</p>
+
+<table>
+  <caption>Les neuf sous-écrans de Stock</caption>
+  <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
+  <tr><td class="chemin">Suivi de stock</td><td>L'état des quantités, dépôt par dépôt, avec la valeur au coût moyen.</td></tr>
+  <tr><td class="chemin">Entrée</td><td>Faire entrer de la marchandise : achat fournisseur, retour client.</td></tr>
+  <tr><td class="chemin">Sortie / Casse</td><td>Déstockage, perte, casse. La sortie retient le coût du jour.</td></tr>
+  <tr><td class="chemin">Transfert entre dépôts</td><td>Déplacer de la marchandise d'un dépôt à l'autre, dans la même filiale.</td></tr>
+  <tr><td class="chemin">Transfert entre filiales</td><td>Envoyer de la marchandise à une autre filiale (voir 7.3).</td></tr>
+  <tr><td class="chemin">Inventaire</td><td>Saisir le comptage réel et constater l'écart.</td></tr>
+  <tr><td class="chemin">Production</td><td>Fabriquer un article à partir d'autres (assemblage, découpe).</td></tr>
+  <tr><td class="chemin">Mouvements</td><td>Le journal de tout ce qui est entré et sorti, filtrable.</td></tr>
+  <tr><td class="chemin">Alertes</td><td>Ce qui est en rupture ou sous le minimum, et ce qu'il faut commander.</td></tr>
+</table>
+
+<h3>7.1 — Enregistrer une entrée d'achat</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li><span class="chemin-ui">Stock → Entrée</span>. Choisissez le dépôt de destination.</li>
+    <li>Choisissez le <strong>fournisseur</strong> : c'est lui qui fera le lien avec son compte et sa facture d'achat.</li>
+    <li>Ajoutez les articles reçus, avec la quantité et le prix d'achat. Saisissez la remise de ligne s'il y en a une.</li>
+    <li>Validez. Le stock monte, le coût moyen du dépôt est recalculé <strong>sur le net de remise</strong>.</li>
+    <li>La <strong>facture d'achat A4</strong> s'imprime aussitôt : cartouche fournisseur, lignes valorisées, brut HT, remise, net HT, TVA, net à payer en toutes lettres.</li>
+  </ol>
+</div>
+<div class="note">
+  <span class="titre">Réception partielle</span>
+  <p>La facture d'achat ne porte que la marchandise <strong>réellement reçue</strong>. Une commande
+  livrée à moitié ne se facture pas en entier, et le document l'annonce.</p>
+</div>
+
+<h3>7.2 — Les alertes de stock et la liste de commande</h3>
+<p><span class="chemin-ui">Stock → Alertes</span> se filtre par nature (ruptures, stocks faibles,
+ou les deux), par dépôt, par famille et par recherche. <em>Imprimer / PDF</em> sort la
+<strong>liste de commande</strong> : pour chaque article, la quantité à commander, son coût estimé,
+le total à engager, et un visa du gérant.</p>
+<ul>
+  <li>La quantité à commander vise le <strong>stock maximum</strong> quand il est renseigné, sinon <strong>deux fois le minimum</strong>.</li>
+  <li>Un stock négatif creuse la commande d'autant, au lieu d'être ignoré.</li>
+  <li>Le document signale aussi les articles <strong>sans seuil</strong> : ceux-là ne déclencheront jamais d'alerte tant qu'on ne les renseigne pas.</li>
+</ul>
+
+<h3>7.3 — Transférer de la marchandise vers une autre filiale</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas — côté expéditeur</div>
+  <ol>
+    <li><span class="chemin-ui">Stock → Transfert entre filiales</span>. Choisissez la filiale destinataire, le dépôt de départ et le transporteur.</li>
+    <li>Ajoutez les articles et validez l'envoi. La marchandise <strong>sort immédiatement</strong> du dépôt de départ ; le bon reste <em>en transit</em>.</li>
+    <li>Imprimez le <strong>bon de transfert A4</strong> — il porte un cachet pour chaque filiale — et remettez-le au transporteur.</li>
+  </ol>
+</div>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas — côté destinataire</div>
+  <ol>
+    <li>Le bon apparaît dans le même écran, côté réceptions.</li>
+    <li>À l'arrivée de la marchandise, choisissez le dépôt d'entrée et validez la réception.</li>
+    <li>Si un article est inconnu du catalogue local, il est <strong>créé automatiquement</strong> avec le prix de vente de l'expéditeur, et l'écran vous annonce nommément les créations à vérifier.</li>
+  </ol>
+</div>
+<p>Tant que rien n'est arrivé, l'expéditeur peut <strong>annuler</strong> : la marchandise rentre au
+dépôt de départ. Le lien entre les deux catalogues se fait par le <strong>code article</strong> :
+veillez à ce qu'il soit le même d'une filiale à l'autre.</p>
+
+<h3>7.4 — Inventaire</h3>
+<p>On saisit le comptage réel ; l'application affiche l'écart avec le théorique et enregistre la
+régularisation. L'inventaire se retrouve ensuite dans <span class="chemin-ui">Historiques →
+Inventaires</span>.</p>
+
+<!-- ============ 8. CLIENTS ============ -->
+<h2><span class="num">8.</span>Clients</h2>
+<p class="chapeau">Six sous-écrans, du répertoire à la relance.</p>
+
+<table>
+  <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
+  <tr><td class="chemin">Répertoire</td><td>La liste des clients, avec leur solde.</td></tr>
+  <tr><td class="chemin">Nouveau client</td><td>Créer une fiche (code <code>CLI-</code> attribué automatiquement).</td></tr>
+  <tr><td class="chemin">Proforma à facture</td><td>Établir un devis, puis le transformer en vente quand le client confirme.</td></tr>
+  <tr><td class="chemin">Compte client</td><td>Le détail d'un compte : ventes, règlements, solde dû.</td></tr>
+  <tr><td class="chemin">Historique des versements</td><td>Tous les règlements reçus, filtrables par période.</td></tr>
+  <tr><td class="chemin">Relance clients</td><td>Qui doit quoi, depuis combien de temps, et comment le relancer.</td></tr>
+</table>
+
+<h3>8.1 — Encaisser un règlement client</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li><span class="chemin-ui">Clients → Compte client</span>, puis choisissez le client.</li>
+    <li>Cliquez <em>Encaisser un règlement</em>. Saisissez le montant et le mode.</li>
+    <li>Validez : la créance baisse, la caisse monte, et le <strong>reçu</strong> s'imprime avec le montant en toutes lettres.</li>
+  </ol>
+</div>
+
+<h3>8.2 — Relancer</h3>
+<p><span class="chemin-ui">Clients → Relance clients</span> classe les impayés par ancienneté.
+<em>Envoyer par e-mail</em> ouvre votre logiciel de messagerie avec l'objet et le corps déjà écrits.
+Si aucun logiciel de messagerie n'est configuré sur le poste, le bouton <em>Copier</em> met le texte
+dans le presse-papiers.</p>
+
+<!-- ============ 9. FOURNISSEURS ============ -->
+<h2><span class="num">9.</span>Fournisseurs</h2>
+
+<table>
+  <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
+  <tr><td class="chemin">Répertoire</td><td>La liste des fournisseurs et ce qu'on leur doit.</td></tr>
+  <tr><td class="chemin">Nouveau fournisseur</td><td>Créer une fiche (code <code>FOU-</code>), avec RC, CC, adresse et contact.</td></tr>
+  <tr><td class="chemin">Compte fournisseur</td><td>Le détail d'un compte : achats, règlements, solde dû.</td></tr>
+  <tr><td class="chemin">Historique des règlements</td><td>Tout ce qui a été payé, filtrable par période.</td></tr>
+  <tr><td class="chemin">Bons de commande</td><td>Passer une commande, la suivre, la réceptionner.</td></tr>
+  <tr><td class="chemin">Relance fournisseur</td><td>Les commandes en retard et le courrier de relance.</td></tr>
+</table>
+
+<h3>9.1 — Du bon de commande à la facture d'achat</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li><span class="chemin-ui">Fournisseurs → Bons de commande</span>, puis <em>Nouveau bon</em>.</li>
+    <li>Choisissez le fournisseur, ajoutez les articles et les quantités. Validez : le bon s'imprime en A4.</li>
+    <li>À l'arrivée de la marchandise, revenez sur le bon et <strong>réceptionnez</strong> — totalement ou partiellement.</li>
+    <li>La réception fait entrer le stock et produit la <strong>facture d'achat</strong>, rééditable depuis la fiche du fournisseur ou depuis le bon.</li>
+    <li>Le règlement se saisit dans <span class="chemin-ui">Compte fournisseur</span> et sort la caisse.</li>
+  </ol>
+</div>
+
+<!-- ============ 10. TRÉSORERIE ============ -->
+<h2><span class="num">10.</span>Trésorerie</h2>
+<p class="chapeau">Les caisses de la filiale, et tout ce qui y entre et en sort.</p>
+
+<table>
+  <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
+  <tr><td class="chemin">Liste des caisses</td><td>L'état des caisses : solde d'ouverture, entrées, sorties, solde de clôture, solde du jour.</td></tr>
+  <tr><td class="chemin">Versement</td><td>Un client dépose de l'argent sur son compte.</td></tr>
+  <tr><td class="chemin">Retrait</td><td>Sortie d'espèces de la caisse.</td></tr>
+  <tr><td class="chemin">Entrée en caisse</td><td>Une recette qui n'est pas une vente.</td></tr>
+  <tr><td class="chemin">Transfert inter caisse</td><td>Déplacer des fonds d'une caisse à l'autre, dans la filiale.</td></tr>
+  <tr><td class="chemin">Transfert inter filiale</td><td>Envoyer des fonds à une autre filiale.</td></tr>
+  <tr><td class="chemin">Dépense</td><td>Une sortie d'argent justifiée (carburant, transport, fourniture).</td></tr>
+</table>
+
+<h3>10.1 — L'état des caisses</h3>
+<p>Une ligne par caisse, le total en bas. Les filtres : recherche, caisses actives / fermées /
+mouvementées / à solde négatif, et période. <em>Imprimer / PDF</em> sort l'état A4 du périmètre
+retenu ; le journal d'une caisse s'exporte aussi en classeur.</p>
+<div class="note">
+  <span class="titre">Deux colonnes qui ne disent pas la même chose</span>
+  <p>Sur une période passée, le <strong>solde du jour</strong> et le <strong>solde de clôture</strong>
+  diffèrent. Les deux colonnes sont affichées exprès, pour que l'écart se lise.</p>
+</div>
+
+<h3>10.2 — Chaque mouvement sort son reçu</h3>
+<p>Versement, retrait, entrée, dépense : chacun imprime un reçu avec le montant en chiffres
+<strong>et en toutes lettres</strong>. Vérifiez que les deux concordent avant de faire signer.</p>
+
+<h3>10.3 — Transfert de fonds entre filiales</h3>
+<p>L'argent part de la caisse d'origine à l'envoi et entre dans celle de destination à la réception.
+Tant que le transfert est en transit, l'expéditeur peut l'annuler : la somme <strong>recrédite</strong>
+la caisse de départ.</p>
+
+<!-- ============ 11. LIVRAISONS & PERSONNEL ============ -->
+<h2><span class="num">11.</span>Livraisons et personnel</h2>
+
+<h3>11.1 — Livraisons</h3>
+<p><span class="chemin-ui">Livraisons</span> suit les bons de livraison à faire : ce qui est vendu
+mais pas encore sorti de la cour. Le nombre de bons en attente figure parmi les huit chiffres du
+tableau de bord — c'est un engagement pris envers un client.</p>
+
+<h3>11.2 — Employés</h3>
+<table>
+  <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
+  <tr><td class="chemin">Effectif</td><td>La liste du personnel de la filiale.</td></tr>
+  <tr><td class="chemin">Nouveau employé</td><td>Créer une fiche (code <code>EMP-</code>), avec photo et contrat PDF.</td></tr>
+  <tr><td class="chemin">Pointage</td><td>Saisir les présences, jour par jour. Fonctionne hors ligne.</td></tr>
+  <tr><td class="chemin">Paie / salaire</td><td>Établir les bulletins de la période.</td></tr>
+  <tr><td class="chemin">Paiement de salaire</td><td>Payer, et sortir la feuille d'émargement.</td></tr>
+</table>
+<p>Les avances sur salaire se déduisent de la paie. Les bulletins et l'émargement s'impriment en A4.</p>
+
+<!-- ============ 12. TABLEAU DE BORD ============ -->
+<h2><span class="num">12.</span>Tableau de bord</h2>
+<p class="chapeau">Le même écran pour un gérant et pour la direction — seul le périmètre change.
+<span class="chemin-ui">Pilotage → Consolidation</span>.</p>
+
+<h3>12.1 — La période</h3>
+<p>Un seul réglage commande tout l'écran : <strong>aujourd'hui</strong>, <strong>7 jours</strong>,
+<strong>ce mois</strong> ou <strong>12 mois</strong>. Chaque chiffre est comparé à la période
+précédente de <strong>même durée</strong> — la flèche et le pourcentage disent l'évolution.</p>
+
+<h3>12.2 — Les huit chiffres</h3>
+<table>
+  <tr><th>Indicateur</th><th>Ce qu'il dit</th></tr>
+  <tr><td class="chemin">Chiffre d'affaires TTC</td><td>Ce qui a été vendu sur la période.</td></tr>
+  <tr><td class="chemin">Marge commerciale</td><td>Le chiffre d'affaires moins le coût d'achat de ce qui est sorti.</td></tr>
+  <tr><td class="chemin">Résultat estimé</td><td>La marge moins les dépenses saisies. Une estimation, pas un résultat comptable.</td></tr>
+  <tr><td class="chemin">Trésorerie</td><td>Le disponible en caisse, toutes caisses du périmètre.</td></tr>
+  <tr><td class="chemin">Créances clients</td><td>Ce que les clients doivent à la maison.</td></tr>
+  <tr><td class="chemin">Dettes fournisseurs</td><td>Ce que la maison doit à ses fournisseurs.</td></tr>
+  <tr><td class="chemin">Valeur du stock</td><td>Le stock valorisé au coût moyen.</td></tr>
+  <tr><td class="chemin">Bons de livraison en attente</td><td>Ce qui est vendu mais pas encore livré.</td></tr>
+</table>
+
+<h3>12.3 — Les quatre graphiques</h3>
+<ul>
+  <li><strong>Chiffre d'affaires et marge</strong>, barre par barre sur la période.</li>
+  <li><strong>État du stock</strong> — en rupture, dormant, sous le minimum, actif — en valeur et en nombre d'articles. Un article est dit <em>dormant</em> après <strong>90 jours</strong> sans mouvement.</li>
+  <li><strong>Chiffre d'affaires par famille</strong> et <strong>par client</strong>, plus les articles les plus vendus.</li>
+  <li><strong>Ancienneté des impayés</strong> : 0–30, 31–60, 61–90 et plus de 90 jours.</li>
+</ul>
+<p>Un bandeau en haut rassemble les <strong>points de vigilance</strong> : ce qui réclame une
+décision aujourd'hui. L'écran entier s'imprime en A4, et la vue groupe s'exporte en Excel.</p>
+
+<div class="note">
+  <span class="titre">Chaque graphique a sa table</span>
+  <p>Sous chaque graphique, les mêmes chiffres sont donnés en tableau. Pour lire une valeur exacte,
+  ou pour la recopier, servez-vous du tableau plutôt que de viser la barre.</p>
+</div>
+
+<h3>12.4 — Gérant ou direction</h3>
+<p>Un <strong>gérant</strong> voit sa filiale. Un compte de <strong>direction</strong> choisit une
+filiale, ou <strong>Groupe (consolidé)</strong> : les chiffres s'additionnent, les taux se
+recalculent sur les totaux — ils ne sont jamais une moyenne de moyennes —, et une ligne par filiale
+permet de comparer.</p>
+
+<!-- ============ 13. HISTORIQUES & AUDIT ============ -->
+<h2><span class="num">13.</span>Historiques et audit</h2>
+
+<h3>13.1 — Historiques</h3>
+<p>Toutes les pièces déjà passées, réunies sous un même menu. Chaque section donne la même chose :
+une liste filtrée par période, par dépôt et par recherche, le total en bas,
+<em>Imprimer / PDF</em>, <em>Exporter Excel</em>, et la pièce d'origine qui se rouvre d'un clic
+pour être rééditée.</p>
+<div class="deux-col">
+<ul>
+  <li>Ventes</li>
+  <li>Commandes fournisseurs</li>
+  <li>Entrées en stock (achat)</li>
+  <li>Transferts inter-dépôt</li>
+  <li>Productions</li>
+  <li>Déstockages et casses</li>
+  <li>Inventaires</li>
+</ul>
+</div>
+<div class="note">
+  <span class="titre">L'historique relit, il ne saisit pas</span>
+  <p>On ne corrige pas une pièce depuis l'historique : on la retrouve, on la relit, on la réimprime.
+  La saisie reste dans son écran d'origine.</p>
+</div>
+
+<h3>13.2 — Audit</h3>
+<p><span class="chemin-ui">Audit</span> retrace qui a fait quoi, et quand. C'est le
+<strong>seul écran de l'application qui exige le réseau</strong> : le journal reste sur le serveur
+et ne descend pas sur les postes. Sans connexion, l'écran le dit clairement.</p>
+
+<!-- ============ 14. IMPRIMER & EXPORTER ============ -->
+<h2><span class="num">14.</span>Imprimer et exporter</h2>
+
+<h3>14.1 — Obtenir un PDF sans rien installer</h3>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Réglez d'abord vos filtres à l'écran : ce que vous voyez est ce qui sortira.</li>
+    <li>Cliquez <em>Imprimer / PDF</em>.</li>
+    <li>Dans la boîte d'impression de Windows, choisissez l'imprimante <strong>« Microsoft Print to PDF »</strong> (ou <em>Enregistrer au format PDF</em>).</li>
+    <li>Indiquez où enregistrer. C'est tout — aucun logiciel supplémentaire n'est nécessaire.</li>
+  </ol>
+</div>
+
+<h3>14.2 — Les documents produits</h3>
+<table>
+  <tr><th>Écran</th><th>Document</th></tr>
+  <tr><td class="chemin">Point de Vente</td><td>Ticket 80 mm · Facture A4</td></tr>
+  <tr><td class="chemin">Ventes</td><td>Journal des ventes A4 avec récapitulatif de caisse et visa</td></tr>
+  <tr><td class="chemin">Catalogue</td><td>Liste des articles · Fiche article</td></tr>
+  <tr><td class="chemin">Stock</td><td>État du stock · Liste de commande · Bons d'entrée, de sortie, de transfert (deux cachets)</td></tr>
+  <tr><td class="chemin">Clients</td><td>Facture proforma · Reçu de règlement · Relevé de compte · Lettre de relance</td></tr>
+  <tr><td class="chemin">Fournisseurs</td><td>Bon de commande · Facture d'achat · Relevé de compte</td></tr>
+  <tr><td class="chemin">Trésorerie</td><td>État des caisses · Journal de caisse · Reçus de mouvement</td></tr>
+  <tr><td class="chemin">Employés</td><td>Bulletins de paie · Feuille d'émargement</td></tr>
+  <tr><td class="chemin">Paramètres</td><td>Tableau des droits · Liste des comptes (deux visas)</td></tr>
+  <tr><td class="chemin">Consolidation</td><td>Tableau de bord A4</td></tr>
+</table>
+
+<h3>14.3 — Les codes-barres</h3>
+<p>Factures, reçus de caisse et fiches article portent un code-barres. Le code lu par la douchette
+est exactement celui imprimé en clair en dessous : en cas de doute, comparez.</p>
+
+<h3>14.4 — Exporter en Excel</h3>
+<p><em>Exporter Excel</em> produit un classeur du périmètre affiché, colonnes, remises et totaux
+compris. Windows demande où enregistrer le fichier — ce n'est pas un téléchargement silencieux.</p>
+
+<!-- ============ 15. QUE FAIRE SI ============ -->
+<h2><span class="num">15.</span>Que faire si…</h2>
+
+<table>
+  <caption>Les situations courantes et la bonne réponse</caption>
+  <tr><th>La situation</th><th>Ce qu'il faut faire</th></tr>
+  <tr>
+    <td><strong>Le bandeau dit « Hors ligne »</strong></td>
+    <td>Rien. Continuez à travailler : tout est enregistré sur le poste et partira seul au retour du réseau.</td>
+  </tr>
+  <tr>
+    <td><strong>Des opérations restent « en attente »</strong></td>
+    <td>C'est l'envoi en cours. Laissez le poste allumé et connecté ; la file se vide seule.</td>
+  </tr>
+  <tr>
+    <td><strong>Une écriture a été « mise de côté »</strong></td>
+    <td>Le serveur l'a refusée et affiche la raison en clair. Un responsable l'ouvre et décide : réessayer, ou abandonner. Elle n'est jamais perdue en silence.</td>
+  </tr>
+  <tr>
+    <td><strong>La caisse refuse de s'ouvrir</strong></td>
+    <td>L'heure du PC a plus de 15 minutes d'écart avec le serveur. Faites régler la date et l'heure de Windows, puis reconnectez-vous.</td>
+  </tr>
+  <tr>
+    <td><strong>Un menu a disparu</strong></td>
+    <td>Votre rôle ne l'ouvre pas. Demandez l'ajout de la permission correspondante à l'administrateur — le chapitre 4 explique où.</td>
+  </tr>
+  <tr>
+    <td><strong>Un bandeau orange parle des rôles</strong></td>
+    <td>Les rôles ne sont pas encore arrivés sur ce poste. Vous travaillez avec les droits de votre profil ; signalez-le à l'administrateur. Rien n'est bloqué.</td>
+  </tr>
+  <tr>
+    <td><strong>Windows refuse d'ouvrir l'installeur</strong></td>
+    <td><em>Informations complémentaires</em> → <em>Exécuter quand même</em>. L'application n'est pas signée auprès de Microsoft, c'est attendu.</td>
+  </tr>
+  <tr>
+    <td><strong>L'impression sort la page entière, menu compris</strong></td>
+    <td>C'est que le bouton <em>Imprimer / PDF</em> de l'écran n'a pas été utilisé — ne passez pas par l'impression du navigateur.</td>
+  </tr>
+  <tr>
+    <td><strong>« Envoyer par e-mail » ne fait rien</strong></td>
+    <td>Aucun logiciel de messagerie n'est configuré sur le poste. Servez-vous du bouton <em>Copier</em> et collez dans votre webmail.</td>
+  </tr>
+  <tr>
+    <td><strong>La recherche ne trouve pas « Koné »</strong></td>
+    <td>Tapez sans accent : « kone ». La recherche ne gère pas encore les accents.</td>
+  </tr>
+  <tr>
+    <td><strong>Un poste est verrouillé et son titulaire est absent</strong></td>
+    <td>N'importe quel compte de la même filiale peut le déverrouiller, même sans réseau, s'il s'est déjà connecté une fois sur cette machine.</td>
+  </tr>
+  <tr>
+    <td><strong>Le stock est négatif</strong></td>
+    <td>Une vente est passée malgré un stock insuffisant. Régularisez par un inventaire ou une entrée.</td>
+  </tr>
+</table>
+
+<!-- ============ 16. ANNEXES ============ -->
+<h2><span class="num">16.</span>Annexes</h2>
+
+<h3>16.1 — Les cinq rôles livrés</h3>
+<table>
+  <tr><th>Rôle</th><th>Portée</th><th>Ce qu'il ouvre</th></tr>
+  <tr><td class="chemin">Superadministrateur</td><td>Toutes filiales</td><td>Tout, y compris la définition des rôles. Compte d'administration, pas de travail quotidien.</td></tr>
+  <tr><td class="chemin">Directeur général</td><td>Toutes filiales</td><td>Tout, <strong>sauf</strong> définir les rôles. Il affecte, il ne redéfinit pas les droits.</td></tr>
+  <tr><td class="chemin">Gérant de filiale</td><td>Sa filiale</td><td>Toute l'exploitation de sa filiale, sans les paramètres.</td></tr>
+  <tr><td class="chemin">Caissier</td><td>Sa filiale</td><td>Encaisser, consulter ventes, catalogue et stock, tenir les clients et leurs règlements, voir la caisse.</td></tr>
+  <tr><td class="chemin">Magasinier</td><td>Sa filiale</td><td>Articles et stock de bout en bout, transferts, production, livraisons, consultation fournisseurs.</td></tr>
+</table>
+
+<h3 class="suite">16.2 — Les permissions, module par module</h3>
+<table>
+  <tr><th>Module</th><th>Permissions</th></tr>
+  <tr><td class="chemin">Pilotage</td><td>Consulter la consolidation</td></tr>
+  <tr><td class="chemin">Ventes et caisse</td><td>Encaisser au point de vente · Consulter les ventes · Valider une vente en attente · Annuler une vente validée · Accorder une remise · Vendre malgré un stock insuffisant</td></tr>
+  <tr><td class="chemin">Catalogue</td><td>Consulter le catalogue · Créer et modifier les articles · Modifier les prix de vente</td></tr>
+  <tr><td class="chemin">Stock</td><td>Consulter les stocks · Enregistrer une entrée · Enregistrer une sortie · Saisir un inventaire · Transférer entre dépôts · Transférer entre filiales · Enregistrer une production · Gérer les dépôts</td></tr>
+  <tr><td class="chemin">Clients</td><td>Consulter · Créer et modifier · Encaisser un règlement · Établir une facture proforma</td></tr>
+  <tr><td class="chemin">Fournisseurs</td><td>Consulter · Créer et modifier · Passer et réceptionner une commande · Payer un fournisseur</td></tr>
+  <tr><td class="chemin">Trésorerie</td><td>Consulter les caisses et les journaux · Saisir une recette ou une dépense · Gérer les caisses · Transférer des fonds entre filiales</td></tr>
+  <tr><td class="chemin">Livraisons</td><td>Consulter · Préparer et suivre</td></tr>
+  <tr><td class="chemin">Personnel</td><td>Consulter · Créer et modifier les fiches · Pointer les présences · Établir et payer les salaires</td></tr>
+  <tr><td class="chemin">Rapports et surveillance</td><td>Consulter les historiques · Consulter le journal d'audit · Décider du sort d'une écriture refusée</td></tr>
+  <tr><td class="chemin">Paramètres</td><td>Ouvrir les paramètres · Affecter les rôles et activer les comptes · Définir les rôles et leurs permissions</td></tr>
+</table>
+
+<h3>16.3 — Raccourcis clavier</h3>
+<table>
+  <tr><th>Touche</th><th>Écran</th><th>Effet</th></tr>
+  <tr><td><span class="touche">F2</span></td><td>Point de vente</td><td>Aller dans la recherche d'article</td></tr>
+  <tr><td><span class="touche">F10</span></td><td>Point de vente</td><td>Nouvelle vente</td></tr>
+  <tr><td><span class="touche">F11</span></td><td>Point de vente</td><td>Encaisser</td></tr>
+  <tr><td><span class="touche">Entrée</span></td><td>Recherche d'article</td><td>Ajouter le code exact, ou le résultat unique</td></tr>
+</table>
+
+<h3>16.4 — Où sont les données</h3>
+<p>Sur chaque poste, la base locale se trouve dans
+<code>%APPDATA%\com.ciadev.quinca-pro</code>. Elle est reconstruite depuis le serveur à la première
+connexion : on ne la sauvegarde pas, on ne la copie pas d'un poste à l'autre. La sauvegarde, c'est
+le serveur.</p>
+
+<div class="alerte">
+  <span class="titre">Les trois règles à retenir</span>
+  <p><strong>1.</strong> Hors ligne, on continue — rien ne se perd.<br />
+  <strong>2.</strong> On verrouille le poste, on ne le déconnecte pas.<br />
+  <strong>3.</strong> Ce qui est filtré à l'écran est ce qui sort à l'impression.</p>
+</div>
+
+<div class="note" style="margin-top:8mm">
+  <span class="titre">Ce guide</span>
+  <p>Il décrit la version <strong>0.2.0</strong> du 20 octobre 2026. Les écrans évoluent : en cas de
+  différence entre ce guide et l'application, c'est l'application qui a raison — signalez l'écart
+  pour que le guide soit repris.</p>
+</div>
+
+</body>
+</html>
