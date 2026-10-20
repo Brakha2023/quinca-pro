@@ -4,15 +4,16 @@ Ce que chaque livraison apporte, et ce qu'il faut faire sur le serveur avant de 
 postes. Le plus récent en premier.
 
 Le projet n'est pas encore versionné par étiquettes Git : les sections ci-dessous correspondent aux
-**installeurs Windows réellement produits**. Au prochain installeur, pensez à passer
-`apps/desktop/package.json` en `0.2.0` et à dater une section ici.
+**installeurs Windows réellement produits**. À chaque installeur, monter la version dans
+`apps/desktop/package.json`, `src-tauri/tauri.conf.json` et `src-tauri/Cargo.toml` — la page de
+connexion affiche ce numéro —, puis dater une section ici.
 
 Conventions : **Ajouté** · **Modifié** · **Corrigé** · **Base de données** (à appliquer avant de
 déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
-## À venir — pas encore dans un installeur
+## 0.2.0 — 20 octobre 2026
 
 Six défauts d'architecture local-first relevés en audit, traités l'un après l'autre. Aucun n'était
 visible à l'écran ; tous pouvaient faire perdre des données.
@@ -151,6 +152,9 @@ visible à l'écran ; tous pouvaient faire perdre des données.
 - Les trois vérifications écrites en dur dans l'interface — valider une vente, vendre malgré un stock
   insuffisant, décider du sort d'une écriture refusée — deviennent des permissions (`ventes.valider`,
   `ventes.forcer_stock`, `sync.decider`) : elles se retirent ou s'accordent rôle par rôle.
+- **Page de connexion.** La mention « Architecture PowerSync · Local-First » laisse la place aux
+  drapeaux des pays où la maison et ses fournisseurs travaillent. Le numéro de version affiché vient
+  désormais du manifeste : il ne peut plus mentir.
 
 ### Corrigé
 
