@@ -140,7 +140,13 @@ const ACCEPTE = { status: 201, contentType: 'application/json', body: '' };
   // +2 : l'article refusé à l'instant, et celui resté en file depuis la panne —
   // le serveur le refuse maintenant définitivement, il rejoint donc le lot.
   const attendu = compteAvant + 2;
-  await badge.locator(`text=${attendu} écriture`).waitFor({ timeout: 5000 });
+  // Le compte vient d'une requête vivante, derrière une boucle d'envoi : il ne
+  // revient pas dans un délai fixe. On attend l'état voulu, pas un chrono — un
+  // poste chargé mettait le scénario en échec sans que rien ne soit cassé.
+  await page.waitForFunction(
+    (n) => (document.querySelector('[data-testid=etat-sync]')?.textContent ?? '').includes(`${n} écriture`),
+    attendu,
+  );
   verifier(true, `bandeau mis à jour sans rechargement (${compteAvant} → ${attendu}) : un refus survenu pendant le travail se voit aussitôt`);
   const resteEnFile = await page.evaluate(async () => {
     const { countPendingUploads } = await import('/src/infrastructure/powersync/database.ts');

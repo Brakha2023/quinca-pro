@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { PrinterIcon } from '@heroicons/react/24/outline';
 import { formaterFcfa } from '../../../core/commun/prix';
 import { fenetrePilotage, type Periode } from '../../../core/pilotage';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
+import { usePermissions } from '../../auth/usePermissions';
 import SelecteurPeriode from '../../features/pilotage/SelecteurPeriode';
 import TableauDeBord from '../../features/pilotage/TableauDeBord';
 import TableauDeBordDocument from '../../features/pilotage/TableauDeBordDocument';
@@ -17,9 +19,16 @@ import { formaterDateHeure } from '../../features/ventes/VenteDetailsModal';
  * filiale — mêmes chiffres, mêmes calculs, même disposition. S'y ajoutent les
  * deux listes qui n'ont de sens qu'au comptoir : ce qui s'est vendu, et ce qui
  * vient d'être encaissé.
+ *
+ * **Un directeur arrive ici sans filiale choisie** : c'est l'écran d'après la
+ * connexion, et son périmètre est le groupe. On l'envoie donc à la
+ * consolidation, qui est exactement ce tableau de bord sur toutes les filiales.
+ * Celui qui a la vue la plus large ne doit pas être celui qui voit une page
+ * vide.
  */
 export default function DashboardPage() {
-  const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
+  const { filialeId, filiale, filiales, estVueConsolidee, setFilialeId } = useFilialeCourante();
+  const { peut, isLoading: permissionsEnCours } = usePermissions();
   const [periode, setPeriode] = useState<Periode>('MOIS');
   const [apercu, setApercu] = useState(false);
 
@@ -27,12 +36,41 @@ export default function DashboardPage() {
   const lecture = useTableauDeBord(fenetre, filialeId);
   const { ventes } = useVentes(filialeId, { jour: new Date().toISOString().slice(0, 10), limite: 8 });
 
+  // Périmètre « Groupe » : la consolidation *est* le tableau de bord de ce
+  // périmètre. On attend d'avoir lu les permissions avant de trancher, sans
+  // quoi on renverrait un directeur vers un écran qu'on lui refuserait ensuite.
+  if (estVueConsolidee && !permissionsEnCours && peut('consolidation.lire')) {
+    return <Navigate to="/consolidation" replace />;
+  }
+
   if (!filialeId) {
     return (
-      <div className="rounded-xl border border-neutral-200 bg-white py-16 text-center text-neutral-400 shadow-sm">
-        {estVueConsolidee
-          ? <p className="text-lg">Vue consolidée : voir la page Consolidation, ou sélectionnez une filiale.</p>
-          : <p>Profil utilisateur en cours de synchronisation…</p>}
+      <div className="rounded-xl border border-neutral-200 bg-white px-6 py-16 text-center shadow-sm">
+        {!estVueConsolidee ? (
+          <p className="text-neutral-400">Profil utilisateur en cours de synchronisation…</p>
+        ) : filiales.length === 0 ? (
+          <p className="text-neutral-400">Les filiales ne sont pas encore arrivées sur ce poste…</p>
+        ) : (
+          <>
+            {/* Directeur sans droit de consolidation : on ne le laisse pas
+                devant une phrase, on lui donne les filiales à ouvrir. */}
+            <p className="text-lg text-neutral-700">Choisissez la filiale à ouvrir.</p>
+            <p className="mt-1 text-sm text-neutral-500">La vue d'ensemble du groupe ne vous est pas ouverte.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {filiales.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFilialeId(f.id)}
+                  className="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-700 hover:border-primary-300 hover:bg-primary-50"
+                  data-testid={`ouvrir-filiale-${f.code}`}
+                >
+                  {f.nom}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     );
   }

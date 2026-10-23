@@ -74,6 +74,18 @@ const ACCEPTE = { status: 200, contentType: 'application/json', body: '[]' };
   verifier(true, 'table absente : signalée sans recharger l’application');
 
   console.log('Hors ligne : on ne conclut rien, et on n’oublie rien');
+  // Le contrôle précédent sonde une trentaine de tables par paquets, et le
+  // bandeau parle dès la première réponse qui l'intéresse : des sondes sont
+  // encore en vol. Couper le réseau maintenant ferait compter une sonde
+  // d'avant comme une sonde tentée hors ligne. On attend que le flot se taise.
+  const flotTari = async () => {
+    let compte = -1;
+    while (compte !== sondes.length) {
+      compte = sondes.length;
+      await page.waitForTimeout(400);
+    }
+  };
+  await flotTari();
   await page.context().setOffline(true);
   const avant = sondes.length;
   await page.locator('[data-testid=reverifier-schema]').click();
