@@ -250,6 +250,30 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
   verifier(feuille.length === 2 && bouake['CA TTC'] === 6000 && bouake.Marge === 2000,
     'export Excel : chaque filiale relue depuis le classeur');
 
+  console.log('Le périmètre commande l’écran');
+  // Un sélecteur nommé « Périmètre » doit changer ce qu'on regarde : tant qu'il
+  // ne le faisait pas, un directeur changeait de filiale sans rien voir bouger.
+  const attendreCa = (valeur) => page.waitForFunction(
+    (v) => document.querySelector('[data-testid=kpi-ca-valeur]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes(v),
+    String(valeur),
+  );
+  const piedGroupe = async () => montant(await texteDe(page, '[data-testid=total-groupe]'));
+
+  await page.locator('[data-testid=filiale-BKE]').click();
+  await attendreCa(6000);
+  verifier((await texteDe(page, 'main h1')) === 'Filiale Bouaké', 'clic sur une ligne : l’écran se réduit à cette filiale');
+  verifier(await valeur('kpi-ca') === '6000F', 'et ses chiffres remplacent ceux du groupe');
+  verifier((await piedGroupe()).includes('36000F'), 'la ligne de pied reste celle du groupe : la filiale se situe dans l’ensemble');
+
+  await page.locator('[data-testid=filiale-ABJ]').click();
+  await attendreCa(30000);
+  verifier(await valeur('kpi-ca') === '30000F', 'changer de filiale change les chiffres');
+
+  await page.locator('[data-testid=total-groupe]').click();
+  await attendreCa(36000);
+  verifier((await texteDe(page, 'main h1')) === 'Vue consolidée — Groupe', 'la ligne de total ramène au groupe');
+  verifier(await valeur('kpi-ca') === '36000F', 'et le groupe additionne de nouveau les deux filiales');
+
   console.log('Sans la permission');
   const { browser: b2, page: p2, erreurs: e2 } = await ouvrirNavigateur();
   await simulerSession(p2, { permissions: ['ventes.lire'] });

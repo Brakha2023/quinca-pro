@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownTrayIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { formaterFcfa, formaterPourcentage } from '../../../core/commun/prix';
-import { fenetrePilotage, type Periode } from '../../../core/pilotage';
+import { consolider, fenetrePilotage, type Periode } from '../../../core/pilotage';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { usePermissions } from '../../auth/usePermissions';
@@ -12,11 +12,16 @@ import { useTableauDeBord } from '../../features/pilotage/hooks';
 import { useNotifier } from '../../notifications/useNotifier';
 
 /**
- * Tableau de bord du directeur : le groupe entier.
+ * Écran de pilotage. **Il suit le périmètre choisi dans le menu** : le groupe
+ * entier, ou une filiale.
  *
- * Même écran que celui du gérant, sur toutes les filiales à la fois — avec, en
- * plus, ce qui n'a de sens qu'à l'échelle du groupe : les filiales comparées
- * entre elles, et le détail ligne à ligne d'où l'on ouvre l'une d'elles.
+ * Le sélecteur s'appelle « Périmètre » et propose « Groupe (consolidé) » au
+ * milieu des filiales : il doit donc commander cet écran. Tant qu'il ne le
+ * faisait pas, changer de filiale ne changeait rien à l'affichage — et le
+ * tableau promettait « Ouvrir cette filiale » sans rien ouvrir.
+ *
+ * Le détail ligne à ligne reste visible dans les deux cas : c'est de là qu'on
+ * passe d'une filiale à l'autre, et la ligne de total ramène au groupe.
  */
 export default function ConsolidationPage() {
   const { estDirecteur, filialeId, filiale, setFilialeId } = useFilialeCourante();
@@ -26,10 +31,13 @@ export default function ConsolidationPage() {
   const [apercu, setApercu] = useState(false);
 
   const fenetre = useMemo(() => fenetrePilotage(periode), [periode]);
-  // La consolidation regarde tout ce que le poste reçoit, quelle que soit la
-  // filiale sélectionnée ailleurs : c'est sa raison d'être.
-  const lecture = useTableauDeBord(fenetre, null);
-  const { total, filiales, isLoading } = lecture;
+  const lecture = useTableauDeBord(fenetre, filialeId);
+  const { filiales, isLoading } = lecture;
+  /** Aucune filiale choisie : on regarde tout ce que le poste reçoit. */
+  const vueGroupe = filialeId === null;
+  // La ligne de pied porte toujours le groupe, même quand l'écran est réduit à
+  // une filiale : c'est ce qui permet de situer la filiale dans l'ensemble.
+  const groupe = useMemo(() => consolider(filiales), [filiales]);
 
   // La page lit des chiffres de toutes les filiales : sans la permission de
   // consolidation, elle n'a rien à montrer.
@@ -79,9 +87,12 @@ export default function ConsolidationPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Vue consolidée — Groupe</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">
+            {vueGroupe ? 'Vue consolidée — Groupe' : filiale?.nom ?? 'Filiale'}
+          </h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {filiales.length} filiale(s) · {fenetre.libelle} · calculé sur ce poste, hors ligne comprise
+            {vueGroupe ? `${filiales.length} filiale(s)` : 'Périmètre d’une filiale'} · {fenetre.libelle} ·
+            {' '}calculé sur ce poste, hors ligne comprise
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -95,13 +106,17 @@ export default function ConsolidationPage() {
         </div>
       </div>
 
-      <TableauDeBord fenetre={fenetre} filialeId={null} lecture={lecture} comparerFiliales />
+      <TableauDeBord fenetre={fenetre} filialeId={filialeId} lecture={lecture} comparerFiliales={vueGroupe} />
 
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
         <div className="border-b border-neutral-200 px-6 py-4">
           <h3 className="text-base font-semibold text-neutral-900">Le détail, filiale par filiale</h3>
           <p className="mt-0.5 text-xs text-neutral-500">
-            {estDirecteur ? 'Cliquez une ligne pour ouvrir cette filiale.' : 'Lecture seule.'}
+            {!estDirecteur
+              ? 'Lecture seule.'
+              : vueGroupe
+                ? 'Cliquez une ligne pour n’afficher que cette filiale.'
+                : 'Cliquez une autre ligne pour changer de filiale, ou la ligne de total pour revenir au groupe.'}
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -150,17 +165,24 @@ export default function ConsolidationPage() {
               ))}
             </tbody>
             <tfoot className="border-t-2 border-neutral-300 bg-neutral-50 font-semibold">
-              <tr data-testid="total-groupe">
-                <td className="px-4 py-3 text-sm">Groupe · {total.ventes} vente(s)</td>
-                <td className={cellule}>{formaterFcfa(total.ca_ttc)}</td>
-                <td className={cellule}>{formaterFcfa(total.marge)}</td>
-                <td className={`${cellule} text-neutral-500`}>{formaterPourcentage(total.taux_marge)}</td>
-                <td className={cellule}>{formaterFcfa(total.resultat)}</td>
-                <td className={cellule}>{formaterFcfa(total.creances)}</td>
-                <td className={cellule}>{formaterFcfa(total.dettes)}</td>
-                <td className={cellule}>{formaterFcfa(total.valeur_stock)}</td>
-                <td className={cellule}>{formaterFcfa(total.tresorerie)}</td>
-                <td className="px-4 py-3 text-center text-sm">{total.livraisons_attente}</td>
+              {/* La ligne de total ramène au groupe : sans elle, on ne sait plus
+                  comment élargir le périmètre depuis le tableau. */}
+              <tr
+                data-testid="total-groupe"
+                onClick={() => estDirecteur && !vueGroupe && setFilialeId(null)}
+                className={estDirecteur && !vueGroupe ? 'cursor-pointer hover:bg-neutral-100' : ''}
+                title={estDirecteur && !vueGroupe ? 'Revenir au groupe' : undefined}
+              >
+                <td className="px-4 py-3 text-sm">Groupe · {groupe.ventes} vente(s)</td>
+                <td className={cellule}>{formaterFcfa(groupe.ca_ttc)}</td>
+                <td className={cellule}>{formaterFcfa(groupe.marge)}</td>
+                <td className={`${cellule} text-neutral-500`}>{formaterPourcentage(groupe.taux_marge)}</td>
+                <td className={cellule}>{formaterFcfa(groupe.resultat)}</td>
+                <td className={cellule}>{formaterFcfa(groupe.creances)}</td>
+                <td className={cellule}>{formaterFcfa(groupe.dettes)}</td>
+                <td className={cellule}>{formaterFcfa(groupe.valeur_stock)}</td>
+                <td className={cellule}>{formaterFcfa(groupe.tresorerie)}</td>
+                <td className="px-4 py-3 text-center text-sm">{groupe.livraisons_attente}</td>
               </tr>
             </tfoot>
           </table>
@@ -171,10 +193,10 @@ export default function ConsolidationPage() {
       {apercu && (
         <TableauDeBordDocument
           fenetre={fenetre}
-          filialeId={null}
+          filialeId={filialeId}
           lecture={lecture}
           filiales={filiales}
-          filiale={{ nom: 'Cissé & Frères — Groupe' }}
+          filiale={vueGroupe ? { nom: 'Cissé & Frères — Groupe' } : { nom: filiale?.nom ?? 'Filiale' }}
           onClose={() => setApercu(false)}
         />
       )}
