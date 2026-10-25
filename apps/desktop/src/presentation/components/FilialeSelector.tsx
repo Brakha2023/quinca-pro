@@ -31,9 +31,13 @@ export default function FilialeSelector() {
     );
   }
 
+  // La maison mère n'est pas une holding : c'est la filiale où siège la
+  // direction, et elle vend comme les autres. L'écarter du sélecteur revenait
+  // à interdire au directeur de regarder sa propre filiale — la consolidation
+  // et les transferts, eux, l'ont toujours comptée.
   const options: Array<{ id: string | null; nom: string }> = [
     { id: null, nom: LIBELLE_CONSOLIDE },
-    ...filiales.filter((f) => f.type !== 'MAISON_MERE').map((f) => ({ id: f.id, nom: f.nom ?? f.code ?? f.id })),
+    ...filiales.map((f) => ({ id: f.id, nom: f.nom ?? f.code ?? f.id })),
   ];
 
   return (
