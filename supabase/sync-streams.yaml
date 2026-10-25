@@ -57,6 +57,11 @@ streams:
       # et la table ne contient rien de confidentiel (RLS : lecture ouverte aux
       # utilisateurs authentifiés). Le sélecteur de périmètre reste, lui,
       # réservé au directeur.
+      # Configuration de chaque filiale : identité, fiscalité, papiers. Le
+      # poste en a besoin pour imprimer un document hors ligne — sans elle, il
+      # ne sait pas quel en-tête mettre. Une ligne par filiale, sans filtre :
+      # un directeur imprime pour n'importe laquelle de ses filiales.
+      - SELECT * FROM parametres_filiale
       - SELECT * FROM filiales WHERE est_active = true
       - SELECT * FROM depots WHERE filiale_id IN mes_filiales
       - SELECT * FROM caisses WHERE filiale_id IN mes_filiales

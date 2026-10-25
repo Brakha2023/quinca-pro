@@ -32,6 +32,17 @@
 .document-entete { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; }
 .document-logo { font: bold 26px Georgia, serif; border: 3px double #000; border-radius: 8px; padding: 4px 14px; }
 .document-societe { text-align: right; }
+/* Logo chargé dans Paramètres → Entreprise. Borné pour ne pas pousser l'en-tête. */
+.document-logo-image { max-height: 22mm; max-width: 50mm; object-fit: contain; display: block; }
+.document-societe-identifiants { font-size: 10px; }
+/* Filigrane : derrière le texte, assez pâle pour ne jamais gêner la lecture. */
+.document { position: relative; }
+.document-filigrane { position: absolute; inset: 0; margin: auto; max-width: 60%; max-height: 50%;
+  object-fit: contain; opacity: .07; pointer-events: none; z-index: 0; }
+.document > *:not(.document-filigrane) { position: relative; z-index: 1; }
+/* Mentions légales, au pied de chaque pièce. */
+.document-mentions { margin-top: 10px; padding-top: 6px; border-top: 1px solid #000;
+  font-size: 10px; white-space: pre-line; }
 .document-societe p { margin: 0; }
 .document-societe-nom { font-weight: bold; font-size: 14px; }
 .document-titre { text-align: center; font-size: 15px; font-weight: bold; text-transform: uppercase; background: #eee; border: 1px solid #000; padding: 6px; margin: 14px 0; }

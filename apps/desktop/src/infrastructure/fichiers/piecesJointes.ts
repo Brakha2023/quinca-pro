@@ -34,3 +34,23 @@ export function tailleDataUrl(dataUrl: string): number {
   const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
   return Math.floor((base64.length * 3) / 4);
 }
+
+/**
+ * Réduit un logo à `cote` px max, **en PNG** : un logo a souvent un fond
+ * transparent, que le JPEG remplacerait par du noir.
+ */
+export async function redimensionnerLogo(fichier: File, cote = 480): Promise<string> {
+  const source = await lireFichierDataUrl(fichier);
+  const image = await new Promise<HTMLImageElement>((resoudre, rejeter) => {
+    const img = new Image();
+    img.onload = () => resoudre(img);
+    img.onerror = () => rejeter(new Error('Image illisible'));
+    img.src = source;
+  });
+  const ratio = Math.min(1, cote / Math.max(image.width, image.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(image.width * ratio);
+  canvas.height = Math.round(image.height * ratio);
+  canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/png');
+}

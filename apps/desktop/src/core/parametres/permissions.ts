@@ -130,6 +130,7 @@ export const CATALOGUE_PERMISSIONS: ModulePermissions[] = [
     libelle: 'Paramètres',
     permissions: [
       { code: 'parametres.lire', libelle: 'Ouvrir les paramètres' },
+      { code: 'parametres.entreprise', libelle: "Modifier l'identité et les papiers de l'entreprise", detail: 'Raison sociale, identifiants fiscaux, TVA, logos, formats des pièces imprimées.' },
       { code: 'parametres.utilisateurs', libelle: 'Affecter les rôles et activer les comptes' },
       { code: 'parametres.roles', libelle: 'Définir les rôles et leurs permissions', detail: 'Décider qui a le droit de quoi : la permission la plus lourde de toutes.' },
     ],

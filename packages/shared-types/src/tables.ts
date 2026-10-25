@@ -48,6 +48,43 @@ export const TABLES = {
     ...COMMUNES_HORODATAGE,
   },
   /**
+   * Configuration d'une filiale : son identité, sa fiscalité, ses papiers.
+   * Une ligne par filiale. Tout poste qui reçoit la filiale la reçoit aussi —
+   * sans elle, un document ne sait pas quel en-tête imprimer hors ligne.
+   */
+  parametres_filiale: {
+    filiale_id: 'text',
+    nom_commercial: 'text',
+    raison_sociale: 'text',
+    forme_juridique: 'text',
+    rccm: 'text',
+    numero_cc: 'text',
+    compte_contribuable: 'text',
+    telephone_principal: 'text',
+    telephone_secondaire: 'text',
+    email: 'text',
+    adresse: 'text',
+    ville: 'text',
+    pays: 'text',
+    localisation: 'text',
+    /** Logos en data URL, réduits par le poste avant l'envoi. */
+    logo_couleur: 'text',
+    logo_noir_blanc: 'text',
+    logo_entete: 'text',
+    logo_filigrane: 'text',
+    assujetti_tva: 'integer',
+    taux_tva: 'real',
+    /** `TTC` ou `HT` : comment les prix sont saisis dans cette filiale. */
+    prix_saisis: 'text',
+    devise: 'text',
+    mentions_legales: 'text',
+    /** JSON : réglages d'impression par nature de pièce (voir `core/parametres/entreprise.ts`). */
+    formats_documents: 'text',
+    /** JSON : préfixe de numérotation par nature de pièce. */
+    prefixes_numerotation: 'text',
+    ...COMMUNES_HORODATAGE,
+  },
+  /**
    * Rôles : un nom, une portée de données, un jeu de permissions.
    * Table courte et sans filiale — tout le monde la reçoit, c'est l'annuaire
    * des rôles de la maison.
@@ -529,6 +566,7 @@ export type Row<T extends TableName> = { id: string } & {
 
 export type FilialeRow = Row<'filiales'>;
 export type UtilisateurRow = Row<'utilisateurs'>;
+export type ParametresFilialeRow = Row<'parametres_filiale'>;
 export type RoleRow = Row<'roles'>;
 export type RolePermissionRow = Row<'roles_permissions'>;
 export type DepotRow = Row<'depots'>;

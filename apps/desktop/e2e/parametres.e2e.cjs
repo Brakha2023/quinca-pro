@@ -43,14 +43,18 @@ async function poserRolesLivres(page) {
   console.log('Les rôles livrés');
   await page.goto(`${BASE_URL}/#/parametres`);
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForURL(/#\/parametres\/roles$/);
-  verifier(true, 'sans section, le menu ouvre les rôles');
+  // Sans section, l'écran ouvre la première du menu — l'identité de la maison.
+  await page.waitForURL(/#\/parametres\/entreprise$/);
+  verifier(true, 'sans section, le menu ouvre la première section');
+
+  await page.goto(`${BASE_URL}/#/parametres/roles`);
+  await page.reload({ waitUntil: 'networkidle' });
   // La requête est vivante : elle revient après le premier rendu.
   await page.waitForFunction(() => document.querySelectorAll('[data-testid^="role-role_"]').length >= 6);
 
   verifier((await texteDe(page, '[data-testid=compteur-roles]')).includes('6 rôle(s)'), 'six rôles : les cinq livrés et celui du poste d’essai');
   verifier((await texteDe(page, '[data-testid=permissions-role_caissier]')) === '11', 'le caissier a onze permissions');
-  verifier((await texteDe(page, '[data-testid=permissions-role_directeur]')) === '41', 'le directeur a tout sauf la définition des rôles');
+  verifier((await texteDe(page, '[data-testid=permissions-role_directeur]')) === '42', 'le directeur a tout sauf la définition des rôles');
   verifier((await texteDe(page, '[data-testid=permissions-role_superadmin]')) === 'toutes', 'le superadministrateur : « toutes », pas un compte');
   verifier((await page.locator('[data-testid=supprimer-role_caissier]').count()) === 0, 'un rôle livré n’a pas de bouton supprimer');
 
@@ -70,7 +74,7 @@ async function poserRolesLivres(page) {
   await page.getByTestId('permission-articles.lire').check();
   await page.getByTestId('permission-stock.lire').check();
   await page.getByTestId('permission-stock.entree').check();
-  verifier((await texteDe(page, '[data-testid=editeur-permissions]')).includes('3 permission(s) sur 42'), 'le compteur suit les cases cochées');
+  verifier((await texteDe(page, '[data-testid=editeur-permissions]')).includes('3 permission(s) sur 43'), 'le compteur suit les cases cochées');
   await page.getByTestId('enregistrer-permissions').click();
   await page.waitForFunction(() => document.querySelector('[data-testid=permissions-role_chef_de_rayon]')?.textContent.trim() === '3');
   verifier(true, 'les permissions sont enregistrées');
@@ -107,9 +111,9 @@ async function poserRolesLivres(page) {
   const doc = page.locator('#zone-impression');
   await doc.locator('[data-testid=ligne-permission]').first().waitFor();
   const papier = await texteDe(page, '#zone-impression');
-  verifier((await doc.locator('[data-testid=ligne-permission]').count()) === 42, 'document : une ligne par permission du catalogue');
+  verifier((await doc.locator('[data-testid=ligne-permission]').count()) === 43, 'document : une ligne par permission du catalogue');
   verifier(papier.includes('Rôles et permissions') && papier.includes('Chef de rayon'), 'document : titre et colonne du nouveau rôle');
-  verifier(papier.includes('7 rôle(s) · 42 permission(s)'), 'document : le compte des rôles et des permissions');
+  verifier(papier.includes('7 rôle(s) · 43 permission(s)'), 'document : le compte des rôles et des permissions');
   verifier(papier.includes('Visa du directeur') && papier.includes('Visa du contrôle'), 'document : les deux visas');
   verifier(!papier.includes('Point de Vente'), 'document : ni menu ni bandeau de l’application');
   await doc.getByRole('button', { name: "Fermer l'aperçu" }).click();
@@ -125,7 +129,7 @@ async function poserRolesLivres(page) {
   const chef = feuilleRoles.find((l) => l.Rôle === 'Chef de rayon');
   verifier(chef.Code === 'role_chef_de_rayon' && chef.Permissions === 2 && chef.Nature === 'Sur mesure', 'export Excel : le rôle relu depuis le classeur');
   const valider = feuillePerms.find((l) => l.Code === 'ventes.valider');
-  verifier(feuillePerms.length === 42 && valider['Gérant de filiale'] === 'Oui' && valider.Caissier === '',
+  verifier(feuillePerms.length === 43 && valider['Gérant de filiale'] === 'Oui' && valider.Caissier === '',
     'export Excel : la matrice, rôle par rôle');
 
   console.log('Les comptes');
