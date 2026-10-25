@@ -59,6 +59,12 @@ export const INDICATEURS_QUERY = `
       WHERE fo.filiale_id = f.id AND fo.est_actif = 1) AS dettes,
     (SELECT COALESCE(SUM(s.quantite * s.cout_moyen), 0) FROM stocks s WHERE s.filiale_id = f.id AND s.quantite > 0) AS valeur_stock,
     (SELECT COALESCE(SUM(ca.solde_actuel), 0) FROM caisses ca WHERE ca.filiale_id = f.id AND ca.est_active = 1) AS tresorerie,
+    -- Espèces parties d'ici et pas encore encaissées ailleurs. Comptées au
+    -- départ : la somme des filiales donne le total en route, sans doublon.
+    (SELECT COALESCE(SUM(tf.montant), 0) FROM transferts_filiales tf
+      WHERE tf.filiale_source_id = f.id AND tf.statut = 'EN_TRANSIT') AS fonds_en_transit,
+    (SELECT COUNT(*) FROM transferts_filiales tf
+      WHERE tf.filiale_source_id = f.id AND tf.statut = 'EN_TRANSIT') AS transferts_en_transit,
     (SELECT COUNT(*) FROM livraisons l
       WHERE l.filiale_id = f.id AND l.statut IN ('A_PREPARER', 'EN_COURS')) AS livraisons_attente,
     (SELECT COUNT(*) FROM livraisons l

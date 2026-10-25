@@ -41,6 +41,17 @@ export interface IndicateursBruts {
   dettes: number;
   valeur_stock: number;
   tresorerie: number;
+  /**
+   * Espèces parties de cette filiale vers une autre, pas encore encaissées.
+   * Elles ont quitté la caisse de départ et ne sont entrées nulle part : sans
+   * cette ligne, l'argent dans la voiture ne figure sur aucun tableau.
+   *
+   * Compté **au départ seulement** : au niveau du groupe, la somme des
+   * filiales donne donc le total en route, sans compter deux fois.
+   */
+  fonds_en_transit: number;
+  /** Nombre de bons concernés : un transit qui dure est un oubli de réception. */
+  transferts_en_transit: number;
   /** Bons de livraison ni livrés ni annulés. */
   livraisons_attente: number;
   /** Parmi eux, ceux dont la date prévue est passée. */
@@ -67,6 +78,7 @@ export interface Indicateurs extends IndicateursBruts {
 const BRUTS_VIDES: Omit<IndicateursBruts, 'filiale_id' | 'filiale_code' | 'filiale_nom'> = {
   ca_ht: 0, ca_ttc: 0, ventes: 0, encaisse: 0, cout_ventes: 0, charges: 0,
   creances: 0, dettes: 0, valeur_stock: 0, tresorerie: 0,
+  fonds_en_transit: 0, transferts_en_transit: 0,
   livraisons_attente: 0, livraisons_retard: 0, commandes_ouvertes: 0, clients_servis: 0,
 };
 
@@ -125,6 +137,8 @@ export interface PointsDeVigilance {
   dettes: boolean;
   tresorerie_negative: boolean;
   livraisons_retard: boolean;
+  /** Des espèces sont en route et personne n'a confirmé leur arrivée. */
+  fonds_en_transit: boolean;
   marge_negative: boolean;
   resultat_negatif: boolean;
   ruptures: boolean;
@@ -138,6 +152,7 @@ export function pointsDeVigilance(i: Indicateurs, rupturesStock = 0): PointsDeVi
     dettes: i.dettes > 0,
     tresorerie_negative: i.tresorerie < 0,
     livraisons_retard: i.livraisons_retard > 0,
+    fonds_en_transit: i.transferts_en_transit > 0,
     // Une marge négative n'a de sens que si l'on a vendu : sinon elle vaut zéro.
     marge_negative: i.ca_ht > 0 && i.marge < 0,
     resultat_negatif: i.ca_ht > 0 && i.resultat < 0,

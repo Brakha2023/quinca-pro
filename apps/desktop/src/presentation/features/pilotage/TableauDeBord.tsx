@@ -92,7 +92,14 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           label="Trésorerie"
           valeur={formaterFcfa(total.tresorerie)}
           ton={total.tresorerie < 0 ? 'text-red-600' : 'text-green-700'}
-          sous={`encaissé sur la période ${formaterFcfa(total.encaisse)}`}
+          /* Les fonds en route ne sont dans aucune caisse : ils manqueraient
+             au tableau sans cette ligne. On les montre à part, jamais
+             additionnés — ce n'est pas de l'argent disponible. */
+          sous={
+            total.fonds_en_transit > 0
+              ? `+ ${formaterFcfa(total.fonds_en_transit)} en route, pas encore en caisse`
+              : `encaissé sur la période ${formaterFcfa(total.encaisse)}`
+          }
           testId="kpi-tresorerie"
         />
       </div>
@@ -138,6 +145,8 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
               vigilance.ruptures && `${repartition.ruptures} article(s) en rupture`,
               vigilance.livraisons_retard && `${total.livraisons_retard} livraison(s) en retard`,
               vigilance.tresorerie_negative && 'trésorerie négative',
+              vigilance.fonds_en_transit
+                && `${formaterFcfa(total.fonds_en_transit)} en transit (${total.transferts_en_transit} bon(s)) — réception à confirmer`,
               vigilance.marge_negative && 'marge négative sur la période',
               vigilance.resultat_negatif && !vigilance.marge_negative && 'les dépenses dépassent la marge',
               anciennete.au_dela_de_90 > 0 && `${formaterFcfa(anciennete.au_dela_de_90)} d'impayés de plus de 90 jours`,

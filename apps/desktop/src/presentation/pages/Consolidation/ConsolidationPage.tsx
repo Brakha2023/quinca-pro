@@ -71,6 +71,8 @@ export default function ConsolidationPage() {
           Dettes: f.dettes,
           'Valeur du stock': f.valeur_stock,
           Trésorerie: f.tresorerie,
+          'Fonds en transit': f.fonds_en_transit,
+          'Transferts en transit': f.transferts_en_transit,
           'Livraisons en attente': f.livraisons_attente,
           'Livraisons en retard': f.livraisons_retard,
         })),

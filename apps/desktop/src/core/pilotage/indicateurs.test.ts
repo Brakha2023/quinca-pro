@@ -112,3 +112,38 @@ describe('pointsDeVigilance', () => {
     expect(pointsDeVigilance(indicateurs(bruts({ tresorerie: -50_000 })), 0).tresorerie_negative).toBe(true);
   });
 });
+
+describe('fonds en transit', () => {
+  const filiale = (nom: string, over: Record<string, number> = {}) =>
+    indicateurs({ filiale_id: nom, filiale_code: nom, filiale_nom: nom, tresorerie: 100_000, ...over });
+
+  it('le groupe additionne ce que chaque filiale a envoyé, sans compter deux fois', () => {
+    // Abidjan a envoyé 300 000 à Bouaké. Un seul bon : une seule ligne, du
+    // côté de l'expéditeur. Bouaké ne le compte pas une seconde fois.
+    const total = consolider([
+      filiale('ABJ', { fonds_en_transit: 300_000, transferts_en_transit: 1 }),
+      filiale('BKE'),
+    ]);
+    expect(total.fonds_en_transit).toBe(300_000);
+    expect(total.transferts_en_transit).toBe(1);
+  });
+
+  it('ne gonfle pas la trésorerie : l’argent en route n’est pas disponible', () => {
+    const total = consolider([
+      filiale('ABJ', { fonds_en_transit: 300_000, transferts_en_transit: 1 }),
+      filiale('BKE'),
+    ]);
+    expect(total.tresorerie).toBe(200_000);
+  });
+
+  it('vaut zéro quand rien n’est en route', () => {
+    expect(consolider([filiale('ABJ'), filiale('BKE')]).fonds_en_transit).toBe(0);
+  });
+
+  it('un transit en cours lève un point de vigilance', () => {
+    const avec = pointsDeVigilance(filiale('ABJ', { fonds_en_transit: 300_000, transferts_en_transit: 1 }));
+    const sans = pointsDeVigilance(filiale('ABJ'));
+    expect(avec.fonds_en_transit).toBe(true);
+    expect(sans.fonds_en_transit).toBe(false);
+  });
+});

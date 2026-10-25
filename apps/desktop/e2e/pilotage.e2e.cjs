@@ -250,6 +250,25 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
   verifier(feuille.length === 2 && bouake['CA TTC'] === 6000 && bouake.Marge === 2000,
     'export Excel : chaque filiale relue depuis le classeur');
 
+  console.log('Les fonds en route');
+  // Un transfert parti d'Abidjan et pas encore encaissé à Bouaké : l'argent
+  // n'est dans aucune caisse. Sans cette ligne, il ne figure nulle part.
+  const tresorerieAvant = montant(await texteDe(page, '[data-testid=kpi-tresorerie-valeur]'));
+  await page.evaluate(async ({ source, destination }) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    await db.execute(`INSERT OR REPLACE INTO transferts_filiales
+      (id, numero, filiale_source_id, filiale_destination_id, caisse_source_id, montant, statut, date_envoi)
+      VALUES ('tf-essai','TRF-ESSAI', ?, ?, 'c-1', 25000, 'EN_TRANSIT', datetime('now'))`,
+      [source, destination]);
+  }, { source: filialeId, destination: faits.filiale2 });
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=kpi-tresorerie]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes('25000Fenroute'),
+  );
+  verifier(montant(await texteDe(page, '[data-testid=kpi-tresorerie-valeur]')) === tresorerieAvant,
+    'les fonds en route ne gonflent pas la trésorerie : ils ne sont dans aucune caisse');
+  verifier((await texteDe(page, '[data-testid=vigilance]')).includes('réception à confirmer'),
+    'un transit en cours réclame une décision : la réception est à confirmer');
+
   console.log('Le périmètre commande l’écran');
   // Un sélecteur nommé « Périmètre » doit changer ce qu'on regarde : tant qu'il
   // ne le faisait pas, un directeur changeait de filiale sans rien voir bouger.

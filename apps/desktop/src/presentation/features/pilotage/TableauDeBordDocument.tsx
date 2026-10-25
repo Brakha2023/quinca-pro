@@ -70,6 +70,9 @@ export default function TableauDeBordDocument({ fenetre, filialeId, lecture, fil
         <thead><tr><th style={{ textAlign: 'left' }}>Situation</th><th className="num">Montant</th></tr></thead>
         <tbody>
           {ligne('Trésorerie (caisses)', formaterFcfa(total.tresorerie))}
+          {/* L'argent parti et pas encore arrivé : il s'ajoute aux caisses, il n'y est pas. */}
+          {total.fonds_en_transit > 0
+            && ligne(`En transit, hors caisses (${total.transferts_en_transit} bon(s))`, formaterFcfa(total.fonds_en_transit))}
           {ligne('Créances clients', formaterFcfa(total.creances), anciennete.au_dela_de_90 > 0 ? `dont ${formaterFcfa(anciennete.au_dela_de_90)} à plus de 90 j` : undefined)}
           {ligne('Dettes fournisseurs', formaterFcfa(total.dettes), `${total.commandes_ouvertes} commande(s) ouverte(s)`)}
           {ligne('Valeur du stock', formaterFcfa(repartition.valeur), `${repartition.articles} article(s)`)}
