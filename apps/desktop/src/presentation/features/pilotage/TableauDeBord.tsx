@@ -40,7 +40,10 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
   const precedente = useMemo(() => fenetrePrecedente(fenetre), [fenetre]);
   const { total: avant } = usePerimetre(precedente, filialeId);
 
-  const vigilance = pointsDeVigilance(total, repartition.ruptures);
+  // En vue groupe, « en route » et « à recevoir » décrivent le même billet à deux
+  // endroits : on ne l'annonce qu'une fois, du côté de la caisse qui s'est vidée.
+  const vueGroupe = filialeId === null;
+  const vigilance = pointsDeVigilance(total, repartition.ruptures, vueGroupe);
   const dormants = useMemo(() => dormantsLesPlusLourds(lignesStock, 5), [lignesStock]);
 
   const parFiliale = useMemo(
@@ -55,6 +58,14 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
 
   const reference = precedente.libelle;
   const ecartCreances = Math.abs(total.creances - anciennete.total);
+
+  /* Les fonds qui voyagent ne sont dans aucune caisse : sans cette ligne, ils
+     ne figureraient sur aucun tableau. Montrés à part, jamais additionnés à la
+     trésorerie — on ne paie pas un fournisseur avec des billets en voiture. */
+  const horsCaisses = [
+    total.fonds_en_transit > 0 && `${formaterFcfa(total.fonds_en_transit)} en route`,
+    !vueGroupe && total.fonds_a_recevoir > 0 && `${formaterFcfa(total.fonds_a_recevoir)} à recevoir`,
+  ].filter((part): part is string => typeof part === 'string');
 
   return (
     <div className="space-y-6">
@@ -92,12 +103,9 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           label="Trésorerie"
           valeur={formaterFcfa(total.tresorerie)}
           ton={total.tresorerie < 0 ? 'text-red-600' : 'text-green-700'}
-          /* Les fonds en route ne sont dans aucune caisse : ils manqueraient
-             au tableau sans cette ligne. On les montre à part, jamais
-             additionnés — ce n'est pas de l'argent disponible. */
           sous={
-            total.fonds_en_transit > 0
-              ? `+ ${formaterFcfa(total.fonds_en_transit)} en route, pas encore en caisse`
+            horsCaisses.length > 0
+              ? `+ ${horsCaisses.join(' · ')}, pas encore en caisse`
               : `encaissé sur la période ${formaterFcfa(total.encaisse)}`
           }
           testId="kpi-tresorerie"
@@ -147,6 +155,8 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
               vigilance.tresorerie_negative && 'trésorerie négative',
               vigilance.fonds_en_transit
                 && `${formaterFcfa(total.fonds_en_transit)} en transit (${total.transferts_en_transit} bon(s)) — réception à confirmer`,
+              vigilance.fonds_a_recevoir
+                && `${formaterFcfa(total.fonds_a_recevoir)} à recevoir (${total.transferts_a_recevoir} bon(s)) — à encaisser à la réception`,
               vigilance.marge_negative && 'marge négative sur la période',
               vigilance.resultat_negatif && !vigilance.marge_negative && 'les dépenses dépassent la marge',
               anciennete.au_dela_de_90 > 0 && `${formaterFcfa(anciennete.au_dela_de_90)} d'impayés de plus de 90 jours`,

@@ -65,6 +65,13 @@ export const INDICATEURS_QUERY = `
       WHERE tf.filiale_source_id = f.id AND tf.statut = 'EN_TRANSIT') AS fonds_en_transit,
     (SELECT COUNT(*) FROM transferts_filiales tf
       WHERE tf.filiale_source_id = f.id AND tf.statut = 'EN_TRANSIT') AS transferts_en_transit,
+    -- Le même argent vu de l'arrivée : ce qu'une autre filiale a envoyé ici et
+    -- que personne n'a encore mis en caisse. Au groupe, cette colonne répète
+    -- la précédente — elles ne s'additionnent jamais.
+    (SELECT COALESCE(SUM(tf.montant), 0) FROM transferts_filiales tf
+      WHERE tf.filiale_destination_id = f.id AND tf.statut = 'EN_TRANSIT') AS fonds_a_recevoir,
+    (SELECT COUNT(*) FROM transferts_filiales tf
+      WHERE tf.filiale_destination_id = f.id AND tf.statut = 'EN_TRANSIT') AS transferts_a_recevoir,
     (SELECT COUNT(*) FROM livraisons l
       WHERE l.filiale_id = f.id AND l.statut IN ('A_PREPARER', 'EN_COURS')) AS livraisons_attente,
     (SELECT COUNT(*) FROM livraisons l

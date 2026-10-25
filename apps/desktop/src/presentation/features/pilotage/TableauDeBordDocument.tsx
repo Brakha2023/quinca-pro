@@ -73,6 +73,10 @@ export default function TableauDeBordDocument({ fenetre, filialeId, lecture, fil
           {/* L'argent parti et pas encore arrivé : il s'ajoute aux caisses, il n'y est pas. */}
           {total.fonds_en_transit > 0
             && ligne(`En transit, hors caisses (${total.transferts_en_transit} bon(s))`, formaterFcfa(total.fonds_en_transit))}
+          {/* Le même argent vu de l'arrivée : masqué sur la feuille du groupe, où
+              ce serait un bon annoncé deux fois — et cette feuille part en réunion. */}
+          {filialeId !== null && total.fonds_a_recevoir > 0
+            && ligne(`À recevoir, hors caisses (${total.transferts_a_recevoir} bon(s))`, formaterFcfa(total.fonds_a_recevoir))}
           {ligne('Créances clients', formaterFcfa(total.creances), anciennete.au_dela_de_90 > 0 ? `dont ${formaterFcfa(anciennete.au_dela_de_90)} à plus de 90 j` : undefined)}
           {ligne('Dettes fournisseurs', formaterFcfa(total.dettes), `${total.commandes_ouvertes} commande(s) ouverte(s)`)}
           {ligne('Valeur du stock', formaterFcfa(repartition.valeur), `${repartition.articles} article(s)`)}

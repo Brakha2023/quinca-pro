@@ -52,6 +52,18 @@ export interface IndicateursBruts {
   fonds_en_transit: number;
   /** Nombre de bons concernés : un transit qui dure est un oubli de réception. */
   transferts_en_transit: number;
+  /**
+   * Espèces qu'une autre filiale a envoyées ici, pas encore encaissées.
+   *
+   * C'est le **même argent** que `fonds_en_transit`, vu de l'autre bout : au
+   * niveau du groupe les deux colonnes donnent le même total, et les ajouter
+   * compterait chaque bon deux fois. Comptée chez le destinataire, cette ligne
+   * répond à la seule question qui se pose là-bas : qu'est-ce qui m'arrive, et
+   * que je n'ai pas encore mis en caisse ?
+   */
+  fonds_a_recevoir: number;
+  /** Nombre de bons à encaisser à la réception. */
+  transferts_a_recevoir: number;
   /** Bons de livraison ni livrés ni annulés. */
   livraisons_attente: number;
   /** Parmi eux, ceux dont la date prévue est passée. */
@@ -79,6 +91,7 @@ const BRUTS_VIDES: Omit<IndicateursBruts, 'filiale_id' | 'filiale_code' | 'filia
   ca_ht: 0, ca_ttc: 0, ventes: 0, encaisse: 0, cout_ventes: 0, charges: 0,
   creances: 0, dettes: 0, valeur_stock: 0, tresorerie: 0,
   fonds_en_transit: 0, transferts_en_transit: 0,
+  fonds_a_recevoir: 0, transferts_a_recevoir: 0,
   livraisons_attente: 0, livraisons_retard: 0, commandes_ouvertes: 0, clients_servis: 0,
 };
 
@@ -139,6 +152,8 @@ export interface PointsDeVigilance {
   livraisons_retard: boolean;
   /** Des espèces sont en route et personne n'a confirmé leur arrivée. */
   fonds_en_transit: boolean;
+  /** Des espèces arrivent ici et ne sont pas encore entrées en caisse. */
+  fonds_a_recevoir: boolean;
   marge_negative: boolean;
   resultat_negatif: boolean;
   ruptures: boolean;
@@ -146,13 +161,19 @@ export interface PointsDeVigilance {
   nombre: number;
 }
 
-export function pointsDeVigilance(i: Indicateurs, rupturesStock = 0): PointsDeVigilance {
+/**
+ * `vueGroupe` éteint l'alerte « à recevoir » : au niveau du groupe, l'argent qui
+ * arrive quelque part est celui qui est parti d'ailleurs — un seul bon, une
+ * seule alerte, levée du côté de la caisse qui s'est vidée.
+ */
+export function pointsDeVigilance(i: Indicateurs, rupturesStock = 0, vueGroupe = false): PointsDeVigilance {
   const leves = {
     creances: i.creances > 0,
     dettes: i.dettes > 0,
     tresorerie_negative: i.tresorerie < 0,
     livraisons_retard: i.livraisons_retard > 0,
     fonds_en_transit: i.transferts_en_transit > 0,
+    fonds_a_recevoir: !vueGroupe && i.transferts_a_recevoir > 0,
     // Une marge négative n'a de sens que si l'on a vendu : sinon elle vaut zéro.
     marge_negative: i.ca_ht > 0 && i.marge < 0,
     resultat_negatif: i.ca_ht > 0 && i.resultat < 0,

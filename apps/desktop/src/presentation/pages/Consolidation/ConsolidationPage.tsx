@@ -73,6 +73,8 @@ export default function ConsolidationPage() {
           Trésorerie: f.tresorerie,
           'Fonds en transit': f.fonds_en_transit,
           'Transferts en transit': f.transferts_en_transit,
+          'Fonds à recevoir': f.fonds_a_recevoir,
+          'Transferts à recevoir': f.transferts_a_recevoir,
           'Livraisons en attente': f.livraisons_attente,
           'Livraisons en retard': f.livraisons_retard,
         })),

@@ -147,3 +147,38 @@ describe('fonds en transit', () => {
     expect(sans.fonds_en_transit).toBe(false);
   });
 });
+
+describe('fonds à recevoir', () => {
+  const filiale = (nom: string, over: Record<string, number> = {}) =>
+    indicateurs({ filiale_id: nom, filiale_code: nom, filiale_nom: nom, tresorerie: 100_000, ...over });
+
+  // Un bon : 300 000 partis d'Abidjan, attendus à Bouaké. Abidjan le porte en
+  // « en route », Bouaké en « à recevoir » — c'est le même billet.
+  const abidjan = () => filiale('ABJ', { fonds_en_transit: 300_000, transferts_en_transit: 1 });
+  const bouake = () => filiale('BKE', { fonds_a_recevoir: 300_000, transferts_a_recevoir: 1 });
+
+  it('le destinataire voit arriver ce qui n’est pas encore dans sa caisse', () => {
+    const bke = bouake();
+    expect(bke.fonds_a_recevoir).toBe(300_000);
+    expect(bke.tresorerie).toBe(100_000);
+  });
+
+  it('les deux colonnes décrivent le même argent : au groupe, elles sont égales', () => {
+    const total = consolider([abidjan(), bouake()]);
+    expect(total.fonds_a_recevoir).toBe(total.fonds_en_transit);
+    expect(total.fonds_a_recevoir).toBe(300_000);
+    // Et surtout : les additionner donnerait 600 000 pour un seul bon.
+    expect(total.tresorerie).toBe(200_000);
+  });
+
+  it('alerte le destinataire, qui doit encaisser', () => {
+    expect(pointsDeVigilance(bouake()).fonds_a_recevoir).toBe(true);
+    expect(pointsDeVigilance(filiale('BKE')).fonds_a_recevoir).toBe(false);
+  });
+
+  it('se tait au niveau du groupe : un bon, une alerte', () => {
+    const v = pointsDeVigilance(consolider([abidjan(), bouake()]), 0, true);
+    expect(v.fonds_en_transit).toBe(true);
+    expect(v.fonds_a_recevoir).toBe(false);
+  });
+});

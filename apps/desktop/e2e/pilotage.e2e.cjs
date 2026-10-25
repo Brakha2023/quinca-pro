@@ -268,6 +268,21 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
     'les fonds en route ne gonflent pas la trésorerie : ils ne sont dans aucune caisse');
   verifier((await texteDe(page, '[data-testid=vigilance]')).includes('réception à confirmer'),
     'un transit en cours réclame une décision : la réception est à confirmer');
+  verifier(!(await texteDe(page, '[data-testid=kpi-tresorerie]')).includes('recevoir'),
+    'au groupe, le bon n’est annoncé qu’une fois : en route, jamais aussi à recevoir');
+
+  // Vu de Bouaké, ce même argent est « à recevoir » : il arrive, il n'est dans
+  // aucune caisse, et c'est là-bas qu'on clique « Encaisser ».
+  await page.locator('[data-testid=filiale-BKE]').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=kpi-tresorerie]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes('25000F\u00e0recevoir'),
+  );
+  verifier((await texteDe(page, '[data-testid=vigilance]')).includes('encaisser à la réception'),
+    'la filiale destinataire voit ce qui lui arrive, à encaisser à la réception');
+  await page.locator('[data-testid=total-groupe]').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=kpi-tresorerie]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes('25000Fenroute'),
+  );
 
   console.log('Le périmètre commande l’écran');
   // Un sélecteur nommé « Périmètre » doit changer ce qu'on regarde : tant qu'il
