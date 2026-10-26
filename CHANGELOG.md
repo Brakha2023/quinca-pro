@@ -13,6 +13,63 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
+## 0.3.0 — 26 octobre 2026
+
+L'identité de la maison se règle depuis l'application, et l'argent qui voyage entre filiales
+cesse d'être invisible : il figure au tableau de bord des deux côtés, et il part avec une pièce
+signée.
+
+### Ajouté
+
+- **Paramètres « Entreprise », filiale par filiale.** Sept sections : identité (raison sociale,
+  forme juridique, RCCM, n° CC, compte contribuable), coordonnées, logos et filigrane, fiscalité
+  (assujettissement à la TVA, taux, prix saisis TTC ou HT, devise, mentions légales), formats de
+  documents par nature de pièce, préfixes de numérotation, rôles, utilisateurs et préférences du
+  poste. Les **vingt-sept documents A4** de l'application prennent leur en-tête ici : l'identité de
+  la maison se règle une fois.
+- **Les fonds en route au tableau de bord.** Des espèces parties d'une caisse et pas encore
+  encaissées ailleurs ne sont dans aucune caisse. La tuile Trésorerie les annonce sous le montant
+  (« + 300 000 F en route, pas encore en caisse ») sans jamais les y ajouter, et le bandeau de
+  vigilance réclame la confirmation de réception.
+- **La filiale destinataire voit ce qui lui arrive.** Elle lit « 300 000 F à recevoir » et
+  « à encaisser à la réception ». Les deux colonnes décrivent le même billet vu des deux bouts :
+  elles ne s'additionnent jamais, et en vue groupe un bon n'est annoncé qu'une fois.
+- **Bordereau de transfert de fonds.** La pièce qui voyage avec l'argent : montant en chiffres et en
+  toutes lettres, porteur à nommer à la main, et **deux cachets signés du gérant ou du directeur**
+  — l'un autorise la sortie des fonds, l'autre reconnaît avoir reçu la somme. Un transfert annulé
+  s'imprime pour le classement, barré d'un « ne vaut pas remise de fonds » et sans case à signer.
+- **Drapeaux sur la page de connexion**, dessinés en SVG : Windows n'a pas les glyphes d'émoji
+  correspondants et afficherait « CI ».
+- **Guide de l'utilisateur**, seize chapitres en A4, livré en PDF à côté de l'installeur.
+- **`supabase/outils/reinitialiser_essais.sql`** : vide les données saisies et pose trois comptes
+  d'essai, en gardant la charpente (filiales, dépôts, caisses, familles, rôles, fiches d'entreprise).
+
+### Corrigé
+
+- **Le directeur arrivait sur une page vide.** En vue consolidée, le tableau de bord n'avait aucune
+  filiale à montrer ; il mène maintenant à la consolidation.
+- **Le périmètre ne commandait pas l'écran.** Changer de filiale dans le sélecteur ne changeait ni
+  la consolidation ni le tableau de bord.
+- **La maison mère était introuvable dans le sélecteur.** Elle n'est pas une holding : c'est la
+  filiale où siège la direction, et elle vend comme les autres.
+- **Un formulaire perdait la saisie en cours** quand une mise à jour arrivait par la
+  synchronisation.
+
+### Base de données
+
+- Appliquer `supabase/migrations/20261025000000_configuration_entreprise.sql` (table
+  `parametres_filiale`, une fiche par filiale, permission `parametres.entreprise`).
+- **Redéployer les règles de synchronisation** (PowerSync → Sync Streams → Deploy) : sans cela les
+  postes n'auront pas la fiche, et l'écran Paramètres le dira.
+
+### Attention
+
+- Les documents imprimés prennent l'en-tête de la fiche d'entreprise. Tant qu'elle n'est pas
+  remplie, ils sortent avec le nom de la filiale et ses initiales — complétez
+  **Paramètres → Entreprise** avant de faire circuler des pièces.
+
+---
+
 ## 0.2.0 — 20 octobre 2026
 
 Six défauts d'architecture local-first relevés en audit, traités l'un après l'autre. Aucun n'était
