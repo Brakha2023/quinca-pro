@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { BuildingOffice2Icon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
+import { BuildingOffice2Icon, PaperAirplaneIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import {
-  LIBELLES_STATUT_TRANSFERT, roleFiliale, transfertFilialeSchema,
+  LIBELLES_STATUT_TRANSFERT, construireBordereauFonds, roleFiliale, transfertFilialeSchema,
   type Caisse, type TransfertFilialeForm, type TransfertFilialeFormInput,
 } from '../../../core/tresorerie';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
@@ -15,8 +15,9 @@ import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import AucuneCaisse from './AucuneCaisse';
+import BordereauFondsDocument from './BordereauFondsDocument';
 import SelectCaisse from './SelectCaisse';
-import { useCaissesToutes, useTransfertsFiliales, type TransfertFilialeVue } from './hooks';
+import { enteteBordereau, useCaissesToutes, useTransfertsFiliales, type TransfertFilialeVue } from './hooks';
 
 const formaterDateHeure = (iso: string | null) => (iso ? new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
 
@@ -24,6 +25,8 @@ const STYLE_STATUT: Record<string, string> = { EN_TRANSIT: 'bg-orange-100 text-o
 
 interface Props {
   filialeId: string;
+  /** Entête du bordereau imprimé. */
+  filiale: { nom: string; adresse?: string | null; telephone?: string | null };
   /** Les autres filiales où l'on peut envoyer des fonds. */
   filiales: Array<{ id: string; nom: string | null }>;
 }
@@ -32,8 +35,12 @@ interface Props {
  * Transfert d'espèces entre filiales. L'argent voyage : la filiale source
  * sort les fonds tout de suite (le transfert part « en transit »), la filiale
  * destinataire les encaisse à l'arrivée dans la caisse de son choix.
+ *
+ * Chaque ligne s'imprime en **bordereau** — la pièce qui part avec l'argent,
+ * signée du gérant ou du directeur aux deux bouts. Elle se réimprime à tout
+ * moment : un bordereau se perd en route, et un transfert annulé se classe.
  */
-export default function TransfertFilialePanel({ filialeId, filiales }: Props) {
+export default function TransfertFilialePanel({ filialeId, filiale, filiales }: Props) {
   const repository = useRepository(TresorerieRepository);
   const notifier = useNotifier();
   const confirmer = useConfirmation();
@@ -41,6 +48,7 @@ export default function TransfertFilialePanel({ filialeId, filiales }: Props) {
   const caisses = useCaissesToutes(filialeId).filter((c) => c.est_active);
   const { transferts } = useTransfertsFiliales(filialeId);
   const [reception, setReception] = useState<TransfertFilialeVue | null>(null);
+  const [apercu, setApercu] = useState<TransfertFilialeVue | null>(null);
   const autresFiliales = filiales.filter((f) => f.id !== filialeId);
 
   const annuler = async (t: TransfertFilialeVue) => {
@@ -69,7 +77,7 @@ export default function TransfertFilialePanel({ filialeId, filiales }: Props) {
         <p className="px-4 py-3 text-sm font-semibold text-neutral-700 border-b border-neutral-200 bg-neutral-50">Transferts envoyés et reçus</p>
         <table className="w-full">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
-            <th className="px-3 py-2 text-left">Envoi</th><th className="px-3 py-2 text-left">Pièce</th><th className="px-3 py-2 text-left">Sens</th><th className="px-3 py-2 text-left">Filiale</th><th className="px-3 py-2 text-left">Caisse source</th><th className="px-3 py-2 text-left">Motif</th><th className="px-3 py-2 text-right">Montant</th><th className="px-3 py-2 text-center">Statut</th><th className="px-3 py-2 text-center">Réception</th>
+            <th className="px-3 py-2 text-left">Envoi</th><th className="px-3 py-2 text-left">Pièce</th><th className="px-3 py-2 text-left">Sens</th><th className="px-3 py-2 text-left">Filiale</th><th className="px-3 py-2 text-left">Caisse source</th><th className="px-3 py-2 text-left">Motif</th><th className="px-3 py-2 text-right">Montant</th><th className="px-3 py-2 text-center">Statut</th><th className="px-3 py-2 text-center">Réception</th><th className="px-3 py-2 text-center">Bordereau</th>
           </tr></thead>
           <tbody className="divide-y divide-neutral-100">
             {transferts.map((t) => {
@@ -90,6 +98,13 @@ export default function TransfertFilialePanel({ filialeId, filiales }: Props) {
                     {enTransit && role === 'EXPEDITEUR' && <button type="button" onClick={() => annuler(t)} className="px-3 py-1 rounded-lg text-red-600 hover:bg-red-50 text-xs font-medium">Annuler</button>}
                     {!enTransit && <span className="text-neutral-500">{formaterDateHeure(t.date_reception)}</span>}
                   </td>
+                  <td className="px-3 py-2 text-center">
+                    {/* La pièce se réimprime à tout moment : un bordereau se perd en
+                        route, et un transfert annulé se classe lui aussi. */}
+                    <button type="button" onClick={() => setApercu(t)} title="Imprimer le bordereau" className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100" data-testid={`imprimer-bordereau-${t.numero}`}>
+                      <PrinterIcon className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -97,6 +112,14 @@ export default function TransfertFilialePanel({ filialeId, filiales }: Props) {
         </table>
         {transferts.length === 0 && <div className="text-center py-8 text-neutral-400 text-sm">Aucun transfert entre filiales.</div>}
       </div>
+
+      {apercu && (
+        <BordereauFondsDocument
+          bordereau={construireBordereauFonds(enteteBordereau(apercu))}
+          filiale={filiale}
+          onClose={() => setApercu(null)}
+        />
+      )}
 
       {reception && (
         <ModaleReception

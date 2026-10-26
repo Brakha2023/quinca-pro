@@ -3,7 +3,7 @@ import { useQuery } from '@powersync/react';
 import type { CaisseRow, MouvementTresorerieRow, TransfertFilialeRow } from '@quinca/shared-types';
 import {
   caisseFromRow, etatCaisses, recapEtatCaisses, soldeOuverture,
-  type MouvementCaisse, type MouvementJournal,
+  type EnteteTransfertFonds, type MouvementCaisse, type MouvementJournal,
 } from '../../../core/tresorerie';
 import {
   CAISSES_QUERY, TRANSFERTS_FILIALES_QUERY, mouvementsDepuisQuery, mouvementsTresorerieQuery, type FiltresTresorerie,
@@ -63,6 +63,32 @@ export interface TransfertFilialeVue extends TransfertFilialeRow {
   filiale_source_nom: string | null;
   filiale_destination_nom: string | null;
   caisse_source_nom: string | null;
+  /** Les quatre suivants ne servent qu'au bordereau, et sont souvent nuls. */
+  caisse_destination_nom: string | null;
+  envoi_nom: string | null;
+  envoi_prenom: string | null;
+  reception_nom: string | null;
+  reception_prenom: string | null;
+}
+
+const nomComplet = (prenom: string | null, nom: string | null) => [prenom, nom].filter(Boolean).join(' ') || null;
+
+/** La ligne de la liste, telle que le bordereau la lit. */
+export function enteteBordereau(t: TransfertFilialeVue): EnteteTransfertFonds {
+  return {
+    numero: t.numero,
+    statut: t.statut,
+    date_envoi: t.date_envoi,
+    date_reception: t.date_reception,
+    montant: t.montant,
+    motif: t.motif,
+    filiale_source_nom: t.filiale_source_nom,
+    filiale_destination_nom: t.filiale_destination_nom,
+    caisse_source_nom: t.caisse_source_nom,
+    caisse_destination_nom: t.caisse_destination_nom,
+    utilisateur_envoi: nomComplet(t.envoi_prenom, t.envoi_nom),
+    utilisateur_reception: nomComplet(t.reception_prenom, t.reception_nom),
+  };
 }
 
 export function useTransfertsFiliales(filialeId: string | null) {

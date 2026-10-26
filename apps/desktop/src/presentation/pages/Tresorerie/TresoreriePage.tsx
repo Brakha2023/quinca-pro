@@ -66,7 +66,7 @@ export default function TresoreriePage() {
             {section === 'retrait' && <RetraitPanel filialeId={filialeId} filiale={infosFiliale} />}
             {section === 'entree' && <OperationPanel filialeId={filialeId} filiale={infosFiliale} config={ENTREE_EN_CAISSE} />}
             {section === 'transfert-caisse' && <TransfertCaissePanel filialeId={filialeId} />}
-            {section === 'transfert-filiale' && <TransfertFilialePanel filialeId={filialeId} filiales={filiales.map((f) => ({ id: f.id, nom: f.nom }))} />}
+            {section === 'transfert-filiale' && <TransfertFilialePanel filialeId={filialeId} filiale={infosFiliale} filiales={filiales.map((f) => ({ id: f.id, nom: f.nom }))} />}
             {section === 'depense' && <OperationPanel filialeId={filialeId} filiale={infosFiliale} config={DEPENSE} />}
           </div>
         </div>

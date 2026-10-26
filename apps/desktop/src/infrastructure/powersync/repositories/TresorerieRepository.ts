@@ -46,12 +46,26 @@ export function mouvementsDepuisQuery(filialeId: string | null, caisseId: string
 }
 
 /** Transferts inter-filiales où la filiale est expéditrice ou destinataire. */
+/**
+ * Les transferts où la filiale est partie prenante, dans les deux sens.
+ *
+ * Les jointures de droite servent au **bordereau** : caisse d'arrivée, nom de
+ * celui qui a saisi, nom de celui qui a encaissé. Elles rendent souvent nul du
+ * côté de l'expéditeur — un poste ne synchronise ni les caisses ni les
+ * utilisateurs d'en face — et la pièce s'imprime quand même.
+ */
 export const TRANSFERTS_FILIALES_QUERY = `
-  SELECT t.*, fs.nom AS filiale_source_nom, fd.nom AS filiale_destination_nom, c.nom AS caisse_source_nom
+  SELECT t.*, fs.nom AS filiale_source_nom, fd.nom AS filiale_destination_nom,
+    c.nom AS caisse_source_nom, cd.nom AS caisse_destination_nom,
+    ue.nom AS envoi_nom, ue.prenom AS envoi_prenom,
+    ur.nom AS reception_nom, ur.prenom AS reception_prenom
   FROM transferts_filiales t
   LEFT JOIN filiales fs ON fs.id = t.filiale_source_id
   LEFT JOIN filiales fd ON fd.id = t.filiale_destination_id
   LEFT JOIN caisses c ON c.id = t.caisse_source_id
+  LEFT JOIN caisses cd ON cd.id = t.caisse_destination_id
+  LEFT JOIN utilisateurs ue ON ue.id = t.utilisateur_envoi_id
+  LEFT JOIN utilisateurs ur ON ur.id = t.utilisateur_reception_id
   WHERE t.filiale_source_id = ? OR t.filiale_destination_id = ?
   ORDER BY t.date_envoi DESC LIMIT 200`;
 

@@ -198,6 +198,20 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   await page.locator('tbody tr', { hasText: 'En transit' }).first().waitFor();
   verifier(true, 'transfert inter-filiale envoyé depuis l’interface');
 
+  // Le bordereau : la pièce qui voyage avec l'argent. Sans elle, entre les deux
+  // caisses il ne reste que la parole du porteur.
+  await page.locator('[data-testid^=imprimer-bordereau-]').first().click();
+  await page.locator('#zone-impression .document-titre', { hasText: 'Bordereau de transfert de fonds' }).waitFor();
+  const bordereau = await texteDe(page, '#zone-impression');
+  verifier(bordereau.includes('trente mille francs CFA'), 'bordereau : le montant en toutes lettres, qui fait foi');
+  verifier((bordereau.match(/Le gérant ou le directeur/g) || []).length === 2,
+    'bordereau : deux cachets, signés du gérant ou du directeur de chaque filiale');
+  verifier(bordereau.includes('Porteur des fonds'), 'bordereau : le porteur se nomme à la main sur la pièce');
+  verifier(bordereau.includes('Filiale Bouaké') && bordereau.includes('désignée à la réception'),
+    'bordereau : destinataire nommé, caisse d’arrivée encore inconnue');
+  verifier((await page.locator('#zone-impression .code-barres rect').count()) > 20, 'bordereau : code-barres de la pièce');
+  await page.keyboard.press('Escape');
+
   // Dépense : sens et catégories propres à la section.
   await sousMenu.getByRole('link', { name: 'Dépense' }).click();
   await page.locator('[data-testid=depense-montant]').waitFor();
