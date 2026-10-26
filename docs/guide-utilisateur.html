@@ -174,7 +174,7 @@
     Gestion commerciale multi-filiales
   </div>
   <div class="pied">
-    Version 0.2.0 — 20 octobre 2026<br />
+    Version 0.2.0 — guide révisé le 26 octobre 2026<br />
     Ce guide suit l'application écran par écran. Gardez-le à portée du poste.
   </div>
 </section>
@@ -192,7 +192,7 @@
   <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Entrées, sorties, transferts, inventaire, production, alertes.</span></div></li>
   <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire, proforma, compte client, versements, relances.</span></div></li>
   <li><div><span class="titre-chap">Fournisseurs</span><br /><span class="desc">Commandes, réceptions, factures d'achat, règlements.</span></div></li>
-  <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses, transferts entre filiales.</span></div></li>
+  <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses, transferts entre filiales et leur bordereau.</span></div></li>
   <li><div><span class="titre-chap">Livraisons et personnel</span><br /><span class="desc">Bons de livraison, effectif, pointage, paie.</span></div></li>
   <li><div><span class="titre-chap">Tableau de bord</span><br /><span class="desc">Les huit chiffres, les quatre graphiques, la consolidation.</span></div></li>
   <li><div><span class="titre-chap">Historiques et audit</span><br /><span class="desc">Retrouver une pièce, la rééditer, savoir qui a fait quoi.</span></div></li>
@@ -650,6 +650,36 @@ retenu ; le journal d'une caisse s'exporte aussi en classeur.</p>
 <p>L'argent part de la caisse d'origine à l'envoi et entre dans celle de destination à la réception.
 Tant que le transfert est en transit, l'expéditeur peut l'annuler : la somme <strong>recrédite</strong>
 la caisse de départ.</p>
+<p>Entre les deux, les fonds ne sont dans <strong>aucune</strong> caisse. Les deux filiales les voient
+quand même, chacune de son côté, sur leur tableau de bord — voir le chapitre 12.</p>
+
+<h3>10.4 — Le bordereau qui voyage avec l'argent</h3>
+<p>Chaque ligne du tableau des transferts porte une <strong>icône d'imprimante</strong> : elle sort le
+<strong>bordereau de transfert de fonds</strong>, la pièce qui accompagne les espèces. Un billet ne
+porte pas de code article : entre la caisse de départ et celle d'arrivée, ce bordereau est la seule
+trace de ce que devient l'argent.</p>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Envoyez les fonds : caisse de départ, filiale destinataire, montant, motif.</li>
+    <li>Sur la ligne du transfert, cliquez l'icône d'imprimante, puis <em>Imprimer</em>.</li>
+    <li>Écrivez à la main le <strong>nom du porteur</strong> et le numéro de sa pièce d'identité.</li>
+    <li>Faites signer le <strong>gérant ou le directeur</strong> de la filiale qui envoie : c'est lui
+      qui autorise la sortie des fonds, jamais le caissier seul.</li>
+    <li>Le bordereau part avec l'argent. À l'arrivée, le gérant ou le directeur de la filiale
+      destinataire signe la seconde case, puis clique <em>Encaisser</em> et choisit la caisse.</li>
+  </ol>
+</div>
+<div class="note">
+  <span class="titre">Ce qui fait foi, c'est le montant en lettres</span>
+  <p>Le bordereau porte la somme en chiffres <em>et</em> en toutes lettres. Un chiffre se rature d'un
+  trait de stylo sur la route, alors que « soixante mille francs CFA » ne se rallonge pas. Comparez
+  les deux avant de signer.</p>
+</div>
+<p>La pièce se réimprime à tout moment — un bordereau se perd en route. Un transfert
+<strong>annulé</strong> s'imprime lui aussi, pour le classement, mais il porte alors le bandeau
+<strong>« ANNULÉ — ce bordereau ne vaut pas remise de fonds »</strong> et <strong>plus aucune case
+à signer</strong> : une signature y ferait croire à une remise qui n'a pas eu lieu.</p>
 
 <!-- ============ 11. LIVRAISONS & PERSONNEL ============ -->
 <h2><span class="num">11.</span>Livraisons et personnel</h2>
@@ -686,12 +716,25 @@ précédente de <strong>même durée</strong> — la flèche et le pourcentage d
   <tr><td class="chemin">Chiffre d'affaires TTC</td><td>Ce qui a été vendu sur la période.</td></tr>
   <tr><td class="chemin">Marge commerciale</td><td>Le chiffre d'affaires moins le coût d'achat de ce qui est sorti.</td></tr>
   <tr><td class="chemin">Résultat estimé</td><td>La marge moins les dépenses saisies. Une estimation, pas un résultat comptable.</td></tr>
-  <tr><td class="chemin">Trésorerie</td><td>Le disponible en caisse, toutes caisses du périmètre.</td></tr>
+  <tr><td class="chemin">Trésorerie</td><td>Le disponible en caisse, toutes caisses du périmètre. Sous le montant, ce qui est en route vers une autre filiale ou attendu d'elle.</td></tr>
   <tr><td class="chemin">Créances clients</td><td>Ce que les clients doivent à la maison.</td></tr>
   <tr><td class="chemin">Dettes fournisseurs</td><td>Ce que la maison doit à ses fournisseurs.</td></tr>
   <tr><td class="chemin">Valeur du stock</td><td>Le stock valorisé au coût moyen.</td></tr>
   <tr><td class="chemin">Bons de livraison en attente</td><td>Ce qui est vendu mais pas encore livré.</td></tr>
 </table>
+
+<div class="note">
+  <span class="titre">L'argent qui est sur la route</span>
+  <p>Quand des fonds ont quitté une caisse pour une autre filiale et n'y sont pas encore entrés, ils
+  ne sont dans <strong>aucune</strong> caisse. La tuile <strong>Trésorerie</strong> les annonce sous
+  le montant — « + 300 000 F en route, pas encore en caisse » — sans jamais les y ajouter : on ne
+  paie pas un fournisseur avec des billets qui sont dans une voiture.</p>
+  <p>La filiale qui <strong>attend</strong> l'argent lit, elle, « 300 000 F à recevoir », et le
+  bandeau de vigilance lui dit « à encaisser à la réception » : c'est elle qui doit l'encaisser,
+  dans <span class="chemin-ui">Trésorerie → Transfert inter filiale</span>.</p>
+  <p>En vue <strong>Groupe</strong>, le même bon n'est annoncé qu'une fois, du côté de la caisse qui
+  s'est vidée : sinon 300 000 F en route se liraient 600 000 F.</p>
+</div>
 
 <h3>12.3 — Les quatre graphiques</h3>
 <ul>
@@ -768,7 +811,7 @@ et ne descend pas sur les postes. Sans connexion, l'écran le dit clairement.</p
   <tr><td class="chemin">Stock</td><td>État du stock · Liste de commande · Bons d'entrée, de sortie, de transfert (deux cachets)</td></tr>
   <tr><td class="chemin">Clients</td><td>Facture proforma · Reçu de règlement · Relevé de compte · Lettre de relance</td></tr>
   <tr><td class="chemin">Fournisseurs</td><td>Bon de commande · Facture d'achat · Relevé de compte</td></tr>
-  <tr><td class="chemin">Trésorerie</td><td>État des caisses · Journal de caisse · Reçus de mouvement</td></tr>
+  <tr><td class="chemin">Trésorerie</td><td>État des caisses · Journal de caisse · Reçus de mouvement · Bordereau de transfert de fonds (deux cachets)</td></tr>
   <tr><td class="chemin">Employés</td><td>Bulletins de paie · Feuille d'émargement</td></tr>
   <tr><td class="chemin">Paramètres</td><td>Tableau des droits · Liste des comptes (deux visas)</td></tr>
   <tr><td class="chemin">Consolidation</td><td>Tableau de bord A4</td></tr>
