@@ -98,12 +98,19 @@ describe('evolution', () => {
 describe('pointsDeVigilance', () => {
   it('lève ce qui réclame une décision', () => {
     const v = pointsDeVigilance(indicateurs(bruts()), 4);
-    expect(v).toMatchObject({ creances: true, dettes: true, livraisons_retard: true, ruptures: true, tresorerie_negative: false });
-    expect(v.nombre).toBe(4);
+    expect(v).toMatchObject({
+      creances: true, dettes: true, livraisons_retard: true, livraisons_en_cours: true,
+      ruptures: true, tresorerie_negative: false,
+    });
+    // Créances, dettes, ruptures, livraisons en retard, livraisons en cours.
+    expect(v.nombre).toBe(5);
   });
 
   it('ne crie pas « marge négative » quand rien n’a été vendu', () => {
-    const v = pointsDeVigilance(indicateurs(bruts({ ca_ht: 0, cout_ventes: 0, charges: 0, creances: 0, dettes: 0, livraisons_retard: 0 })), 0);
+    const v = pointsDeVigilance(indicateurs(bruts({
+      ca_ht: 0, cout_ventes: 0, charges: 0, creances: 0, dettes: 0,
+      livraisons_attente: 0, livraisons_retard: 0,
+    })), 0);
     expect(v.marge_negative).toBe(false);
     expect(v.nombre).toBe(0);
   });
@@ -145,6 +152,59 @@ describe('fonds en transit', () => {
     const sans = pointsDeVigilance(filiale('ABJ'));
     expect(avec.fonds_en_transit).toBe(true);
     expect(sans.fonds_en_transit).toBe(false);
+  });
+});
+
+describe('marchandise en route', () => {
+  const filiale = (nom: string, over: Record<string, number> = {}) =>
+    indicateurs({ filiale_id: nom, filiale_code: nom, filiale_nom: nom, valeur_stock: 2_000_000, ...over });
+
+  // Un camion : 500 000 F de marchandise partie d'Abidjan, attendue à Bouaké.
+  const abidjan = () => filiale('ABJ', { stock_en_transit: 500_000, transferts_stock_en_transit: 1 });
+  const bouake = () => filiale('BKE', { stock_a_recevoir: 500_000, transferts_stock_a_recevoir: 1 });
+
+  it('ne gonfle pas la valeur du stock : la marchandise n’est dans aucun dépôt', () => {
+    const total = consolider([abidjan(), bouake()]);
+    expect(total.stock_en_transit).toBe(500_000);
+    expect(total.valeur_stock).toBe(4_000_000);
+  });
+
+  it('décrit le même camion des deux bouts : au groupe, les colonnes sont égales', () => {
+    const total = consolider([abidjan(), bouake()]);
+    expect(total.stock_a_recevoir).toBe(total.stock_en_transit);
+  });
+
+  it('alerte l’expéditeur et le destinataire, chacun pour son geste', () => {
+    expect(pointsDeVigilance(abidjan()).stock_en_transit).toBe(true);
+    expect(pointsDeVigilance(bouake()).stock_a_recevoir).toBe(true);
+    expect(pointsDeVigilance(filiale('ABJ')).stock_en_transit).toBe(false);
+  });
+
+  it('se tait au niveau du groupe pour « à recevoir » : un bon, une alerte', () => {
+    const v = pointsDeVigilance(consolider([abidjan(), bouake()]), 0, true);
+    expect(v.stock_en_transit).toBe(true);
+    expect(v.stock_a_recevoir).toBe(false);
+  });
+});
+
+describe('bons de livraison en cours', () => {
+  const filiale = (over: Record<string, number> = {}) =>
+    indicateurs({ filiale_id: 'ABJ', filiale_code: 'ABJ', filiale_nom: 'Abidjan', ...over });
+
+  it('signale les bons à préparer ou en route, même sans retard', () => {
+    const v = pointsDeVigilance(filiale({ livraisons_attente: 3, livraisons_retard: 0 }));
+    expect(v.livraisons_en_cours).toBe(true);
+    expect(v.livraisons_retard).toBe(false);
+  });
+
+  it('se tait quand tout est livré', () => {
+    expect(pointsDeVigilance(filiale()).livraisons_en_cours).toBe(false);
+  });
+
+  it('distingue l’engagement pris du retard pris', () => {
+    const v = pointsDeVigilance(filiale({ livraisons_attente: 3, livraisons_retard: 1 }));
+    expect(v.livraisons_en_cours).toBe(true);
+    expect(v.livraisons_retard).toBe(true);
   });
 });
 

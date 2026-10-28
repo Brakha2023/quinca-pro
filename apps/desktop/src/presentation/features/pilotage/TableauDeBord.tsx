@@ -67,6 +67,14 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
     !vueGroupe && total.fonds_a_recevoir > 0 && `${formaterFcfa(total.fonds_a_recevoir)} à recevoir`,
   ].filter((part): part is string => typeof part === 'string');
 
+  /* La marchandise entre deux filiales : sortie d'un dépôt, entrée dans aucun.
+     La valeur du stock ne la compte pas — elle n'est plus en rayon —, et sans
+     cette ligne un chargement de deux jours n'apparaîtrait nulle part. */
+  const horsDepots = [
+    total.stock_en_transit > 0 && `${formaterFcfa(total.stock_en_transit)} en route`,
+    !vueGroupe && total.stock_a_recevoir > 0 && `${formaterFcfa(total.stock_a_recevoir)} à recevoir`,
+  ].filter((part): part is string => typeof part === 'string');
+
   return (
     <div className="space-y-6">
       {/* Ce que j'ai vendu, ce que j'ai gagné. */}
@@ -133,7 +141,13 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
         <Indicateur
           label="Valeur du stock"
           valeur={formaterFcfa(total.valeur_stock)}
-          sous={repartition.valeur_dormante > 0 ? `dont ${formaterFcfa(repartition.valeur_dormante)} dormant` : `${repartition.articles} article(s)`}
+          sous={
+            horsDepots.length > 0
+              ? `+ ${horsDepots.join(' · ')}, dans aucun dépôt`
+              : repartition.valeur_dormante > 0
+                ? `dont ${formaterFcfa(repartition.valeur_dormante)} dormant`
+                : `${repartition.articles} article(s)`
+          }
           testId="kpi-stock"
         />
         <Indicateur
@@ -152,11 +166,17 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
             {[
               vigilance.ruptures && `${repartition.ruptures} article(s) en rupture`,
               vigilance.livraisons_retard && `${total.livraisons_retard} livraison(s) en retard`,
+              vigilance.livraisons_en_cours
+                && `${total.livraisons_attente} bon(s) de livraison en cours`,
               vigilance.tresorerie_negative && 'trésorerie négative',
               vigilance.fonds_en_transit
                 && `${formaterFcfa(total.fonds_en_transit)} en transit (${total.transferts_en_transit} bon(s)) — réception à confirmer`,
               vigilance.fonds_a_recevoir
                 && `${formaterFcfa(total.fonds_a_recevoir)} à recevoir (${total.transferts_a_recevoir} bon(s)) — à encaisser à la réception`,
+              vigilance.stock_en_transit
+                && `${formaterFcfa(total.stock_en_transit)} de marchandise en route (${total.transferts_stock_en_transit} bon(s)) — réception à confirmer`,
+              vigilance.stock_a_recevoir
+                && `${formaterFcfa(total.stock_a_recevoir)} de marchandise à recevoir (${total.transferts_stock_a_recevoir} bon(s)) — à faire entrer en stock`,
               vigilance.marge_negative && 'marge négative sur la période',
               vigilance.resultat_negatif && !vigilance.marge_negative && 'les dépenses dépassent la marge',
               anciennete.au_dela_de_90 > 0 && `${formaterFcfa(anciennete.au_dela_de_90)} d'impayés de plus de 90 jours`,

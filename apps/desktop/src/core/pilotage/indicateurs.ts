@@ -64,6 +64,27 @@ export interface IndicateursBruts {
   fonds_a_recevoir: number;
   /** Nombre de bons à encaisser à la réception. */
   transferts_a_recevoir: number;
+  /**
+   * Valeur de la marchandise partie d'ici vers une autre filiale et pas
+   * encore entrée dans un dépôt. Même histoire que les espèces : elle a
+   * quitté un dépôt sans entrer dans aucun autre, et sans cette ligne elle
+   * ne figurerait sur aucun tableau — ni dans la valeur du stock, qui ne
+   * compte que ce qui est en rayon.
+   *
+   * Comptée **au départ seulement** : au groupe, la somme des filiales donne
+   * le total sur la route, sans doublon.
+   */
+  stock_en_transit: number;
+  /** Nombre de bons de transfert en route. */
+  transferts_stock_en_transit: number;
+  /**
+   * Le même chargement vu de l'arrivée : ce qu'une autre filiale a expédié
+   * ici et que personne n'a encore fait entrer en stock. Comme pour les
+   * fonds, les deux colonnes décrivent le même camion — elles ne
+   * s'additionnent jamais.
+   */
+  stock_a_recevoir: number;
+  transferts_stock_a_recevoir: number;
   /** Bons de livraison ni livrés ni annulés. */
   livraisons_attente: number;
   /** Parmi eux, ceux dont la date prévue est passée. */
@@ -92,6 +113,8 @@ const BRUTS_VIDES: Omit<IndicateursBruts, 'filiale_id' | 'filiale_code' | 'filia
   creances: 0, dettes: 0, valeur_stock: 0, tresorerie: 0,
   fonds_en_transit: 0, transferts_en_transit: 0,
   fonds_a_recevoir: 0, transferts_a_recevoir: 0,
+  stock_en_transit: 0, transferts_stock_en_transit: 0,
+  stock_a_recevoir: 0, transferts_stock_a_recevoir: 0,
   livraisons_attente: 0, livraisons_retard: 0, commandes_ouvertes: 0, clients_servis: 0,
 };
 
@@ -154,6 +177,12 @@ export interface PointsDeVigilance {
   fonds_en_transit: boolean;
   /** Des espèces arrivent ici et ne sont pas encore entrées en caisse. */
   fonds_a_recevoir: boolean;
+  /** De la marchandise est partie d'ici et personne n'a confirmé son arrivée. */
+  stock_en_transit: boolean;
+  /** De la marchandise arrive ici et n'est pas encore entrée en stock. */
+  stock_a_recevoir: boolean;
+  /** Des bons de livraison restent à préparer ou sont en route chez le client. */
+  livraisons_en_cours: boolean;
   marge_negative: boolean;
   resultat_negatif: boolean;
   ruptures: boolean;
@@ -174,6 +203,11 @@ export function pointsDeVigilance(i: Indicateurs, rupturesStock = 0, vueGroupe =
     livraisons_retard: i.livraisons_retard > 0,
     fonds_en_transit: i.transferts_en_transit > 0,
     fonds_a_recevoir: !vueGroupe && i.transferts_a_recevoir > 0,
+    stock_en_transit: i.transferts_stock_en_transit > 0,
+    stock_a_recevoir: !vueGroupe && i.transferts_stock_a_recevoir > 0,
+    // Un bon de livraison en cours n'est pas une faute : c'est un engagement
+    // pris envers un client, et il se voit à côté de ceux qui sont en retard.
+    livraisons_en_cours: i.livraisons_attente > 0,
     // Une marge négative n'a de sens que si l'on a vendu : sinon elle vaut zéro.
     marge_negative: i.ca_ht > 0 && i.marge < 0,
     resultat_negatif: i.ca_ht > 0 && i.resultat < 0,

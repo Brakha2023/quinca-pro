@@ -174,7 +174,7 @@
     Gestion commerciale multi-filiales
   </div>
   <div class="pied">
-    Version 0.3.0 — 26 octobre 2026<br />
+    Version 0.3.1 — 28 octobre 2026<br />
     Ce guide suit l'application écran par écran. Gardez-le à portée du poste.
   </div>
 </section>
@@ -211,7 +211,7 @@ connexion. Cette opération ne se fait qu'une fois par poste.</p>
 <div class="pasapas">
   <div class="etiquette">Pas à pas</div>
   <ol>
-    <li>Copiez le fichier <code>QuincaPro_0.3.0_x64-setup.exe</code> sur le PC (clé USB ou réseau interne).</li>
+    <li>Copiez le fichier <code>QuincaPro_0.3.1_x64-setup.exe</code> sur le PC (clé USB ou réseau interne).</li>
     <li>Double-cliquez dessus. Windows affiche <em>« Windows a protégé votre ordinateur »</em> : c'est normal, l'application n'est pas signée auprès de Microsoft. Cliquez <em>Informations complémentaires</em>, puis <em>Exécuter quand même</em>.</li>
     <li>Laissez l'installation se faire. Sur un Windows ancien, l'installeur télécharge au passage le composant WebView2 : une connexion Internet est nécessaire <strong>cette fois-là seulement</strong>.</li>
     <li>QuincaPro apparaît dans le menu Démarrer. Lancez-le.</li>
@@ -736,6 +736,19 @@ précédente de <strong>même durée</strong> — la flèche et le pourcentage d
   s'est vidée : sinon 300 000 F en route se liraient 600 000 F.</p>
 </div>
 
+<div class="note">
+  <span class="titre">La marchandise aussi voyage</span>
+  <p>Un transfert de stock entre filiales suit exactement la même règle. Entre le départ et la
+  réception, la marchandise n'est dans <strong>aucun dépôt</strong> : la <strong>valeur du stock</strong>
+  ne la compte plus, et la tuile l'annonce sous le montant — « + 1 250 000 F en route, dans aucun
+  dépôt ». La filiale destinataire lit « à recevoir », et le bandeau lui dit
+  « à faire entrer en stock » : c'est <span class="chemin-ui">Stock → Transfert entre filiales</span>,
+  bouton <em>Réceptionner</em>.</p>
+  <p>Le bandeau porte aussi les <strong>bons de livraison en cours</strong> — ceux qui restent à
+  préparer ou qui sont partis chez le client. Ce n'est pas une faute, c'est un engagement pris : il
+  se lit à côté de ceux qui sont en retard sur leur date prévue.</p>
+</div>
+
 <h3>12.3 — Les quatre graphiques</h3>
 <ul>
   <li><strong>Chiffre d'affaires et marge</strong>, barre par barre sur la période.</li>
@@ -934,7 +947,7 @@ le serveur.</p>
 
 <div class="note" style="margin-top:8mm">
   <span class="titre">Ce guide</span>
-  <p>Il décrit la version <strong>0.3.0</strong> du 26 octobre 2026. Les écrans évoluent : en cas de
+  <p>Il décrit la version <strong>0.3.1</strong> du 28 octobre 2026. Les écrans évoluent : en cas de
   différence entre ce guide et l'application, c'est l'application qui a raison — signalez l'écart
   pour que le guide soit repris.</p>
 </div>

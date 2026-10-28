@@ -80,6 +80,11 @@ export default function TableauDeBordDocument({ fenetre, filialeId, lecture, fil
           {ligne('Créances clients', formaterFcfa(total.creances), anciennete.au_dela_de_90 > 0 ? `dont ${formaterFcfa(anciennete.au_dela_de_90)} à plus de 90 j` : undefined)}
           {ligne('Dettes fournisseurs', formaterFcfa(total.dettes), `${total.commandes_ouvertes} commande(s) ouverte(s)`)}
           {ligne('Valeur du stock', formaterFcfa(repartition.valeur), `${repartition.articles} article(s)`)}
+          {/* Sortie d'un dépôt, entrée dans aucun : la valeur du stock ne la voit pas. */}
+          {total.stock_en_transit > 0
+            && ligne(`Marchandise en route, hors dépôts (${total.transferts_stock_en_transit} bon(s))`, formaterFcfa(total.stock_en_transit))}
+          {filialeId !== null && total.stock_a_recevoir > 0
+            && ligne(`Marchandise à recevoir, hors dépôts (${total.transferts_stock_a_recevoir} bon(s))`, formaterFcfa(total.stock_a_recevoir))}
           {ligne('Stock dormant', formaterFcfa(repartition.valeur_dormante))}
           {ligne('Bons de livraison en attente', `${total.livraisons_attente}`, total.livraisons_retard > 0 ? `${total.livraisons_retard} en retard` : undefined)}
         </tbody>

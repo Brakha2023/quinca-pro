@@ -284,6 +284,48 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
     () => document.querySelector('[data-testid=kpi-tresorerie]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes('25000Fenroute'),
   );
 
+  console.log('La marchandise sur la route et les bons de livraison');
+  // Un camion parti d'Abidjan pour Bouaké : la marchandise a quitté un dépôt
+  // sans entrer dans aucun autre. La valeur du stock ne la compte plus.
+  const stockAvant = montant(await texteDe(page, '[data-testid=kpi-stock-valeur]'));
+  await page.evaluate(async ({ source, destination }) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const depot = await db.get('SELECT id FROM depots WHERE filiale_id = ? LIMIT 1', [source]);
+    await db.execute(`INSERT OR REPLACE INTO transferts_stock
+      (id, numero, filiale_source_id, filiale_destination_id, depot_source_id, statut,
+       nombre_lignes, quantite_totale, valeur_totale, date_envoi)
+      VALUES ('ts-essai','TRS-ESSAI', ?, ?, ?, 'EN_TRANSIT', 2, 10, 40000, datetime('now'))`,
+      [source, destination, depot.id]);
+    await db.execute(`INSERT OR REPLACE INTO livraisons
+      (id, numero, filiale_id, statut, adresse_livraison)
+      VALUES ('liv-essai','BL-ESSAI', ?, 'A_PREPARER', 'Cour du client')`, [source]);
+  }, { source: filialeId, destination: faits.filiale2 });
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=kpi-stock]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes('40000Fenroute'),
+  );
+  verifier(montant(await texteDe(page, '[data-testid=kpi-stock-valeur]')) === stockAvant,
+    'la marchandise en route ne gonfle pas la valeur du stock : elle n’est dans aucun dépôt');
+  const bandeau = await texteDe(page, '[data-testid=vigilance]');
+  verifier(bandeau.includes('de marchandise en route') && bandeau.includes('réception à confirmer'),
+    'un transfert de stock en route réclame une décision : la réception est à confirmer');
+  verifier(bandeau.includes('bon(s) de livraison en cours'),
+    'les bons de livraison en cours figurent au bandeau : c’est un engagement pris');
+  verifier(!(await texteDe(page, '[data-testid=kpi-stock]')).includes('recevoir'),
+    'au groupe, le même camion n’est annoncé qu’une fois : en route, jamais aussi à recevoir');
+
+  // Vu de Bouaké, le même chargement est « à recevoir » : c'est là-bas qu'on le
+  // fait entrer en stock.
+  await page.locator('[data-testid=filiale-BKE]').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=kpi-stock]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes('40000F\u00e0recevoir'),
+  );
+  verifier((await texteDe(page, '[data-testid=vigilance]')).includes('à faire entrer en stock'),
+    'la filiale destinataire voit la marchandise qui lui arrive, à faire entrer en stock');
+  await page.locator('[data-testid=total-groupe]').click();
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=kpi-stock]')?.textContent.replace(/[\s\u202f\u00a0]/g, '').includes('40000Fenroute'),
+  );
+
   console.log('Le périmètre commande l’écran');
   // Un sélecteur nommé « Périmètre » doit changer ce qu'on regarde : tant qu'il
   // ne le faisait pas, un directeur changeait de filiale sans rien voir bouger.

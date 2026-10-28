@@ -72,6 +72,18 @@ export const INDICATEURS_QUERY = `
       WHERE tf.filiale_destination_id = f.id AND tf.statut = 'EN_TRANSIT') AS fonds_a_recevoir,
     (SELECT COUNT(*) FROM transferts_filiales tf
       WHERE tf.filiale_destination_id = f.id AND tf.statut = 'EN_TRANSIT') AS transferts_a_recevoir,
+    -- La marchandise sur la route : sortie d'un dépôt, entrée dans aucun. La
+    -- valeur du stock ne la voit pas, elle ne compte que ce qui est en rayon.
+    -- Même règle que les fonds : au départ pour le total, à l'arrivée pour
+    -- celui qui doit la recevoir, et jamais les deux additionnées.
+    (SELECT COALESCE(SUM(ts.valeur_totale), 0) FROM transferts_stock ts
+      WHERE ts.filiale_source_id = f.id AND ts.statut = 'EN_TRANSIT') AS stock_en_transit,
+    (SELECT COUNT(*) FROM transferts_stock ts
+      WHERE ts.filiale_source_id = f.id AND ts.statut = 'EN_TRANSIT') AS transferts_stock_en_transit,
+    (SELECT COALESCE(SUM(ts.valeur_totale), 0) FROM transferts_stock ts
+      WHERE ts.filiale_destination_id = f.id AND ts.statut = 'EN_TRANSIT') AS stock_a_recevoir,
+    (SELECT COUNT(*) FROM transferts_stock ts
+      WHERE ts.filiale_destination_id = f.id AND ts.statut = 'EN_TRANSIT') AS transferts_stock_a_recevoir,
     (SELECT COUNT(*) FROM livraisons l
       WHERE l.filiale_id = f.id AND l.statut IN ('A_PREPARER', 'EN_COURS')) AS livraisons_attente,
     (SELECT COUNT(*) FROM livraisons l

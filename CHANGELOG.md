@@ -13,6 +13,25 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
+## 0.3.1 — 28 octobre 2026
+
+Ce qui bouge entre les filiales se voit au tableau de bord, marchandise comprise.
+
+### Ajouté
+
+- **La marchandise en route au tableau de bord.** Un transfert de stock entre filiales sort la
+  marchandise d'un dépôt sans la faire entrer dans un autre : la valeur du stock ne la compte plus.
+  La tuile l'annonce sous le montant (« + 1 250 000 F en route, dans aucun dépôt »), le bandeau de
+  vigilance réclame la confirmation de réception, et la filiale destinataire lit « à recevoir »
+  avec « à faire entrer en stock ». Même règle que pour les espèces : au groupe, un bon n'est
+  annoncé qu'une fois, du côté du départ.
+- **Les bons de livraison en cours au bandeau de vigilance.** Ceux qui restent à préparer ou qui
+  sont partis chez le client, à côté de ceux qui sont en retard : un engagement pris se suit, même
+  quand il n'est pas encore en faute.
+- La feuille A4 et l'export Excel du tableau de bord reprennent les quatre colonnes.
+
+---
+
 ## 0.3.0 — 26 octobre 2026
 
 L'identité de la maison se règle depuis l'application, et l'argent qui voyage entre filiales
