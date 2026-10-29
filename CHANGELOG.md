@@ -13,6 +13,37 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
+## 0.4.0 — 28 octobre 2026
+
+Le comptoir, revu là où il coûtait du temps : la remise, la saisie des montants, et les clients
+qu'on fait patienter.
+
+### Modifié
+
+- **La remise se donne en francs, sur la vente entière.** Plus de pourcentage, et plus de remise
+  article par article : c'est ainsi qu'elle se négocie au comptoir — « je te fais 5 000 » — et le
+  caissier n'a plus à ventiler à la main ce qu'il vient d'accorder d'un mot. Une remise plus grande
+  que le ticket est ramenée au total : on ne rend pas d'argent sur une vente.
+- **Le taux négocié d'un client reste**, mais converti : il propose un montant, recalculé à chaque
+  article ajouté, jusqu'à ce que le caissier écrive le sien — qui tient alors.
+- **La colonne `ventes.total_remise` porte désormais la remise toutes taxes**, celle que le client
+  lit sur son ticket, au lieu de son équivalent hors taxes. Les deux se confondent quand la TVA est
+  nulle ; les ventes déjà enregistrées ne sont pas retouchées.
+- **Les proformas gardent leur taux** — un devis annonce une condition commerciale — et la
+  conversion en francs se fait à la reprise au point de vente.
+
+### Ajouté
+
+- **Ventes en brouillon.** La touche F9 met le ticket de côté et libère le comptoir pour le
+  client suivant ; la liste des tickets en attente les rend avec leur remise. Rien n'est vendu, rien
+  ne sort du stock, aucun numéro n'est tiré : le brouillon reste **sur le poste** et ne part pas au
+  serveur, ce que l'écran dit.
+- **Saisie des montants groupée par milliers.** Remise et montant reçu : « 1250000 » s'affiche
+  **1 250 000** pendant la frappe. Un zéro de trop se voit tout de suite au lieu de se découvrir au
+  comptage du soir.
+
+---
+
 ## 0.3.1 — 28 octobre 2026
 
 Ce qui bouge entre les filiales se voit au tableau de bord, marchandise comprise.

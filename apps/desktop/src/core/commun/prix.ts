@@ -34,6 +34,31 @@ export function margePourcent(prixAchat: number, prixVente: number): number {
 }
 
 /** Affichage monétaire : le franc CFA n'a pas de centimes, on arrondit à l'unité. */
+/** Espace fine insécable : un groupe de milliers ne se coupe pas en fin de ligne. */
+const ESPACE_MILLIERS = '\u202f';
+
+/**
+ * Groupe les milliers pendant la frappe : « 1250000 » se lit **1 250 000**.
+ * Sans les groupes, un zéro de trop passe inaperçu, et c'est le genre d'erreur
+ * qu'on ne retrouve qu'au comptage du soir.
+ */
+export function grouperMilliers(valeur: number): string {
+  if (!Number.isFinite(valeur)) return '';
+  const signe = valeur < 0 ? '-' : '';
+  const chiffres = String(Math.abs(Math.round(valeur)));
+  return signe + chiffres.replace(/\B(?=(\d{3})+(?!\d))/g, ESPACE_MILLIERS);
+}
+
+/**
+ * Lit un montant saisi : seuls les chiffres comptent, le FCFA n'ayant pas de
+ * centimes. « 1 250 000 F » et « 1.250.000 » donnent donc 1250000, et une
+ * saisie vide donne 0.
+ */
+export function lireMontant(saisie: string): number {
+  const chiffres = saisie.replace(/[^\d]/g, '');
+  return chiffres === '' ? 0 : Number(chiffres);
+}
+
 export function formaterFcfa(montant: number | null | undefined): string {
   return `${Math.round(montant ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F`;
 }

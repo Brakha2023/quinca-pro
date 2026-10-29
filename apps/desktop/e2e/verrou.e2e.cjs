@@ -90,7 +90,10 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(enAttente === enAttenteAvant, 'la file d’envoi est intacte après verrouillage/déverrouillage (rien n’est perdu)');
   await page.unroute(() => true);
 
-  const inattendues = erreurs.filter((e) => !/INTERNET_DISCONNECTED|Failed to fetch/.test(e));
+  // Chromium n'a pas un seul mot pour « le réseau est coupé » : selon le moment
+  // où la requête part, il dit INTERNET_DISCONNECTED ou NETWORK_IO_SUSPENDED.
+  // Les deux décrivent la coupure que ce scénario provoque lui-même.
+  const inattendues = erreurs.filter((e) => !/INTERNET_DISCONNECTED|NETWORK_IO_SUSPENDED|Failed to fetch/.test(e));
   verifier(inattendues.length === 0, `aucune erreur console hors coupure réseau simulée${inattendues.length ? ' : ' + inattendues.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');

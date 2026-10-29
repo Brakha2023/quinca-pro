@@ -37,27 +37,27 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
     const out = {};
 
     // 1. Comptoir, espèces avec monnaie
-    const v1 = await ventes.enregistrer(ctx, { lignes: [ligne(await article(a1), 10)], remise_globale_percent: 0, client: null, paiement: { mode_paiement: 'ESPECES', montant_percu: 60000 }, livraison: null, notes: '' });
+    const v1 = await ventes.enregistrer(ctx, { lignes: [ligne(await article(a1), 10)], remise: 0, client: null, paiement: { mode_paiement: 'ESPECES', montant_percu: 60000 }, livraison: null, notes: '' });
     out.v1 = { numero: v1.preparee.numero, ttc: v1.preparee.totaux.total_ttc, monnaie: v1.preparee.monnaie };
     out.stockApresV1 = (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a1])).quantite;
     out.caisseApresV1 = (await db.get('SELECT solde_actuel FROM caisses WHERE id = ?', ['caisse-1'])).solde_actuel;
 
     // 2. Crédit dans le plafond, avec livraison
-    const v2 = await ventes.enregistrer(ctx, { lignes: [ligne(await article(a2), 2)], remise_globale_percent: 0, client: await lireClient(), paiement: { mode_paiement: 'CREDIT', montant_percu: 0 }, livraison: { adresse_livraison: 'Cocody', date_livraison_prevue: '2026-09-20', chauffeur: '', vehicule: '' }, notes: '' });
+    const v2 = await ventes.enregistrer(ctx, { lignes: [ligne(await article(a2), 2)], remise: 0, client: await lireClient(), paiement: { mode_paiement: 'CREDIT', montant_percu: 0 }, livraison: { adresse_livraison: 'Cocody', date_livraison_prevue: '2026-09-20', chauffeur: '', vehicule: '' }, notes: '' });
     out.v2 = { ttc: v2.preparee.totaux.total_ttc, reste: v2.preparee.reste_a_payer };
     out.clientApresV2 = await lireClient();
     out.livraison = await db.get('SELECT statut, adresse_livraison FROM livraisons WHERE vente_id = ?', [v2.id]);
 
     // 3. Crédit hors plafond → refusé, rien n'est écrit
-    try { await ventes.enregistrer(ctx, { lignes: [ligne(await article(a1), 10)], remise_globale_percent: 0, client: await lireClient(), paiement: { mode_paiement: 'CREDIT', montant_percu: 0 }, livraison: null, notes: '' }); out.refus = 'NON'; }
+    try { await ventes.enregistrer(ctx, { lignes: [ligne(await article(a1), 10)], remise: 0, client: await lireClient(), paiement: { mode_paiement: 'CREDIT', montant_percu: 0 }, livraison: null, notes: '' }); out.refus = 'NON'; }
     catch (e) { out.refus = e.name; }
     out.nbVentes = (await db.get('SELECT count(*) AS n FROM ventes')).n;
 
     // 4. Stock insuffisant → refusé (3 robinets, 2 vendus → 1 dispo)
-    try { await ventes.enregistrer(ctx, { lignes: [ligne(await article(a2), 2)], remise_globale_percent: 0, client: null, paiement: { mode_paiement: 'ESPECES', montant_percu: 30000 }, livraison: null, notes: '' }); out.refusStock = 'NON'; }
+    try { await ventes.enregistrer(ctx, { lignes: [ligne(await article(a2), 2)], remise: 0, client: null, paiement: { mode_paiement: 'ESPECES', montant_percu: 30000 }, livraison: null, notes: '' }); out.refusStock = 'NON'; }
     catch (e) { out.refusStock = e.name; }
     // … sauf si forcé par un gérant
-    const v4 = await ventes.enregistrer({ ...ctx, autoriserStockNegatif: true }, { lignes: [ligne(await article(a2), 2)], remise_globale_percent: 10, client: null, paiement: { mode_paiement: 'MOBILE_MONEY', montant_percu: 21240 }, livraison: null, notes: '' });
+    const v4 = await ventes.enregistrer({ ...ctx, autoriserStockNegatif: true }, { lignes: [ligne(await article(a2), 2)], remise: 2360, client: null, paiement: { mode_paiement: 'MOBILE_MONEY', montant_percu: 21240 }, livraison: null, notes: '' });
     out.stockRobinetForce = (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a2])).quantite;
     out.v4ttc = v4.preparee.totaux.total_ttc;
 
@@ -76,7 +76,7 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   verifier(r.v2.ttc === 23600 && r.v2.reste === 23600 && r.clientApresV2.solde_actuel === 23600 && r.clientApresV2.cumul_factures === 23600, 'vente à crédit : créance client 23 600');
   verifier(r.livraison?.statut === 'A_PREPARER' && r.livraison.adresse_livraison === 'Cocody', 'bon de livraison créé');
   verifier(r.refus === 'VenteInvalideError' && r.nbVentes === 2, 'crédit hors plafond refusé, rien écrit');
-  verifier(r.refusStock === 'StockInsuffisantError' && r.stockRobinetForce === -1 && r.v4ttc === 21240, 'stock insuffisant refusé, vente forcée par gérant → stock −1, remise 10 % appliquée');
+  verifier(r.refusStock === 'StockInsuffisantError' && r.stockRobinetForce === -1 && r.v4ttc === 21240, 'stock insuffisant refusé, vente forcée par gérant → stock −1, remise de 2 360 F appliquée');
   verifier(r.apresAnnulation.client === 0 && r.apresAnnulation.statut === 'ANNULEE' && r.apresAnnulation.livraison === 'ANNULEE' && r.apresAnnulation.stockRobinet === 1, 'annulation : créance, livraison et stock contre-passés');
   verifier(r.validees === 2, 'validation de journée : 2 ventes en attente validées (l’annulée ignorée)');
   verifier(r.treso.length === 2 && r.treso.every((t) => t.type === 'RECETTE' && t.categorie === 'VENTE'), '2 recettes de trésorerie (ventes encaissées)');
@@ -100,9 +100,49 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await ticket.locator('input[type=number][value="2"]').waitFor();
   verifier(true, 'F2 + Entrée ajoute l’article, second clic cumule (qté 2)');
 
+  // La remise se saisit en francs, sur la vente entière : plus de pourcentage,
+  // et plus rien à ventiler article par article.
+  const total = () => page.getByTestId('ticket-total').textContent();
+  const attendreTotal = (attendu) => page.waitForFunction(
+    (v) => document.querySelector('[data-testid=ticket-total]').textContent.replace(/[\s\u202f\u00a0]/g, '') === v, attendu);
+
+  await page.getByTestId('remise-globale').fill('1000');
+  await attendreTotal('10800F');
+  verifier(true, 'remise de 1 000 F : le total tombe de 11 800 à 10 800');
+  verifier((await page.getByTestId('remise-globale').inputValue()) === '1\u202f000', 'remise : les milliers se groupent pendant la frappe');
+  verifier((await page.locator('[data-testid=ticket-lignes] input[max="100"]').count()) === 0,
+    'la ligne du ticket n’a plus de champ de remise : elle se décide sur la vente');
+
+  await page.getByTestId('remise-globale').fill('99000');
+  await page.locator('[data-testid=remise-plafonnee]').waitFor();
+  verifier((await total()).replace(/[\s\u202f\u00a0]/g, '') === '0F', 'une remise plus grande que le ticket est ramenée au ticket');
+
+  // Mise de côté : rien n'est vendu, et le ticket se retrouve tel quel.
+  await page.getByTestId('remise-globale').fill('1000');
+  await attendreTotal('10800F');
+  await page.getByTestId('mettre-en-brouillon').click();
+  await page.locator('text=Panier vide').waitFor();
+  verifier(true, 'mise en brouillon : le comptoir est libre pour le client suivant');
+
+  await page.getByTestId('ouvrir-brouillons').click();
+  const boite = page.getByRole('dialog', { name: 'Ventes en brouillon' });
+  await boite.locator('[data-testid=liste-brouillons] li').first().waitFor();
+  verifier((await texteDe(boite)).includes('ce poste'), 'brouillons : l’écran dit qu’ils ne quittent pas la machine');
+  await boite.getByTestId('reprendre-brouillon').first().click();
+  await attendreTotal('10800F');
+  verifier((await page.getByTestId('remise-globale').inputValue()) === '1\u202f000', 'reprise du brouillon : lignes et remise retrouvées');
+
+  await page.getByTestId('ouvrir-brouillons').click();
+  verifier((await texteDe(page.getByRole('dialog', { name: 'Ventes en brouillon' }))).includes('Aucune vente mise de côté'),
+    'le brouillon repris ne reste pas en double dans la liste');
+  await page.keyboard.press('Escape');
+
+  await page.getByTestId('remise-globale').fill('');
+  await attendreTotal('11800F');
+
   await page.keyboard.press('F11');
   await page.getByRole('dialog', { name: 'Encaissement' }).waitFor();
-  await page.locator('input[type=number]').last().fill('12000');
+  await page.getByTestId('montant-percu').fill('12000');
   await page.getByRole('button', { name: 'Valider la vente' }).click();
   await page.getByRole('dialog', { name: 'Vente enregistrée' }).waitFor();
   verifier((await page.textContent('[role=dialog]')).includes('Rendu'), 'encaissement espèces avec rendu monnaie');

@@ -39,7 +39,7 @@ describe('lignesFacture', () => {
 describe('recapFacture', () => {
   const vente = (mode: 'ESPECES' | 'CREDIT', percu: number, client: unknown = null) =>
     preparerVente(
-      { lignes: [ligne()], remise_globale_percent: 0, client: client as never, paiement: { mode_paiement: mode, montant_percu: percu }, livraison: null, notes: '' },
+      { lignes: [ligne()], remise: 0, client: client as never, paiement: { mode_paiement: mode, montant_percu: percu }, livraison: null, notes: '' },
       { caisse: 'C1', code: 'K7Q' },
     );
 
@@ -60,8 +60,10 @@ describe('recapFacture', () => {
     expect(r.comptant).toBe(false);
   });
 
-  it('reprend la remise globale dans le pied de facture', () => {
-    const totaux = calculerTotaux([ligne()], 10);
+  it('reprend la remise de la vente dans le pied de facture', () => {
+    // 20 000 TTC sans TVA, 2 000 F de remise : le pied montre ce que le client
+    // économise, dans l'unité où on la lui a accordée.
+    const totaux = calculerTotaux([ligne()], 2000);
     expect(totaux.total_remise).toBe(2000);
     expect(totaux.total_ttc).toBe(18000);
   });

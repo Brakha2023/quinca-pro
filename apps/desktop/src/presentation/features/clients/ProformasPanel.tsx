@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRightCircleIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutProforma } from '@quinca/shared-types';
 import type { Article } from '../../../core/articles';
-import { LIBELLES_STATUT_PROFORMA, calculerLigne, calculerTotaux, ligneProformaVersPanier, proformaSchema, type LignePanier, type Proforma } from '../../../core/ventes';
+import { LIBELLES_STATUT_PROFORMA, calculerLigne, ligneProformaVersPanier, proformaSchema, remiseCommerciale, totauxProforma, type LignePanier, type Proforma } from '../../../core/ventes';
 import { ProformasRepository } from '../../../infrastructure/powersync/repositories/ProformasRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import FormField, { controleInlineClass, inputClass } from '../../components/ui/FormField';
@@ -42,7 +42,7 @@ function NouvelleProformaModal({ filialeId, clientId, onClose }: { filialeId: st
   const [lignes, setLignes] = useState<LignePanier[]>([]);
   const [enCours, setEnCours] = useState(false);
   const remiseEffective = remise ?? client?.remise_percent ?? 0;
-  const totaux = calculerTotaux(lignes, remiseEffective);
+  const totaux = totauxProforma({ lignes, remise_percent: remiseEffective });
 
   const ajouter = (a: Article) => {
     if (lignes.some((l) => l.article_id === a.id)) return;
@@ -117,7 +117,7 @@ function NouvelleProformaModal({ filialeId, clientId, onClose }: { filialeId: st
 function ProformaImprimable({ proforma, filiale, onClose }: { proforma: ProformaVue; filiale: Props['filiale']; onClose: () => void }) {
   const lignes = useLignesProforma(proforma.id).map(ligneProformaVersPanier);
   const client = useClient(proforma.client_id);
-  const totaux = calculerTotaux(lignes, proforma.remise_percent);
+  const totaux = totauxProforma({ lignes, remise_percent: proforma.remise_percent });
   return (
     <DocumentImprimable titre="Facture proforma" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
@@ -190,7 +190,9 @@ function BoutonFacturer({ proforma }: { proforma: ProformaVue }) {
   const facturer = async () => {
     if (lignesTicket.length > 0 && !(await confirmer({ message: 'Le ticket en cours au point de vente sera remplacé par les lignes de la proforma.', libelleConfirmer: 'Remplacer le ticket' }))) return;
     if (proforma.client_id && !client) { notifier('erreur', 'Client introuvable.'); return; }
-    chargerProforma({ id: proforma.id, numero: proforma.numero }, lignes.map(ligneProformaVersPanier), client, proforma.remise_percent);
+    // Le comptoir ne connaît que des francs : le taux du devis s'y convertit.
+    const lignesDuDevis = lignes.map(ligneProformaVersPanier);
+    chargerProforma({ id: proforma.id, numero: proforma.numero }, lignesDuDevis, client, remiseCommerciale(lignesDuDevis, proforma.remise_percent));
     navigate('/pos');
   };
   return <button onClick={facturer} className="p-1.5 rounded hover:bg-green-50 text-green-700" title="Facturer au point de vente"><ArrowRightCircleIcon className="w-4 h-4" /></button>;

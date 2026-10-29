@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { LigneProformaRow, ProformaRow, StatutProforma } from '@quinca/shared-types';
-import { calculerTotaux, type LignePanier } from './panier';
+import { calculerTotaux, remiseCommerciale, type LignePanier } from './panier';
 
 export const LIBELLES_STATUT_PROFORMA: Record<StatutProforma, string> = { EN_COURS: 'En cours', FACTUREE: 'Facturée', ANNULEE: 'Annulée' };
 
@@ -29,7 +29,14 @@ export const proformaSchema = z
   .refine((p) => p.client_id || p.client_nom, { message: 'Client en compte ou nom du client obligatoire', path: ['client_nom'] });
 export type ProformaForm = z.infer<typeof proformaSchema>;
 
-export const totauxProforma = (p: Pick<ProformaForm, 'lignes' | 'remise_percent'>) => calculerTotaux(p.lignes, p.remise_percent);
+/**
+ * Totaux d'un devis. La proforma raisonne en **taux** — c'est une condition
+ * commerciale annoncée au client, valable tant que le devis l'est — là où le
+ * comptoir raisonne en francs. Le taux se convertit donc ici, et nulle part
+ * ailleurs.
+ */
+export const totauxProforma = (p: Pick<ProformaForm, 'lignes' | 'remise_percent'>) =>
+  calculerTotaux(p.lignes, remiseCommerciale(p.lignes, p.remise_percent));
 
 export interface Proforma {
   id: string;

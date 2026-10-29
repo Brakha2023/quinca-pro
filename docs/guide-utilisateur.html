@@ -174,7 +174,7 @@
     Gestion commerciale multi-filiales
   </div>
   <div class="pied">
-    Version 0.3.1 — 28 octobre 2026<br />
+    Version 0.4.0 — 28 octobre 2026<br />
     Ce guide suit l'application écran par écran. Gardez-le à portée du poste.
   </div>
 </section>
@@ -187,7 +187,7 @@
   <li><div><span class="titre-chap">Comprendre l'application</span><br /><span class="desc">Le travail hors ligne, la synchronisation, le verrouillage du poste.</span></div></li>
   <li><div><span class="titre-chap">Se repérer</span><br /><span class="desc">Le menu, le périmètre, les boutons que l'on retrouve partout.</span></div></li>
   <li><div><span class="titre-chap">Paramètres — rôles et utilisateurs</span><br /><span class="desc">Créer un rôle, cocher ses droits, l'affecter à quelqu'un.</span></div></li>
-  <li><div><span class="titre-chap">Le point de vente</span><br /><span class="desc">Encaisser, les raccourcis, le ticket et la facture.</span></div></li>
+  <li><div><span class="titre-chap">Le point de vente</span><br /><span class="desc">Encaisser, la remise en francs, les brouillons, le ticket et la facture.</span></div></li>
   <li><div><span class="titre-chap">Ventes et catalogue</span><br /><span class="desc">Relire une vente, l'annuler, tenir les articles et les prix.</span></div></li>
   <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Entrées, sorties, transferts, inventaire, production, alertes.</span></div></li>
   <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire, proforma, compte client, versements, relances.</span></div></li>
@@ -211,7 +211,7 @@ connexion. Cette opération ne se fait qu'une fois par poste.</p>
 <div class="pasapas">
   <div class="etiquette">Pas à pas</div>
   <ol>
-    <li>Copiez le fichier <code>QuincaPro_0.3.1_x64-setup.exe</code> sur le PC (clé USB ou réseau interne).</li>
+    <li>Copiez le fichier <code>QuincaPro_0.4.0_x64-setup.exe</code> sur le PC (clé USB ou réseau interne).</li>
     <li>Double-cliquez dessus. Windows affiche <em>« Windows a protégé votre ordinateur »</em> : c'est normal, l'application n'est pas signée auprès de Microsoft. Cliquez <em>Informations complémentaires</em>, puis <em>Exécuter quand même</em>.</li>
     <li>Laissez l'installation se faire. Sur un Windows ancien, l'installeur télécharge au passage le composant WebView2 : une connexion Internet est nécessaire <strong>cette fois-là seulement</strong>.</li>
     <li>QuincaPro apparaît dans le menu Démarrer. Lancez-le.</li>
@@ -412,22 +412,55 @@ ouvre. Cinq rôles sont déjà livrés ; vous pouvez en créer autant que vous v
     <li>Ouvrez <span class="chemin-ui">Point de Vente</span>. Le dépôt de vente et la caisse sont rappelés en haut.</li>
     <li>Appuyez sur <span class="touche">F2</span> pour aller dans la recherche. Tapez le code ou le nom de l'article, ou passez la douchette sur le code-barres.</li>
     <li><span class="touche">Entrée</span> ajoute l'article si le code est exact, ou si la recherche ne donne qu'un seul résultat. Sinon, cliquez la carte voulue.</li>
-    <li>Ajustez les quantités dans le ticket. Accordez une remise si votre rôle le permet.</li>
+    <li>Ajustez les quantités dans le ticket.</li>
+    <li>Accordez une remise si besoin : elle se saisit <strong>en francs</strong>, dans la case
+      <em>Remise sur la vente</em>, et porte sur le ticket entier.</li>
     <li>Rattachez un client si la vente est à crédit ou s'il faut une facture nominative.</li>
     <li>Appuyez sur <span class="touche">F11</span> pour encaisser. Choisissez le mode de règlement, saisissez le montant reçu : le rendu de monnaie s'affiche.</li>
     <li>Imprimez le <strong>ticket 80 mm</strong> ou la <strong>facture A4</strong>, puis <span class="touche">F10</span> pour la vente suivante.</li>
   </ol>
 </div>
 
-<h3>5.2 — Les raccourcis</h3>
+<div class="note">
+  <span class="titre">Les montants se tapent sans espaces</span>
+  <p>Remise, montant reçu : tapez les chiffres à la suite, l'application groupe les milliers pendant
+  la frappe. « 1250000 » s'affiche <strong>1 250 000</strong> — un zéro de trop se voit tout de
+  suite, au lieu de se découvrir au comptage du soir.</p>
+</div>
+
+<h3>5.2 — La remise</h3>
+<p>Elle se donne <strong>en francs</strong> et sur la <strong>vente entière</strong>, jamais article
+par article : c'est ainsi qu'elle se négocie au comptoir — « je te fais 5 000 » — et le caissier
+n'a rien à ventiler à la main. Le total tombe immédiatement du montant accordé, et la ligne
+<em>Remise</em> du ticket et de la facture porte ce même montant.</p>
+<p>Si vous tapez plus que le ticket, la remise est ramenée au total : on ne rend pas d'argent sur
+une vente. Un client en compte ayant un <strong>taux négocié</strong> voit sa remise proposée
+d'office, convertie en francs et recalculée à chaque article ajouté — jusqu'à ce que vous écriviez
+votre propre montant, qui tient alors.</p>
+
+<h3>5.3 — Mettre une vente de côté</h3>
+<p>Un client part chercher sa carte, un autre attend derrière : <span class="touche">F9</span> ou le
+bouton <em>Brouillon</em> met le ticket de côté et libère le comptoir. L'icône à côté ouvre la
+liste des tickets en attente, avec leur heure, leur contenu et leur total : <em>Reprendre</em>
+les remet à l'écran, remise comprise.</p>
+<div class="note">
+  <span class="titre">Un brouillon n'est pas une vente</span>
+  <p>Rien n'est vendu, rien ne sort du stock, aucun numéro n'est tiré : c'est une saisie en cours.
+  Elle reste donc <strong>sur ce poste</strong> et ne part pas au serveur ; vous ne la retrouverez
+  pas sur une autre machine. Reprenez-la ou jetez-la, mais ne comptez pas dessus pour la
+  comptabilité.</p>
+</div>
+
+<h3>5.4 — Les raccourcis</h3>
 <table>
   <tr><th>Touche</th><th>Effet</th></tr>
   <tr><td><span class="touche">F2</span></td><td>Aller dans la recherche d'article (et sélectionner ce qui s'y trouve).</td></tr>
+  <tr><td><span class="touche">F9</span></td><td>Mettre le ticket en brouillon — il est gardé pour plus tard.</td></tr>
   <tr><td><span class="touche">F10</span></td><td>Nouvelle vente — vide le ticket en cours.</td></tr>
   <tr><td><span class="touche">F11</span></td><td>Encaisser — ouvre la fenêtre de règlement.</td></tr>
 </table>
 
-<h3>5.3 — Les modes de règlement</h3>
+<h3>5.5 — Les modes de règlement</h3>
 <table>
   <tr><th>Mode</th><th>Effet sur la caisse et le compte client</th></tr>
   <tr><td class="chemin">Espèces</td><td>Entre en caisse immédiatement.</td></tr>
@@ -436,7 +469,7 @@ ouvre. Cinq rôles sont déjà livrés ; vous pouvez en créer autant que vous v
   <tr><td class="chemin">Crédit</td><td>N'entre pas en caisse : la somme devient une <strong>créance</strong> sur le client. Un client doit donc être rattaché.</td></tr>
 </table>
 
-<h3>5.4 — Deux formats d'impression</h3>
+<h3>5.6 — Deux formats d'impression</h3>
 <p>Le <strong>ticket 80 mm</strong> part sur l'imprimante thermique ; la <strong>facture A4</strong>
 part sur la bureautique, avec le cartouche client, le détail des lignes, le montant en toutes
 lettres et les cases de règlement. Le format habituel du poste se choisit dans les réglages du
@@ -449,12 +482,12 @@ point de vente : c'est lui qui devient le bouton principal.</p>
   d'une facture valable.</p>
 </div>
 
-<h3>5.5 — Stock insuffisant</h3>
+<h3>5.7 — Stock insuffisant</h3>
 <p>Si la quantité manque, l'application le dit. Selon votre rôle, soit la vente est bloquée, soit
 vous pouvez passer outre — le stock devient alors négatif et la régularisation est attendue. Ce
 droit (<em>Vendre malgré un stock insuffisant</em>) s'accorde rôle par rôle.</p>
 
-<h3>5.6 — Le code du poste</h3>
+<h3>5.8 — Le code du poste</h3>
 <p><span class="chemin-ui">Point de Vente → Changer</span> affiche le <strong>code du poste</strong>,
 tiré une fois par machine. Il entre dans les numéros de pièces et garantit que deux caisses ne
 tirent jamais le même numéro. Collez-le sur l'unité centrale : il sert au dépannage.</p>
@@ -947,7 +980,7 @@ le serveur.</p>
 
 <div class="note" style="margin-top:8mm">
   <span class="titre">Ce guide</span>
-  <p>Il décrit la version <strong>0.3.1</strong> du 28 octobre 2026. Les écrans évoluent : en cas de
+  <p>Il décrit la version <strong>0.4.0</strong> du 28 octobre 2026. Les écrans évoluent : en cas de
   différence entre ce guide et l'application, c'est l'application qui a raison — signalez l'écart
   pour que le guide soit repris.</p>
 </div>

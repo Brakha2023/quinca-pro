@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ajouterAuPanier, calculerLigne, calculerTotaux, type LignePanier } from './panier';
+import { ajouterAuPanier, calculerLigne, calculerTotaux, remiseCommerciale, type LignePanier } from './panier';
 import { VenteInvalideError, preparerVente } from './vente';
 import type { Client } from '../clients';
 
@@ -22,23 +22,45 @@ describe('panier', () => {
     expect(l.total_ht).toBe(18000);
   });
 
-  it('calcule les totaux avec TVA par ligne et remise globale', () => {
-    const t = calculerTotaux([ligne({ quantite: 2 }), ligne({ article_id: 'b', prix_unitaire_ttc: 1000, tva_percent: 0 })], 10);
+  it('calcule les totaux avec TVA par ligne et remise en francs', () => {
+    // 23 600 TTC à 18 % + 1 000 TTC sans TVA, moins 2 460 F de remise.
+    const t = calculerTotaux([ligne({ quantite: 2 }), ligne({ article_id: 'b', prix_unitaire_ttc: 1000, tva_percent: 0 })], 2460);
     expect(t.total_brut_ht).toBe(21000);
-    expect(t.total_ttc).toBe(22140); // (23600 + 1000) × 0,9
+    expect(t.total_ttc).toBe(22140);
     expect(t.total_net_ht).toBe(18900);
     expect(t.total_tva).toBe(3240);
-    expect(t.total_remise).toBe(2100);
+    // La remise affichée est celle que le client voit : toutes taxes.
+    expect(t.total_remise).toBe(2460);
+    expect(t.remise_accordee).toBe(2460);
     expect(t.nombre_articles).toBe(3);
+  });
+
+  it('ne remise jamais plus que le ticket', () => {
+    const t = calculerTotaux([ligne({ prix_unitaire_ttc: 5000 })], 9000);
+    expect(t.remise_accordee).toBe(5000);
+    expect(t.total_ttc).toBe(0);
+    expect(t.total_net_ht).toBe(0);
+  });
+
+  it('ignore une remise négative', () => {
+    expect(calculerTotaux([ligne({ prix_unitaire_ttc: 5000 })], -3000).total_ttc).toBe(5000);
+  });
+
+  it('convertit le taux commercial d’un client en francs', () => {
+    const lignes = [ligne({ quantite: 2 })]; // 23 600 TTC
+    expect(remiseCommerciale(lignes, 5)).toBe(1180);
+    expect(remiseCommerciale(lignes, 0)).toBe(0);
+    // Le taux suit le ticket : un article de plus, une remise plus grande.
+    expect(remiseCommerciale([...lignes, ligne({ article_id: 'b', prix_unitaire_ttc: 2400, tva_percent: 0 })], 5)).toBe(1300);
   });
 
   it('arrondit les totaux TTC au franc (pas de centimes en FCFA)', () => {
     const l = calculerLigne(ligne({ prix_unitaire_ttc: 999, remise_percent: 5 }));
     expect(l.total_ttc).toBe(949); // 949,05 sans arrondi
-    const t = calculerTotaux([ligne({ prix_unitaire_ttc: 1250 })], 5);
-    expect(t.total_ttc).toBe(1188); // 1187,5
+    const t = calculerTotaux([ligne({ prix_unitaire_ttc: 1250 })], 63);
+    expect(t.total_ttc).toBe(1187);
     expect(Number.isInteger(t.total_tva + t.total_net_ht)).toBe(true);
-    const v = preparerVente({ lignes: [ligne({ prix_unitaire_ttc: 999, remise_percent: 5 })], remise_globale_percent: 0, client: null, livraison: null, notes: '', paiement: { mode_paiement: 'ESPECES', montant_percu: 949 } }, POSTE);
+    const v = preparerVente({ lignes: [ligne({ prix_unitaire_ttc: 999, remise_percent: 5 })], remise: 0, client: null, livraison: null, notes: '', paiement: { mode_paiement: 'ESPECES', montant_percu: 949 } }, POSTE);
     expect(v).toMatchObject({ monnaie: 0, reste_a_payer: 0, montant_encaisse: 949 });
   });
 
@@ -50,7 +72,7 @@ describe('panier', () => {
 });
 
 describe('preparerVente', () => {
-  const base = { lignes: [ligne({ quantite: 2 })], remise_globale_percent: 0, client: null, livraison: null, notes: '' };
+  const base = { lignes: [ligne({ quantite: 2 })], remise: 0, client: null, livraison: null, notes: '' };
 
   it('espèces : exige le montant remis et rend la monnaie', () => {
     expect(() => preparerVente({ ...base, paiement: { mode_paiement: 'ESPECES', montant_percu: 20000 } }, POSTE)).toThrow(VenteInvalideError);

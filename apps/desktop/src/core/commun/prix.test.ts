@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { margePourcent, montantApresRemise, prixHtDepuisTtc, prixTtcDepuisHt } from './prix';
+import { grouperMilliers, lireMontant, margePourcent, montantApresRemise, prixHtDepuisTtc, prixTtcDepuisHt } from './prix';
 
 describe('prix', () => {
   it('convertit TTC ↔ HT avec la TVA', () => {
@@ -30,5 +30,29 @@ describe('montantApresRemise', () => {
     expect(montantApresRemise(1000, undefined)).toBe(1000);
     expect(montantApresRemise(1000, null)).toBe(1000);
     expect(montantApresRemise(1000, Number.NaN)).toBe(1000);
+  });
+});
+
+describe('saisie des montants', () => {
+  it('groupe les milliers avec une espace fine insécable', () => {
+    expect(grouperMilliers(1250000)).toBe('1 250 000');
+    expect(grouperMilliers(999)).toBe('999');
+    expect(grouperMilliers(0)).toBe('0');
+    expect(grouperMilliers(-45000)).toBe('-45 000');
+  });
+
+  it('ne garde que les chiffres de ce qui est saisi ou collé', () => {
+    expect(lireMontant('1 250 000 F')).toBe(1250000);
+    expect(lireMontant('1.250.000')).toBe(1250000);
+    expect(lireMontant('')).toBe(0);
+    expect(lireMontant('abc')).toBe(0);
+  });
+
+  // Ce qui sort du champ doit pouvoir y rentrer : sinon un montant affiché
+  // puis réédité changerait de valeur tout seul.
+  it('fait l’aller-retour sans rien perdre', () => {
+    for (const montant of [0, 7, 999, 1000, 1250000, 987654321]) {
+      expect(lireMontant(grouperMilliers(montant))).toBe(montant);
+    }
   });
 });

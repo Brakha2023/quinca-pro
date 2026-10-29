@@ -172,7 +172,13 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('button', { hasText: 'Client Test UI' }).click();
   await page.locator('text=Client Test UI').first().waitFor();
   await page.locator('[data-testid=remise-globale]').waitFor();
-  verifier((await page.locator('[data-testid=remise-globale]').inputValue()) === '5', 'remise client (5 %) appliquée d’office au ticket');
+  // Le taux négocié reste au client ; le comptoir, lui, ne manipule que des
+  // francs : 5 % d'un sac à 5 500 font 275 F, proposés d'office.
+  verifier((await page.textContent('label[for=remise-vente]')).includes('5 % client'),
+    'le taux négocié du client est rappelé au comptoir');
+  await page.locator('button:has-text("CIM-50")').first().click();
+  await page.waitForFunction(() => document.querySelector('[data-testid=remise-globale]').value === '275');
+  verifier(true, 'remise client (5 %) convertie en francs sur le ticket');
   verifier(true, 'POS : sélection d’un client applique sa remise (5 %) d’office');
 
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);

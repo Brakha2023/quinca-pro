@@ -38,7 +38,8 @@ export type LivraisonDemande = z.infer<typeof livraisonDemandeSchema>;
 
 export interface VenteAEnregistrer {
   lignes: LignePanier[];
-  remise_globale_percent: number;
+  /** Remise accordée sur la vente, **en francs** (voir `calculerTotaux`). */
+  remise: number;
   client: Client | null;
   paiement: Paiement;
   livraison: LivraisonDemande | null;
@@ -85,7 +86,7 @@ export function preparerVente(vente: VenteAEnregistrer, poste: PosteVente, date:
   if (vente.lignes.length === 0) throw new VenteInvalideError('Le ticket est vide');
   if (vente.lignes.some((l) => l.quantite <= 0)) throw new VenteInvalideError('Quantité invalide sur une ligne');
 
-  const totaux = calculerTotaux(vente.lignes, vente.remise_globale_percent);
+  const totaux = calculerTotaux(vente.lignes, vente.remise);
   if (totaux.total_ttc <= 0) throw new VenteInvalideError('Le total de la vente doit être positif');
 
   const { mode_paiement } = vente.paiement;

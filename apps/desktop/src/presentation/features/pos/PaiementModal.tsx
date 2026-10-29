@@ -20,6 +20,7 @@ import {
 import type { Client } from '../../../core/clients';
 import { codePoste } from '../../../infrastructure/desktop/identitePoste';
 import { VentesRepository, type ContexteVente } from '../../../infrastructure/powersync/repositories/VentesRepository';
+import ChampMontant from '../../components/ui/ChampMontant';
 import Modal from '../../components/ui/Modal';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
@@ -52,8 +53,8 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
   const confirmer = useConfirmation();
   const { utilisateur } = useCurrentUtilisateur();
   const { filiale } = useFilialeCourante();
-  const { lignes, client, remiseGlobale, proforma, viderPanier } = usePOSStore();
-  const totaux = useMemo(() => calculerTotaux(lignes, remiseGlobale), [lignes, remiseGlobale]);
+  const { lignes, client, remise, proforma, viderPanier } = usePOSStore();
+  const totaux = useMemo(() => calculerTotaux(lignes, remise), [lignes, remise]);
 
   const [mode, setMode] = useState<ModePaiement>('ESPECES');
   const [montantPercu, setMontantPercu] = useState<number>(totaux.total_ttc);
@@ -74,18 +75,18 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
 
   const apercu = useMemo(() => {
     try {
-      return { ok: true as const, v: preparerVente({ lignes, remise_globale_percent: remiseGlobale, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' }, { caisse: ctx.caisseCode, code: codePoste() }) };
+      return { ok: true as const, v: preparerVente({ lignes, remise, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' }, { caisse: ctx.caisseCode, code: codePoste() }) };
     } catch (e) {
       return { ok: false as const, message: e instanceof Error ? e.message : 'Vente invalide' };
     }
-  }, [lignes, remiseGlobale, client, mode, montantPercu, livraison, ctx.caisseCode]);
+  }, [lignes, remise, client, mode, montantPercu, livraison, ctx.caisseCode]);
 
   const encaisser = async (forcerStock = false) => {
     setEnCours(true);
     try {
       const { preparee } = await repository.enregistrer(
         { ...ctx, autoriserStockNegatif: forcerStock, proformaId: proforma?.id ?? null },
-        { lignes, remise_globale_percent: remiseGlobale, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' },
+        { lignes, remise, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' },
       );
       setTerminee({ preparee, lignes, client, avoir: avoirClient(client), date: new Date() });
       viderPanier();
@@ -194,13 +195,11 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
         {mode !== 'CREDIT' && (
           <div>
             <label className="block text-xs font-medium text-neutral-700 mb-1">{mode === 'ESPECES' ? 'Montant remis par le client' : 'Montant perçu'}</label>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={montantPercu}
+            <ChampMontant
+              valeur={montantPercu}
+              onChange={setMontantPercu}
               autoFocus
-              onChange={(e) => setMontantPercu(Number(e.target.value))}
+              data-testid="montant-percu"
               onKeyDown={(e) => { if (e.key === 'Enter' && apercu.ok) encaisser(); }}
               className="w-full px-4 py-3 border border-neutral-200 rounded-lg text-2xl text-right font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
