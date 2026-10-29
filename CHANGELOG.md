@@ -13,7 +13,7 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
-## 0.4.0 — 28 octobre 2026
+## 0.4.0 — 29 octobre 2026
 
 Le comptoir, revu là où il coûtait du temps : la remise, la saisie des montants, et les clients
 qu'on fait patienter.
@@ -42,6 +42,13 @@ qu'on fait patienter.
 - **Saisie des montants groupée par milliers.** Remise et montant reçu : « 1250000 » s'affiche
   **1 250 000** pendant la frappe. Un zéro de trop se voit tout de suite au lieu de se découvrir au
   comptage du soir.
+- **Un article jamais utilisé se supprime** (Catalogue, la corbeille) : faute de frappe, doublon,
+  ligne d'import malheureuse. Dès qu'une ligne de vente, un mouvement de stock, une commande, un
+  devis, un brouillon ou du stock dans un dépôt le nomme, la suppression est refusée et le message
+  dit ce qui le retient — « Désactiver » reste là pour ce cas, et n'efface rien de son histoire.
+  La vérification passe par le serveur : le poste ne garde que douze mois d'activité, il ne peut
+  pas prouver seul qu'un article n'a jamais servi. Hors ligne, l'application le dit au lieu
+  d'effacer. Aucune migration.
 
 ### Base de données
 

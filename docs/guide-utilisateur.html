@@ -518,8 +518,18 @@ famille, prix de vente, seuils de stock.</p>
   <li><strong>Détail</strong> d'un article : stock par dépôt, activité commerciale, et <em>Imprimer la fiche</em>.</li>
   <li><strong>Modifier les prix</strong> est un droit à part : les prix peuvent s'afficher sans pouvoir se changer.</li>
   <li><strong>Importer Excel</strong> charge un export de l'ancien logiciel. Le nombre d'articles importés est annoncé, et chaque ligne rejetée est expliquée.</li>
+  <li><strong>Désactiver</strong> retire l'article du comptoir et des écrans de saisie sans rien effacer de ce qu'il a vendu. C'est le geste courant, celui d'un article qu'on ne vend plus.</li>
+  <li><strong>Supprimer</strong> (la corbeille) efface pour de bon un article <em>qui n'a jamais servi</em> : faute de frappe, doublon, ligne d'import malheureuse. Dès qu'il a une ligne de vente, un mouvement de stock, une commande, un devis ou du stock dans un dépôt, l'application refuse et dit ce qui le retient.</li>
   <li><em>Imprimer / PDF</em> sort le catalogue complet, qui se poursuit de page en page.</li>
 </ul>
+
+<div class="note">
+  <span class="titre">Supprimer demande la connexion</span>
+  <p>Le poste ne garde que douze mois d'activité : hors ligne, il ne peut pas prouver qu'un article
+  n'a <em>jamais</em> servi, seulement qu'il n'a rien servi récemment. L'application interroge donc
+  le serveur avant d'effacer, et le dit quand le réseau manque. <strong>Désactiver</strong>, lui,
+  marche sans réseau et reste le bon geste dans le doute.</p>
+</div>
 
 <div class="note">
   <span class="titre">Une limite connue</span>

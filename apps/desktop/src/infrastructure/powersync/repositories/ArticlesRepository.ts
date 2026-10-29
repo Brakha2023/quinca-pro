@@ -1,6 +1,10 @@
 import type { Transaction } from '@powersync/web';
 import type { FamilleArticleRow } from '@quinca/shared-types';
-import { preparerImport, type ArticleForm, type LigneImportArticle, type ResultatImport } from '../../../core/articles';
+import {
+  motifNonSupprimable, preparerImport, usagesArticle,
+  type Article, type ArticleForm, type LigneImportArticle, type ResultatImport, type UsagesArticle,
+} from '../../../core/articles';
+import { usagesArticleServeur } from '../../supabase/usagesArticle';
 import { BaseRepository } from './BaseRepository';
 
 export interface FiltresArticles {
@@ -93,6 +97,22 @@ export const VENTES_MENSUELLES_ARTICLE_QUERY = `
   ORDER BY mois DESC
   LIMIT 12`;
 
+/**
+ * Tout ce qui nomme l'article, compté d'un coup dans la base du poste.
+ *
+ * Un brouillon porte son panier en JSON : on y cherche l'identifiant, qui est
+ * un UUID et ne se confond avec rien. Les autres tables ont `article_id`.
+ */
+export const USAGES_ARTICLE_QUERY = `
+  SELECT (SELECT COUNT(*) FROM stocks                      WHERE article_id = ?) AS depots,
+         (SELECT COUNT(*) FROM mouvements_stock            WHERE article_id = ?) AS mouvements,
+         (SELECT COUNT(*) FROM lignes_vente                WHERE article_id = ?) AS ventes,
+         (SELECT COUNT(*) FROM lignes_proforma             WHERE article_id = ?) AS devis,
+         (SELECT COUNT(*) FROM lignes_commande_fournisseur WHERE article_id = ?) AS commandes,
+         (SELECT COUNT(*) FROM lignes_production           WHERE article_id = ?) AS fabrications,
+         (SELECT COUNT(*) FROM lignes_transfert_stock      WHERE article_id = ?) AS transferts,
+         (SELECT COUNT(*) FROM ventes_brouillons           WHERE lignes LIKE ?)  AS brouillons`;
+
 export interface StockDepotRow {
   depot_id: string;
   depot_nom: string | null;
@@ -153,9 +173,53 @@ export class ArticlesRepository extends BaseRepository {
     });
   }
 
-  /** Un article ne se supprime jamais (historique des ventes) : il se désactive. */
+  /**
+   * Un article qui a servi ne se supprime pas : il se désactive. Il quitte le
+   * comptoir et les écrans de saisie, son histoire reste lisible.
+   */
   async setActif(id: string, actif: boolean): Promise<void> {
     await this.patch(this.db, 'articles', id, { est_actif: actif ? 1 : 0 });
+  }
+
+  /** Ce qui rattache l'article à l'activité, vu depuis la base du poste. */
+  async usages(id: string): Promise<UsagesArticle> {
+    // `COUNT(*)` rend toujours un nombre : la ligne arrive complète.
+    const row = await this.db.get<Partial<UsagesArticle>>(
+      USAGES_ARTICLE_QUERY,
+      [...Array<string>(7).fill(id), `%${id}%`],
+    );
+    return usagesArticle(row);
+  }
+
+  /**
+   * Pourquoi cet article ne peut pas être supprimé — ou `null` s'il peut l'être.
+   *
+   * Deux regards, dans cet ordre. Le poste répond sans réseau et sans attendre,
+   * mais il ne garde que douze mois d'activité : son silence ne prouve rien.
+   * Le serveur, lui, a tout l'historique — et c'est lui qui refuserait
+   * l'effacement (clés étrangères), donc c'est lui qui tranche. Hors ligne,
+   * on ne supprime pas : on le dit, et « Désactiver » reste là.
+   */
+  async motifDeRefus(article: Pick<Article, 'id' | 'code' | 'designation'>): Promise<string | null> {
+    const surLePoste = motifNonSupprimable(article, await this.usages(article.id));
+    if (surLePoste) return surLePoste;
+
+    const auServeur = await usagesArticleServeur(article.id);
+    if (!auServeur) {
+      return `Sans réseau, le poste ne peut pas garantir que « ${article.code} » n'a jamais servi : il n'en garde que douze mois. Reconnectez-vous pour le supprimer, ou désactivez-le dès maintenant.`;
+    }
+    return motifNonSupprimable(article, auServeur);
+  }
+
+  /**
+   * Efface définitivement un article jamais utilisé (faute de frappe, doublon,
+   * import malheureux). La garde est refaite ici : aucun appelant ne doit
+   * pouvoir effacer un article qui a une histoire, même par distraction.
+   */
+  async supprimer(article: Pick<Article, 'id' | 'code' | 'designation'>): Promise<void> {
+    const motif = motifNonSupprimable(article, await this.usages(article.id));
+    if (motif) throw new Error(motif);
+    await this.db.execute('DELETE FROM articles WHERE id = ?', [article.id]);
   }
 
   async codeExiste(filialeId: string, code: string, excludeId?: string): Promise<boolean> {

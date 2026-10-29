@@ -247,12 +247,94 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   await page.locator('select').first().selectOption('');
   await page.locator('tbody tr', { hasText: '01408202625001' }).waitFor();
 
+  console.log('Suppression d’un article jamais utilisé');
+  // La base du poste ne garde que douze mois d'activité : elle ne peut pas
+  // prouver qu'un article n'a jamais servi. La suppression interroge donc le
+  // serveur, simulé ici par interception REST — PostgREST rend un comptage
+  // dans l'en-tête `Content-Range`, pas dans le corps de la réponse.
+  let usagesServeur = 0;
+  const comptages = [];
+  await page.route(
+    '**/rest/v1/{stocks,mouvements_stock,lignes_vente,lignes_proforma,lignes_commande_fournisseur,lignes_production,lignes_transfert_stock,ventes_brouillons}*',
+    (route) => {
+      comptages.push(route.request().url());
+      // `Content-Range` porte le compte ; sans `Access-Control-Expose-Headers`,
+      // le navigateur le cache au code (requête d'une autre origine).
+      route.fulfill({
+        status: 200,
+        headers: {
+          'content-range': `*/${usagesServeur}`,
+          'access-control-allow-origin': '*',
+          'access-control-expose-headers': 'content-range',
+        },
+      });
+    },
+  );
+  const cliquerSupprimer = (code) => page.getByTestId(`supprimer-${code}`).click();
+  /** Une notification précise : elles s'empilent et durent huit secondes. */
+  const notification = (texte) => page.locator('[aria-live] > div', { hasText: texte });
+  // Tant qu'une vérification court, aucune suppression n'est possible : après
+  // un refus, l'écran doit revenir à la vie.
+  const attendreBoutonsRendus = () => page.waitForFunction(
+    () => [...document.querySelectorAll('[data-testid^="supprimer-"]')].every((b) => !b.disabled),
+  );
+
+  // ROB-01 a du stock et des ventes sur le poste : la réponse est locale.
+  await cliquerSupprimer('ROB-01');
+  const refus = notification('ROB-01 — Robinet');
+  await refus.waitFor();
+  await attendreBoutonsRendus();
+  const texteRefus = await texteDe(refus);
+  verifier(texteRefus.includes('ligne(s) de vente') && texteRefus.includes('mouvement(s) de stock'),
+    `article utilisé : le refus dit ce qui le retient « ${texteRefus.slice(0, 70)}… »`);
+  verifier(texteRefus.includes('Désactivez-le'), 'article utilisé : le refus dit quoi faire à la place');
+  verifier(comptages.length === 0, 'article utilisé : le poste tranche seul, sans déranger le serveur');
+
+  // ABAT3 vient d'un import et n'a jamais bougé : le serveur le confirme.
+  await cliquerSupprimer('ABAT3');
+  const confirmation = page.getByRole('dialog');
+  await confirmation.waitFor();
+  verifier((await texteDe(confirmation)).includes('ne se défait pas'), 'article neuf : confirmation demandée, une fois la vérification faite');
+  verifier(comptages.length === 8, `${comptages.length} comptages demandés au serveur`);
+  verifier(comptages.some((u) => /lignes_vente/.test(u)) && comptages.some((u) => /ventes_brouillons/.test(u)),
+    'le serveur est interrogé sur toute l’activité, brouillons compris');
+  await confirmation.getByRole('button', { name: 'Supprimer' }).click();
+  await notification('ABAT3 supprimé').waitFor();
+  await page.locator('tbody tr', { hasText: 'ABATANT WC' }).waitFor({ state: 'detached' });
+  verifier((await nombreAffiche()) === total - 1, 'article supprimé : il quitte le catalogue');
+
+  // Le serveur a le dernier mot : vendu il y a trois ans, l'article n'a plus
+  // de trace sur le poste — il ne s'efface pas pour autant.
+  usagesServeur = 3;
+  await cliquerSupprimer('CAT-001');
+  const refusServeur = notification('CAT-001 — Article de catalogue 1');
+  await refusServeur.waitFor();
+  await attendreBoutonsRendus();
+  verifier((await texteDe(refusServeur)).includes('3 ligne(s) de vente') && (await page.getByRole('dialog').count()) === 0,
+    'le serveur retient un article dont le poste n’a plus la trace, sans même demander confirmation');
+
+  console.log('Hors ligne : on ne supprime pas, on le dit');
+  const avantCoupure = comptages.length;
+  await page.context().setOffline(true);
+  await cliquerSupprimer('CAT-002');
+  const horsLigne = notification('CAT-002');
+  await horsLigne.waitFor();
+  await attendreBoutonsRendus();
+  verifier(comptages.length === avantCoupure, 'hors ligne : aucune requête tentée');
+  verifier((await texteDe(horsLigne)).includes('désactivez-le'), 'hors ligne : le message renvoie à la désactivation, qui marche sans réseau');
+  await page.context().setOffline(false);
+
   await page.getByRole('button', { name: 'Familles' }).click();
   await page.locator('tbody tr', { hasText: 'SANITAIRE' }).waitFor();
   await page.locator('tbody tr', { hasText: 'CARREAU' }).waitFor();
   verifier((await page.locator('tbody tr').count()) === 4, 'onglet familles (dont familles créées par les imports)');
 
-  verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
+  // Le scénario coupe lui-même le réseau (`setOffline`) : une tentative de
+  // synchronisation qui tombe dans cette fenêtre se plaint en console. C'est la
+  // coupure simulée qui parle, pas un défaut — et elle n'arrive pas à chaque
+  // exécution, d'où la tolérance (même raisonnement que `audit.e2e.cjs`).
+  const inattendues = erreurs.filter((e) => !/Failed to fetch|Failed to load resource|INTERNET_DISCONNECTED|NETWORK_IO_SUSPENDED/.test(e));
+  verifier(inattendues.length === 0, `aucune erreur console hors coupure réseau simulée${inattendues.length ? ' : ' + inattendues.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');
 })().catch((e) => { console.error(e.message); process.exit(1); });

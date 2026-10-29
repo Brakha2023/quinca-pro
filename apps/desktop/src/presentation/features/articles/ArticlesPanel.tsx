@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { ArrowUpTrayIcon, DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { ArrowUpTrayIcon, DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon, TrashIcon } from '@heroicons/react/24/outline';
 import * as XLSX from 'xlsx';
 import { lignesDepuisGrille, margeArticle, type Article, type Cellule, type LigneImportArticle } from '../../../core/articles';
 import { ArticlesRepository } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
@@ -11,6 +11,7 @@ import CatalogueDocument from './CatalogueDocument';
 import ArticleFormModal from './ArticleFormModal';
 import { useArticles, useFamilles } from './hooks';
 import { useConfirmation } from '../../confirmation/useConfirmation';
+import { usePermissions } from '../../auth/usePermissions';
 
 interface Props {
   filialeId: string;
@@ -40,6 +41,7 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
   const repository = useRepository(ArticlesRepository);
   const notifier = useNotifier();
   const confirmer = useConfirmation();
+  const { peut } = usePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [recherche, setRecherche] = useState('');
@@ -48,6 +50,8 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
   const [modal, setModal] = useState<{ mode: 'creer' } | { mode: 'modifier'; article: Article } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [apercu, setApercu] = useState(false);
+  /** Article dont on interroge le serveur : le bouton attend sa réponse. */
+  const [verification, setVerification] = useState<string | null>(null);
 
   const { articles, isLoading } = useArticles(filialeId, { recherche, familleId: familleId || null, inclureInactifs });
   const { familles, famillesParId } = useFamilles(filialeId, { actives: true });
@@ -78,6 +82,37 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
       notifier('succes', `Article ${article.code} ${article.est_actif ? 'désactivé' : 'réactivé'}.`);
     } catch (error) {
       notifier('erreur', error instanceof Error ? error.message : 'Opération impossible.');
+    }
+  };
+
+  /**
+   * Suppression définitive, réservée aux articles qui n'ont jamais servi.
+   *
+   * On vérifie **avant** de demander confirmation : poser une question pour
+   * ensuite refuser serait une question de trop. La vérification passe par le
+   * serveur (voir `ArticlesRepository.motifDeRefus`), d'où l'attente affichée.
+   */
+  const supprimer = async (article: Article) => {
+    setVerification(article.id);
+    try {
+      const motif = await repository.motifDeRefus(article);
+      if (motif) { notifier('erreur', motif); return; }
+
+      const ok = await confirmer({
+        titre: `Supprimer ${article.code}`,
+        message: `« ${article.designation} » disparaîtra du catalogue, sur ce poste comme sur les autres. L'article n'a jamais servi : rien d'autre ne s'efface avec lui. Cette opération ne se défait pas.`,
+        libelleConfirmer: 'Supprimer',
+        danger: true,
+      });
+      if (!ok) return;
+
+      await repository.supprimer(article);
+      if (detailId === article.id) setDetailId(null);
+      notifier('succes', `Article ${article.code} supprimé.`);
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Suppression impossible.');
+    } finally {
+      setVerification(null);
     }
   };
 
@@ -201,6 +236,18 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
                       >
                         {article.est_actif ? 'Désactiver' : 'Réactiver'}
                       </button>
+                      {/* Effacer n'est pas désactiver : réservé à qui tient le catalogue. */}
+                      {peut('articles.ecrire') && (
+                        <button
+                          onClick={() => supprimer(article)}
+                          disabled={verification !== null}
+                          className="p-1.5 rounded text-red-500 hover:bg-red-50 disabled:opacity-40"
+                          title="Supprimer définitivement (articles jamais utilisés)"
+                          data-testid={`supprimer-${article.code}`}
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
