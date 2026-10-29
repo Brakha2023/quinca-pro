@@ -145,6 +145,13 @@
 .facture .facture-case { width: 14px; height: 14px; border: 1px solid #000; font: bold 12px/12px Arial, sans-serif; text-align: center; }
 .facture .facture-reglement-nature { display: inline-flex; gap: 12px; margin-left: 18px; }
 .facture .facture-reglement-nature .facture-case-groupe { flex-direction: row; align-items: center; gap: 4px; }
+/* À qui revient l'exemplaire, quand la facture sort en plusieurs copies. */
+.facture .facture-exemplaire { text-align: right; font: italic bold 11px Arial, sans-serif; margin: 3px 0 0; }
+
+/* Liasse : plusieurs feuilles envoyées en une seule impression (facture en deux
+   exemplaires, bon de livraison). Chacune démarre sa page — sans cela, la
+   seconde facture se collerait à la première. */
+.liasse > .document + .document { break-before: page; page-break-before: always; }
 
 /* Aperçu avant impression : plein écran à l'écran, seul le document à l'impression. */
 #zone-impression.apercu-impression { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60; background: rgba(23, 23, 23, .75); overflow: auto; padding: 0 0 24px; }

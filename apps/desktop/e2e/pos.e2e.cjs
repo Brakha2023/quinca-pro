@@ -4,6 +4,16 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
 /** Texte d'un conteneur, espaces insécables des montants normalisés. */
 const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g, ' ');
 
+/**
+ * Nombre de pages réellement imprimées. `page.pdf()` rend la page en média
+ * `print` : c'est la seule façon de vérifier qu'une feuille démarre bien la
+ * sienne, les sauts de page n'existant pas à l'écran.
+ */
+const pagesImprimees = async (page) => {
+  const pdf = await page.pdf({ format: 'A4' });
+  return (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+};
+
 (async () => {
   const { browser, page, erreurs } = await ouvrirNavigateur();
   const { filialeId, userId } = await simulerSession(page);
@@ -47,6 +57,7 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
     out.v2 = { ttc: v2.preparee.totaux.total_ttc, reste: v2.preparee.reste_a_payer };
     out.clientApresV2 = await lireClient();
     out.livraison = await db.get('SELECT statut, adresse_livraison FROM livraisons WHERE vente_id = ?', [v2.id]);
+    out.numeroLivraison = { rendu: v2.numeroLivraison, enBase: (await db.get('SELECT numero FROM livraisons WHERE vente_id = ?', [v2.id])).numero };
 
     // 3. Crédit hors plafond → refusé, rien n'est écrit
     try { await ventes.enregistrer(ctx, { lignes: [ligne(await article(a1), 10)], remise: 0, client: await lireClient(), paiement: { mode_paiement: 'CREDIT', montant_percu: 0 }, livraison: null, notes: '' }); out.refus = 'NON'; }
@@ -75,6 +86,8 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   verifier(r.stockApresV1 === 90 && r.caisseApresV1 === 59000, 'stock −10 et caisse +59 000');
   verifier(r.v2.ttc === 23600 && r.v2.reste === 23600 && r.clientApresV2.solde_actuel === 23600 && r.clientApresV2.cumul_factures === 23600, 'vente à crédit : créance client 23 600');
   verifier(r.livraison?.statut === 'A_PREPARER' && r.livraison.adresse_livraison === 'Cocody', 'bon de livraison créé');
+  // Le numéro revient avec la vente : le bon s'imprime dans la foulée.
+  verifier(r.numeroLivraison.rendu === r.numeroLivraison.enBase && /^LIV-/.test(r.numeroLivraison.rendu), `numéro du bon rendu à l'encaissement (${r.numeroLivraison.rendu})`);
   verifier(r.refus === 'VenteInvalideError' && r.nbVentes === 2, 'crédit hors plafond refusé, rien écrit');
   verifier(r.refusStock === 'StockInsuffisantError' && r.stockRobinetForce === -1 && r.v4ttc === 21240, 'stock insuffisant refusé, vente forcée par gérant → stock −1, remise de 2 360 F appliquée');
   verifier(r.apresAnnulation.client === 0 && r.apresAnnulation.statut === 'ANNULEE' && r.apresAnnulation.livraison === 'ANNULEE' && r.apresAnnulation.stockRobinet === 1, 'annulation : créance, livraison et stock contre-passés');
@@ -189,9 +202,10 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
 
   // L'impression système est remplacée par un témoin : en test, aucune boîte d'impression ne doit s'ouvrir.
   await page.evaluate(() => { window.__impressions = []; window.print = () => window.__impressions.push(document.querySelector('#zone-impression')?.className ?? ''); });
-  await page.getByTestId('imprimer-facture-a4').click();
-  const facture = page.locator('#zone-impression.facture');
-  await facture.waitFor({ state: 'attached' });
+  await page.getByTestId('imprimer-facture').click();
+  const liasse = page.locator('#zone-impression.liasse');
+  await liasse.waitFor({ state: 'attached' });
+  const facture = liasse.locator('.facture').first();
   const papier = await texteDe(facture);
   verifier(/^C01-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(await facture.locator('[data-testid=facture-numero]').textContent()), 'facture A4 : numéro de la vente');
   verifier(papier.includes('CLIENT DIVERS'), 'facture A4 : cartouche client (vente au comptoir)');
@@ -204,10 +218,33 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   verifier((await facture.locator('svg.code-barres rect').count()) > 20, 'facture A4 : code-barres de la facture');
   verifier((await page.locator('#zone-impression.ticket').count()) === 0, 'un seul document à la fois dans la zone d’impression');
 
+  // Le navigateur ne sait pas demander deux copies à l'imprimante : c'est la
+  // feuille qui est répétée, et chacune dit à qui elle revient.
+  verifier((await liasse.locator('.facture').count()) === 2, 'facture ×2 : deux exemplaires en une seule impression');
+  verifier((await liasse.locator('[data-testid=facture-exemplaire]').allTextContents()).join(' | ') === 'Exemplaire client | Exemplaire maison',
+    'facture ×2 : le client et la maison, chacun le sien');
+  verifier((await liasse.locator('[data-testid=bl-numero]').count()) === 0, 'facture ×2 : aucun bon de livraison dans la liasse');
+  verifier((await pagesImprimees(page)) === 2, 'facture ×2 : deux pages A4 sortent de l’imprimante');
+
+  await page.getByTestId('imprimer-facture_bl').click();
+  await liasse.locator('[data-testid=bl-numero]').waitFor({ state: 'attached' });
+  verifier((await liasse.locator('.document').count()) === 3 && (await liasse.locator('.facture').count()) === 2,
+    'facture ×2 + bon de livraison : trois feuilles, le bon en dernier');
+  const bon = await texteDe(liasse.locator('.document').last());
+  // Le titre s'imprime en capitales par la feuille de style, pas dans le texte.
+  verifier(bon.includes('Bon de livraison'), 'bon de livraison : titre de la pièce');
+  verifier(bon.includes('CIM-50') && bon.includes('Ciment 50kg') && bon.includes('Dépôt principal'), 'bon de livraison : la marchandise, son unité et son dépôt');
+  // Le bon accompagne la marchandise ; chiffré, il se lirait comme une seconde
+  // demande de paiement.
+  verifier(!bon.includes('11 800') && !bon.includes('5 000,00') && !bon.includes('NET À PAYER'), 'bon de livraison : aucun prix');
+  verifier(bon.includes('reçu en bon état') && bon.includes('Le magasinier'), 'bon de livraison : les deux signatures de la remise');
+  verifier(bon.includes(await facture.locator('[data-testid=facture-numero]').textContent()), 'bon de livraison : rattaché au numéro de la facture');
+  verifier((await pagesImprimees(page)) === 3, 'facture ×2 + bon : trois pages A4, chacune sur sa feuille');
+
   await page.getByTestId('imprimer-ticket').click();
   await page.locator('#zone-impression.ticket').waitFor({ state: 'attached' });
   const impressions = await page.evaluate(() => window.__impressions);
-  verifier(impressions.length === 2 && impressions[0].includes('facture') && impressions[1].includes('ticket'), 'les deux formats partent bien à l’impression');
+  verifier(impressions.length === 3 && impressions[0].includes('liasse') && impressions[2].includes('ticket'), 'chaque choix part bien à l’impression');
 
   await page.keyboard.press('Escape');
   await page.locator('text=Panier vide').waitFor();
@@ -238,7 +275,7 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   // Réédition de la facture d'une vente déjà enregistrée.
   await page.evaluate(() => { window.__impressions = []; window.print = () => window.__impressions.push('ok'); });
   await page.getByTestId('reimprimer-facture-a4').click();
-  const reedition = page.locator('#zone-impression.facture');
+  const reedition = page.locator('#zone-impression .facture');
   await reedition.waitFor({ state: 'attached' });
   const papierRee = await texteDe(reedition);
   verifier(papierRee.includes('Ciment 50kg') && papierRee.includes('Dépôt principal'), 'réédition : lignes et dépôt de la vente stockée');
@@ -257,7 +294,7 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.locator('tbody tr').first().getByTitle('Détail').click();
   await page.evaluate(() => { window.print = () => {}; });
   await page.getByTestId('reimprimer-facture-a4').click();
-  await page.locator('#zone-impression.facture [data-testid=facture-mention]').waitFor({ state: 'attached' });
+  await page.locator('#zone-impression .facture [data-testid=facture-mention]').waitFor({ state: 'attached' });
   verifier((await page.locator('[data-testid=facture-mention]').textContent()) === 'FACTURE ANNULÉE', 'réédition : une vente annulée ne ressort pas muette');
   await page.keyboard.press('Escape');
 
@@ -268,10 +305,26 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.keyboard.type('CIM-50');
   await page.keyboard.press('Enter');
   await ticket.locator('text=Ciment 50kg').waitFor();
+  // Livraison demandée au comptoir : son bon doit porter la tournée.
+  await page.getByRole('button', { name: 'Ajouter une livraison' }).click();
+  await page.getByRole('dialog', { name: 'Livraison' }).waitFor();
+  await page.locator('#livraison-form input[name=adresse_livraison]').fill('Riviera 3, face pharmacie');
+  await page.locator('#livraison-form input[name=chauffeur]').fill('Yao');
+  await page.locator('#livraison-form input[name=vehicule]').fill('4521 CI');
+  // Le bouton est au pied de la boîte, rattaché au formulaire par `form=`.
+  await page.getByRole('dialog', { name: 'Livraison' }).getByRole('button', { name: 'Valider' }).click();
   await page.keyboard.press('F11');
   await page.getByRole('dialog', { name: 'Encaissement' }).waitFor();
   await page.getByRole('button', { name: 'Valider la vente' }).click();
   await page.getByRole('dialog', { name: 'Vente enregistrée' }).waitFor();
+  await page.evaluate(() => { window.print = () => {}; });
+  await page.getByTestId('imprimer-facture_bl').click();
+  const bonLivre = page.locator('#zone-impression.liasse .document').last();
+  await bonLivre.locator('[data-testid=bl-livraison]').waitFor({ state: 'attached' });
+  const tournee = await texteDe(bonLivre);
+  const numeroBon = await bonLivre.locator('[data-testid=bl-numero]').textContent();
+  verifier(tournee.includes('Bon n°') && /^LIV-/.test(numeroBon), `bon de livraison : son propre numéro quand une livraison a été créée (${numeroBon})`);
+  verifier(tournee.includes('Riviera 3') && tournee.includes('Yao') && tournee.includes('4521 CI'), 'bon de livraison : adresse, chauffeur et véhicule de la tournée');
   await page.keyboard.press('Escape');
   await page.goto(`${BASE_URL}/#/ventes`);
   await page.locator('tbody tr', { hasText: 'En attente' }).first().waitFor();
@@ -292,7 +345,11 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   verifier((await page.locator('tbody tr').count()) >= 3, 'trésorerie : recettes de ventes journalisées');
   await page.goto(`${BASE_URL}/#/livraisons`);
   await page.locator('tbody tr', { hasText: 'Cocody' }).waitFor();
-  verifier((await page.locator('tbody tr', { hasText: 'Annulée' }).count()) === 1, 'livraisons : bon annulé avec la vente');
+  // Sur la colonne Statut, pas sur la ligne : la cellule Actions porte aussi le
+  // mot « Annulée », qui est l'un des changements d'état proposés.
+  const statuts = page.locator('tbody tr td:nth-child(8)');
+  verifier((await statuts.filter({ hasText: 'Annulée' }).count()) === 1, 'livraisons : bon annulé avec la vente');
+  verifier((await page.locator('tbody tr', { hasText: 'Riviera 3' }).count()) === 1, 'livraisons : le bon demandé au comptoir est à préparer');
   await page.goto(`${BASE_URL}/#/audit`);
   await page.locator('main h1', { hasText: 'audit' }).waitFor();
   verifier(true, 'audit : page rendue (journal serveur, vide hors ligne)');

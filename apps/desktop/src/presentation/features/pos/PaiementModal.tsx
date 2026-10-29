@@ -1,20 +1,21 @@
 import { useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { CheckCircleIcon, DocumentTextIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { MODES_PAIEMENT, type ModePaiement } from '@quinca/shared-types';
 import { disponibiliteCredit } from '../../../core/clients';
 import { StockInsuffisantError } from '../../../core/stock';
 import {
   LIBELLES_MODE_PAIEMENT,
+  SORTIES_PAPIER,
   VenteInvalideError,
   avoirClient,
   calculerTotaux,
-  lignesFacture,
-  recapFacture,
   preparerVente,
+  sortieParDefaut,
   type FormatImpression,
   type LignePanier,
   type LivraisonDemande,
+  type SortiePapier,
   type VentePreparee,
 } from '../../../core/ventes';
 import type { Client } from '../../../core/clients';
@@ -25,11 +26,11 @@ import Modal from '../../components/ui/Modal';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { useRepository } from '../../hooks/useRepository';
-import { formaterFcfa } from '../../hooks/useFormatage';
+import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
 import { useConfirmation } from '../../confirmation/useConfirmation';
 import { useNotifier } from '../../notifications/useNotifier';
 import { usePOSStore } from '../../stores/pos.store';
-import FactureVente from './FactureVente';
+import LiasseVente from './LiasseVente';
 import TicketImprimable from './TicketImprimable';
 
 interface Props {
@@ -59,14 +60,19 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
   const [mode, setMode] = useState<ModePaiement>('ESPECES');
   const [montantPercu, setMontantPercu] = useState<number>(totaux.total_ttc);
   const [enCours, setEnCours] = useState(false);
-  const [terminee, setTerminee] = useState<{ preparee: VentePreparee; lignes: LignePanier[]; client: Client | null; avoir: number; date: Date } | null>(null);
-  const [sortie, setSortie] = useState<FormatImpression>(format);
+  const [terminee, setTerminee] = useState<{ preparee: VentePreparee; lignes: LignePanier[]; client: Client | null; avoir: number; date: Date; numeroLivraison: string | null } | null>(null);
+  /**
+   * Ce que le caissier a choisi d'envoyer à l'imprimante. Proposé d'office
+   * selon le réglage du poste et la livraison demandée (voir `sortieParDefaut`),
+   * et modifiable d'un clic avant d'imprimer.
+   */
+  const [sortie, setSortie] = useState<SortiePapier>(sortieParDefaut(format, livraison !== null));
 
   /**
-   * Imprime dans le format demandé. Le document doit être dans le DOM avant
+   * Imprime la sortie demandée. Le document doit être dans le DOM avant
    * d'ouvrir la boîte d'impression du système, d'où le rendu forcé.
    */
-  const imprimer = (choisi: FormatImpression) => {
+  const imprimer = (choisi: SortiePapier) => {
     flushSync(() => setSortie(choisi));
     window.print();
   };
@@ -84,11 +90,11 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
   const encaisser = async (forcerStock = false) => {
     setEnCours(true);
     try {
-      const { preparee } = await repository.enregistrer(
+      const { preparee, numeroLivraison } = await repository.enregistrer(
         { ...ctx, autoriserStockNegatif: forcerStock, proformaId: proforma?.id ?? null },
         { lignes, remise, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' },
       );
-      setTerminee({ preparee, lignes, client, avoir: avoirClient(client), date: new Date() });
+      setTerminee({ preparee, lignes, client, avoir: avoirClient(client), date: new Date(), numeroLivraison });
       viderPanier();
       notifier('succes', `Vente ${preparee.numero} enregistrée${proforma ? ` (proforma ${proforma.numero} facturée)` : ''}.`);
     } catch (error) {
@@ -116,15 +122,7 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
     const vendeur = utilisateur ? `${utilisateur.prenom ?? ''} ${utilisateur.nom}`.trim() : '';
     return (
       <Modal titre="Vente enregistrée" largeur="max-w-md" onClose={onTerminee} pied={
-        <>
-          <button type="button" onClick={() => imprimer('TICKET')} className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg ${format === 'TICKET' ? 'bg-neutral-800 hover:bg-neutral-900 text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'}`} data-testid="imprimer-ticket">
-            <PrinterIcon className="w-4 h-4" /> Ticket
-          </button>
-          <button type="button" onClick={() => imprimer('A4')} className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg ${format === 'A4' ? 'bg-neutral-800 hover:bg-neutral-900 text-white' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'}`} data-testid="imprimer-facture-a4">
-            <DocumentTextIcon className="w-4 h-4" /> Facture A4
-          </button>
-          <button type="button" onClick={onTerminee} autoFocus className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg">Nouvelle vente (F10)</button>
-        </>
+        <button type="button" onClick={onTerminee} autoFocus className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg">Nouvelle vente (F10)</button>
       }>
         <div className="text-center space-y-3">
           <CheckCircleIcon className="w-14 h-14 text-green-600 mx-auto" />
@@ -133,8 +131,38 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
           <p className="text-sm text-neutral-600">{LIBELLES_MODE_PAIEMENT[p.mode_paiement]} · perçu {formaterFcfa(p.montant_percu)}</p>
           {p.monnaie > 0 && <p className="text-xl font-semibold text-green-700">Rendu : <span className="font-mono">{formaterFcfa(p.monnaie)}</span></p>}
           {p.reste_a_payer > 0 && <p className="text-sm text-orange-700">Reste dû par le client : <span className="font-mono font-semibold">{formaterFcfa(p.reste_a_payer)}</span></p>}
-          {livraison && <p className="text-xs text-neutral-500">Bon de livraison créé pour le {livraison.date_livraison_prevue}.</p>}
+          {livraison && (
+            <p className="text-xs text-neutral-500">
+              Livraison {terminee.numeroLivraison} créée pour le {formaterDate(livraison.date_livraison_prevue)}.
+            </p>
+          )}
         </div>
+
+        {/* Le choix du papier : il se fait ici, une fois la vente sûre, et la
+            proposition d'office tient compte du réglage du poste. */}
+        <div className="mt-5 border-t border-neutral-100 pt-4">
+          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">À imprimer</p>
+          <div className="mt-2 space-y-2">
+            {SORTIES_PAPIER.map((choix) => (
+              <button
+                key={choix.id}
+                type="button"
+                onClick={() => imprimer(choix.id)}
+                className={`w-full flex items-start gap-3 rounded-lg border-2 px-3 py-2.5 text-left transition-colors ${
+                  sortie === choix.id ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 hover:border-primary-300'
+                }`}
+                data-testid={`imprimer-${choix.id.toLowerCase()}`}
+              >
+                <PrinterIcon className={`mt-0.5 h-5 w-5 flex-shrink-0 ${sortie === choix.id ? 'text-primary-700' : 'text-neutral-400'}`} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-neutral-900">{choix.libelle}</span>
+                  <span className="block text-xs text-neutral-500">{choix.aide}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {sortie === 'TICKET' ? (
           <TicketImprimable
             preparee={p}
@@ -146,14 +174,17 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
             date={terminee.date}
           />
         ) : (
-          <FactureVente
-            numero={p.numero}
+          <LiasseVente
+            sortie={sortie}
+            preparee={p}
+            lignes={terminee.lignes}
+            client={terminee.client}
+            avoir={terminee.avoir}
             date={terminee.date}
             vendeur={vendeur}
-            client={terminee.client}
-            lignes={lignesFacture(terminee.lignes, depot)}
-            recap={recapFacture(p, terminee.avoir)}
-            modePaiement={p.mode_paiement}
+            depot={depot}
+            livraison={livraison}
+            numeroLivraison={terminee.numeroLivraison}
             filiale={infosFiliale}
           />
         )}

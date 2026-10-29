@@ -26,6 +26,8 @@ interface Props {
   /** Bandeau en tête du document, ex. « FACTURE ANNULÉE » : une facture annulée
    *  ne doit pas pouvoir ressortir muette de l'imprimante. */
   mention?: string;
+  /** À qui revient cet exemplaire, quand la facture sort en plusieurs copies. */
+  exemplaire?: string | null;
 }
 
 /** Montant à deux décimales, sans devise (la facture annonce « en FCFA » une fois). */
@@ -46,16 +48,18 @@ function Case({ coche, libelle }: { coche: boolean; libelle: string }) {
 }
 
 /**
- * Facture A4 d'une vente, rendue dans la zone d'impression (seule imprimée).
+ * Facture A4 d'une vente, sans portail : la feuille seule, pour qui décide où
+ * la rendre — seule à l'impression, ou répétée dans une liasse.
+ *
  * Les montants arrivent déjà calculés : la même mise en page sert à la vente
  * qui vient d'être encaissée et à la réédition d'une facture plus ancienne.
  * Reprend la mise en page attendue par la maison : cartouches facture / client,
  * lignes en HT, cachet, récapitulatif des montants, montant en toutes lettres
  * et conditions de règlement.
  */
-export default function FactureVente({ numero, date, vendeur, client, lignes, recap, modePaiement, filiale, mention }: Props) {
-  return createPortal(
-    <div id="zone-impression" className="document facture">
+export function CorpsFacture({ numero, date, vendeur, client, lignes, recap, modePaiement, filiale, mention, exemplaire }: Props) {
+  return (
+    <div className="document facture">
       <header className="facture-entete">
         <div className="document-logo">Q.C.F</div>
         <div className="facture-cachet">
@@ -66,6 +70,7 @@ export default function FactureVente({ numero, date, vendeur, client, lignes, re
       </header>
 
       {mention && <p className="facture-mention" data-testid="facture-mention">{mention}</p>}
+      {exemplaire && <p className="facture-exemplaire" data-testid="facture-exemplaire">{exemplaire}</p>}
 
       <div className="facture-haut">
         <div className="facture-haut-gauche">
@@ -158,7 +163,14 @@ export default function FactureVente({ numero, date, vendeur, client, lignes, re
           <Case coche={!recap.comptant} libelle="CRÉDIT" />
         </span>
       </div>
-    </div>,
+    </div>
+  );
+}
+
+/** La facture seule dans la zone d'impression : réédition, vente du comptoir. */
+export default function FactureVente(props: Props) {
+  return createPortal(
+    <div id="zone-impression"><CorpsFacture {...props} /></div>,
     document.body,
   );
 }

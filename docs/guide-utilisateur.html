@@ -417,7 +417,9 @@ ouvre. Cinq rôles sont déjà livrés ; vous pouvez en créer autant que vous v
       <em>Remise sur la vente</em>, et porte sur le ticket entier.</li>
     <li>Rattachez un client si la vente est à crédit ou s'il faut une facture nominative.</li>
     <li>Appuyez sur <span class="touche">F11</span> pour encaisser. Choisissez le mode de règlement, saisissez le montant reçu : le rendu de monnaie s'affiche.</li>
-    <li>Imprimez le <strong>ticket 80 mm</strong> ou la <strong>facture A4</strong>, puis <span class="touche">F10</span> pour la vente suivante.</li>
+    <li>Choisissez ce qu'il faut imprimer — <strong>facture ×2 + bon de livraison</strong>,
+      <strong>facture ×2</strong>, ou <strong>ticket 80 mm</strong> (voir 5.6) —, puis
+      <span class="touche">F10</span> pour la vente suivante.</li>
   </ol>
 </div>
 
@@ -474,11 +476,32 @@ sait à qui l'on prend le ticket. Repris ou jeté, il disparaît pour tout le mo
   <tr><td class="chemin">Crédit</td><td>N'entre pas en caisse : la somme devient une <strong>créance</strong> sur le client. Un client doit donc être rattaché.</td></tr>
 </table>
 
-<h3>5.6 — Deux formats d'impression</h3>
-<p>Le <strong>ticket 80 mm</strong> part sur l'imprimante thermique ; la <strong>facture A4</strong>
-part sur la bureautique, avec le cartouche client, le détail des lignes, le montant en toutes
-lettres et les cases de règlement. Le format habituel du poste se choisit dans les réglages du
-point de vente : c'est lui qui devient le bouton principal.</p>
+<h3>5.6 — Ce qu'on imprime à la fin de la vente</h3>
+<p>Une fois la vente enregistrée, l'écran demande ce qui doit sortir de l'imprimante. Trois choix,
+et celui qui convient le plus souvent est déjà proposé.</p>
+<table>
+  <caption>Les trois sorties proposées au caissier</caption>
+  <tr><th>Choix</th><th>Ce qui sort</th></tr>
+  <tr><td class="chemin">Facture ×2 + bon de livraison</td><td>Trois feuilles A4 : la facture pour le client, la même pour la maison, puis le bon qui accompagne la marchandise.</td></tr>
+  <tr><td class="chemin">Facture ×2</td><td>Deux feuilles A4 : <em>Exemplaire client</em> et <em>Exemplaire maison</em>. Le client repart avec la sienne, la vôtre est signée et classée.</td></tr>
+  <tr><td class="chemin">Ticket 80 mm</td><td>Le ticket de caisse sur l'imprimante thermique, pour la vente rapide.</td></tr>
+</table>
+<p>La <strong>facture A4</strong> porte le cartouche client, le détail des lignes, le montant en
+toutes lettres et les cases de règlement. Le <strong>bon de livraison</strong>, lui, ne porte
+<strong>aucun prix</strong> : il dit ce qui sort, de quel dépôt, et comporte deux emplacements de
+signature — le magasinier et le client, qui reconnaît avoir reçu la marchandise en bon état. Si une
+livraison a été demandée au comptoir, le bon porte en plus son numéro, l'adresse, la date prévue, le
+chauffeur et le véhicule.</p>
+<p>Le format habituel du poste se choisit dans les réglages du point de vente : un poste réglé sur
+le ticket propose le ticket, un poste réglé sur l'A4 propose la facture. Et quand une livraison a
+été demandée, c'est la liasse <em>avec</em> le bon qui est proposée d'office — la marchandise ne
+part pas avec le client.</p>
+
+<div class="note">
+  <span class="titre">Pourquoi deux exemplaires et non « 2 copies » dans la boîte d'impression</span>
+  <p>L'application envoie réellement deux feuilles, chacune nommée. Vous n'avez donc rien à régler
+  dans la fenêtre de l'imprimante, et les deux exemplaires ne se confondent pas.</p>
+</div>
 
 <div class="note">
   <span class="titre">Réimprimer plus tard</span>

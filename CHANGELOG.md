@@ -42,6 +42,17 @@ qu'on fait patienter.
 - **Saisie des montants groupée par milliers.** Remise et montant reçu : « 1250000 » s'affiche
   **1 250 000** pendant la frappe. Un zéro de trop se voit tout de suite au lieu de se découvrir au
   comptage du soir.
+- **Le caissier choisit ce qu'il imprime, à la fin de la vente** : *facture ×2 + bon de livraison*,
+  *facture ×2*, ou *ticket 80 mm*. Les deux exemplaires sont réellement envoyés à l'imprimante —
+  rien à régler dans la fenêtre du système — et chacun dit à qui il revient, *Exemplaire client* et
+  *Exemplaire maison*. Le choix proposé d'office suit le réglage du poste ; si une livraison a été
+  demandée au comptoir, c'est la liasse avec le bon qui est proposée.
+- **Le bon de livraison s'imprime enfin.** Il accompagne la marchandise et ne porte aucun prix :
+  code, désignation, quantité, unité, dépôt, le numéro de la facture, et deux emplacements de
+  signature — le magasinier et le client, qui reconnaît avoir reçu en bon état. Quand une livraison
+  a été créée avec la vente, le bon porte son numéro, l'adresse, la date prévue, le chauffeur et le
+  véhicule. Son logo et son filigrane se règlent comme les autres pièces, dans
+  Paramètres → Documents & impressions.
 - **Un article jamais utilisé se supprime** (Catalogue, la corbeille) : faute de frappe, doublon,
   ligne d'import malheureuse. Dès qu'une ligne de vente, un mouvement de stock, une commande, un
   devis, un brouillon ou du stock dans un dépôt le nomme, la suppression est refusée et le message

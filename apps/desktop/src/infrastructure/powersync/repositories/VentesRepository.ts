@@ -81,7 +81,11 @@ export class VentesRepository extends BaseRepository {
     return new StockRepository(this.db);
   }
 
-  enregistrer(ctx: ContexteVente, vente: VenteAEnregistrer): Promise<{ id: string; preparee: VentePreparee }> {
+  /**
+   * Le numéro du bon de livraison est rendu avec la vente : il s'imprime dans
+   * la foulée, sur la pièce qui part avec la marchandise.
+   */
+  enregistrer(ctx: ContexteVente, vente: VenteAEnregistrer): Promise<{ id: string; preparee: VentePreparee; numeroLivraison: string | null }> {
     const preparee = preparerVente(vente, { caisse: ctx.caisseCode, code: codePoste() });
     return this.db.writeTransaction(async (tx) => {
       const id = this.nouvelId();
@@ -137,16 +141,18 @@ export class VentesRepository extends BaseRepository {
         await this.patch(tx, 'proformas', ctx.proformaId, { statut: 'FACTUREE', vente_id: id });
       }
 
+      let numeroLivraison: string | null = null;
       if (vente.livraison) {
+        numeroLivraison = numeroPiece('LIV');
         await tx.execute(
           `INSERT INTO livraisons (id, numero, vente_id, client_id, adresse_livraison, chauffeur, vehicule, statut, date_livraison_prevue, filiale_id, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'A_PREPARER', ?, ?, ?, ?)`,
-          [this.nouvelId(), numeroPiece('LIV'), id, vente.client?.id ?? null, vente.livraison.adresse_livraison,
+          [this.nouvelId(), numeroLivraison, id, vente.client?.id ?? null, vente.livraison.adresse_livraison,
            vente.livraison.chauffeur || null, vente.livraison.vehicule || null, new Date(vente.livraison.date_livraison_prevue).toISOString(), ctx.filialeId, now, now],
         );
       }
 
-      return { id, preparee };
+      return { id, preparee, numeroLivraison };
     });
   }
 
