@@ -1,15 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usePowerSync } from '@powersync/react';
 import { ArchiveBoxIcon, InboxStackIcon, MinusIcon, PlusIcon, TrashIcon, TruckIcon, UserIcon } from '@heroicons/react/24/outline';
-import { calculerLigne, calculerTotaux, type FormatImpression, type LivraisonDemande } from '../../../core/ventes';
+import type { ClientRow } from '@quinca/shared-types';
+import { clientFromRow } from '../../../core/clients';
+import {
+  calculerLigne, calculerTotaux, libelleBrouillon,
+  type Brouillon, type FormatImpression, type LivraisonDemande,
+} from '../../../core/ventes';
+import { BrouillonsRepository } from '../../../infrastructure/powersync/repositories/BrouillonsRepository';
 import ChampMontant from '../../components/ui/ChampMontant';
 import { formaterFcfa } from '../../hooks/useFormatage';
+import { useRepository } from '../../hooks/useRepository';
 import { usePOSStore } from '../../stores/pos.store';
-import { brouillonsDeLaFiliale, useBrouillonsStore } from '../../stores/brouillons.store';
 import { useNotifier } from '../../notifications/useNotifier';
 import BrouillonsModal from './BrouillonsModal';
 import ClientSelector from './ClientSelector';
 import LivraisonModal from './LivraisonModal';
 import PaiementModal from './PaiementModal';
+import { useBrouillons } from './hooks';
 import type { ContexteVente } from '../../../infrastructure/powersync/repositories/VentesRepository';
 
 interface Props {
@@ -31,40 +39,52 @@ interface Props {
  */
 export default function TicketPanel({ ctx, depot, format, peutForcerStock }: Props) {
   const { lignes, client, remise, remiseAuto, setRemise, modifierQuantite, supprimerLigne, viderPanier, reprendreBrouillon } = usePOSStore();
-  const { brouillons, enregistrer, supprimer } = useBrouillonsStore();
+  const db = usePowerSync();
+  const repository = useRepository(BrouillonsRepository);
+  const { brouillons } = useBrouillons(ctx.filialeId);
   const notifier = useNotifier();
   const [modal, setModal] = useState<'client' | 'livraison' | 'paiement' | 'brouillons' | null>(null);
   const [livraison, setLivraison] = useState<LivraisonDemande | null>(null);
   const totaux = calculerTotaux(lignes, remise);
-  const mesBrouillons = useMemo(() => brouillonsDeLaFiliale(brouillons, ctx.filialeId), [brouillons, ctx.filialeId]);
 
   const nouvelleVente = () => { viderPanier(); setLivraison(null); };
 
   /**
-   * Met le ticket de côté. Rien n'est vendu, rien ne sort du stock : le
-   * brouillon reste sur ce poste jusqu'à ce qu'on le reprenne ou qu'on le jette.
+   * Met le ticket de côté. Rien n'est vendu, rien ne sort du stock, aucun
+   * numéro n'est tiré : le brouillon attend, et toutes les caisses de la
+   * filiale le voient — on change de poste en cours de journée.
    */
-  const mettreEnBrouillon = () => {
+  const mettreEnBrouillon = async () => {
     if (lignes.length === 0) return;
-    // De quoi reconnaître le ticket d'un coup d'œil : le client s'il y en a un,
-    // sinon ce qu'il y a dedans. Deux tickets mis de côté dans la même minute
-    // porteraient sinon le même nom.
-    const libelle = client?.raison_sociale
-      ?? `${lignes[0]!.designation}${lignes.length > 1 ? ` +${lignes.length - 1}` : ''}`;
-    enregistrer({
-      id: `${Date.now()}`,
-      libelle,
-      filialeId: ctx.filialeId,
-      lignes,
-      client,
-      remise,
-      remiseAuto,
-      cree_le: new Date().toISOString(),
-      total_ttc: totaux.total_ttc,
-      articles: totaux.nombre_articles,
-    });
-    nouvelleVente();
-    notifier('succes', `Vente mise en brouillon (${libelle}). Reprenez-la quand vous voulez.`);
+    const libelle = libelleBrouillon(lignes, client);
+    try {
+      await repository.enregistrer(
+        { filialeId: ctx.filialeId, utilisateurId: ctx.utilisateurId },
+        { libelle, lignes, clientId: client?.id ?? null, remise, remiseAuto, totalTtc: totaux.total_ttc, articles: totaux.nombre_articles },
+      );
+      nouvelleVente();
+      notifier('succes', `Vente mise en brouillon (${libelle}). Reprenez-la depuis n'importe quelle caisse.`);
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Mise en brouillon impossible.');
+    }
+  };
+
+  /**
+   * Reprend un ticket mis de côté. Le client est relu en base plutôt que
+   * recopié dans le brouillon : son solde a pu bouger entre-temps, et c'est
+   * celui d'aujourd'hui qui décide d'une vente à crédit.
+   */
+  const reprendre = async (b: Brouillon) => {
+    try {
+      const row = b.client_id ? await db.getOptional<ClientRow>('SELECT * FROM clients WHERE id = ?', [b.client_id]) : null;
+      reprendreBrouillon({ lignes: b.lignes, client: row ? clientFromRow(row) : null, remise: b.remise, remiseAuto: b.remise_auto });
+      setLivraison(null);
+      setModal(null);
+      await repository.supprimer(b.id);
+      if (b.client_id && !row) notifier('erreur', 'Le client de ce brouillon est introuvable : le ticket revient au comptoir.');
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Reprise impossible.');
+    }
   };
 
   useEffect(() => {
@@ -180,7 +200,7 @@ export default function TicketPanel({ ctx, depot, format, peutForcerStock }: Pro
             </button>
             <button onClick={() => setModal('brouillons')} className="flex items-center justify-center gap-1.5 rounded-lg bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-200" data-testid="ouvrir-brouillons">
               <InboxStackIcon className="h-4 w-4" />
-              {mesBrouillons.length > 0 && <span className="font-mono">{mesBrouillons.length}</span>}
+              {brouillons.length > 0 && <span className="font-mono">{brouillons.length}</span>}
             </button>
           </div>
           <button onClick={nouvelleVente} disabled={lignes.length === 0 && !client} className="w-full py-2 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50 text-neutral-700 font-medium rounded-lg transition-colors text-sm">
@@ -192,10 +212,10 @@ export default function TicketPanel({ ctx, depot, format, peutForcerStock }: Pro
       {modal === 'client' && <ClientSelector onClose={() => setModal(null)} />}
       {modal === 'brouillons' && (
         <BrouillonsModal
-          brouillons={mesBrouillons}
+          brouillons={brouillons}
           ticketEnCours={lignes.length > 0}
-          onReprendre={(b) => { reprendreBrouillon(b); supprimer(b.id); setLivraison(null); setModal(null); }}
-          onSupprimer={supprimer}
+          onReprendre={reprendre}
+          onSupprimer={(b) => { repository.supprimer(b.id).catch(() => notifier('erreur', 'Suppression impossible.')); }}
           onClose={() => setModal(null)}
         />
       )}

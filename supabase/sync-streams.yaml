@@ -79,6 +79,10 @@ streams:
     queries:
       - SELECT * FROM ventes WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM lignes_vente WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      # Ventes mises de côté : partagées entre les postes d'une filiale, pour
+      # qu'un ticket se reprenne d'une autre caisse. Pas de `dans_fenetre` —
+      # un brouillon vit quelques heures, et la table reste courte.
+      - SELECT * FROM ventes_brouillons WHERE filiale_id IN mes_filiales
       - SELECT * FROM reglements_clients WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM proformas WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM lignes_proforma WHERE filiale_id IN mes_filiales AND dans_fenetre = true

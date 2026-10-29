@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import type { Client } from '../../core/clients';
 import { ajouterAuPanier, remiseCommerciale, type LignePanier } from '../../core/ventes';
 import type { Article } from '../../core/articles';
-import type { BrouillonVente } from './brouillons.store';
 
 interface POSState {
   lignes: LignePanier[];
@@ -36,7 +35,7 @@ interface POSState {
   /** Remplace le ticket par les lignes d'une proforma (client et remise compris). */
   chargerProforma: (proforma: { id: string; numero: string }, lignes: LignePanier[], client: Client | null, remise: number) => void;
   /** Reprend une vente mise de côté : le ticket en cours est remplacé. */
-  reprendreBrouillon: (brouillon: BrouillonVente) => void;
+  reprendreBrouillon: (panier: { lignes: LignePanier[]; client: Client | null; remise: number; remiseAuto: boolean }) => void;
 }
 
 /** État du ticket en cours (UI uniquement ; la persistance se fait à la validation). */
@@ -95,7 +94,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   chargerProforma: (proforma, lignes, client, remise) => set({ proforma, lignes, client, remise, remiseAuto: false }),
 
-  reprendreBrouillon: (b) => set({
-    lignes: b.lignes, client: b.client, remise: b.remise, remiseAuto: b.remiseAuto, proforma: null,
-  }),
+  reprendreBrouillon: ({ lignes, client, remise, remiseAuto }) =>
+    set({ lignes, client, remise, remiseAuto, proforma: null }),
 }));

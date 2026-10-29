@@ -34,13 +34,26 @@ qu'on fait patienter.
 
 ### Ajouté
 
-- **Ventes en brouillon.** La touche F9 met le ticket de côté et libère le comptoir pour le
-  client suivant ; la liste des tickets en attente les rend avec leur remise. Rien n'est vendu, rien
-  ne sort du stock, aucun numéro n'est tiré : le brouillon reste **sur le poste** et ne part pas au
-  serveur, ce que l'écran dit.
+- **Ventes en brouillon, partagées entre les caisses.** La touche F9 met le ticket de côté et
+  libère le comptoir pour le client suivant ; la liste des tickets en attente les rend avec leur
+  remise. Commencé à la caisse 1, un ticket se reprend à la caisse 2 : la liste dit d'où il vient
+  et qui l'a mis de côté. Rien n'est vendu, rien ne sort du stock, aucun numéro n'est tiré — un
+  brouillon n'entre dans aucun chiffre.
 - **Saisie des montants groupée par milliers.** Remise et montant reçu : « 1250000 » s'affiche
   **1 250 000** pendant la frappe. Un zéro de trop se voit tout de suite au lieu de se découvrir au
   comptage du soir.
+
+### Base de données
+
+- Appliquer `supabase/migrations/20261029000000_ventes_brouillons.sql` (table `ventes_brouillons`,
+  une ligne par ticket mis de côté, portée par la filiale).
+- **Redéployer les règles de synchronisation** (PowerSync → Sync Streams → Deploy) : sans cela un
+  brouillon restera sur la machine qui l'a pris, sans message d'erreur — c'est exactement ce qu'on
+  cherchait à corriger.
+- Les brouillons ont leur **table** et non un statut sur `ventes` : un statut serait entré dans
+  toutes les requêtes qui disent `statut <> 'ANNULEE'` (chiffre d'affaires, marge, encaissé,
+  impayés, cumuls du compte client calculés par trigger), et une seule oubliée gonflait le chiffre
+  d'affaires en silence.
 
 ---
 

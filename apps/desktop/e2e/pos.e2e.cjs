@@ -127,17 +127,56 @@ const texteDe = async (locator) => (await locator.textContent()).replace(/\s+/g,
   await page.getByTestId('ouvrir-brouillons').click();
   const boite = page.getByRole('dialog', { name: 'Ventes en brouillon' });
   await boite.locator('[data-testid=liste-brouillons] li').first().waitFor();
-  verifier((await texteDe(boite)).includes('ce poste'), 'brouillons : l’écran dit qu’ils ne quittent pas la machine');
+  verifier((await texteDe(boite)).includes('toutes les caisses de la filiale'),
+    'brouillons : l’écran dit qu’ils sont partagés entre les caisses');
   await boite.getByTestId('reprendre-brouillon').first().click();
   await attendreTotal('10800F');
   verifier((await page.getByTestId('remise-globale').inputValue()) === '1\u202f000', 'reprise du brouillon : lignes et remise retrouvées');
 
+  // La suppression suit la reprise : la liste se vide dès que la requête vivante
+  // repasse, et on l'attend plutôt que de la supposer.
   await page.getByTestId('ouvrir-brouillons').click();
+  await page.locator('[data-testid=liste-brouillons]').waitFor({ state: 'detached' });
   verifier((await texteDe(page.getByRole('dialog', { name: 'Ventes en brouillon' }))).includes('Aucune vente mise de côté'),
     'le brouillon repris ne reste pas en double dans la liste');
   await page.keyboard.press('Escape');
 
-  await page.getByTestId('remise-globale').fill('');
+  // Un brouillon venu d'une autre caisse arrive par la synchronisation : ici on
+  // écrit la ligne directement, c'est exactement ce que PowerSync dépose.
+  await page.evaluate(async (F) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const article = await db.get('SELECT id, code, designation, unite, prix_vente, tva FROM articles WHERE code = ?', ['CIM-50']);
+    await db.execute(`INSERT OR REPLACE INTO ventes_brouillons
+      (id, libelle, filiale_id, client_id, lignes, remise, remise_auto, total_ttc, articles, utilisateur_id, poste, created_at, updated_at)
+      VALUES ('br-autre', 'Ticket de la caisse 2', ?, NULL, ?, 0, 0, 5900, 1, NULL, 'ZZZ', datetime('now'), datetime('now'))`,
+      [F, JSON.stringify([{ article_id: article.id, code: article.code, designation: article.designation,
+        unite: article.unite, prix_unitaire_ttc: article.prix_vente, tva_percent: article.tva, quantite: 1, remise_percent: 0 }])]);
+  }, filialeId);
+  await page.waitForFunction(() => document.querySelector('[data-testid=ouvrir-brouillons]').textContent.includes('1'));
+  verifier(true, 'un brouillon pris sur une autre caisse apparaît ici');
+  await page.getByTestId('ouvrir-brouillons').click();
+  const venuDAilleurs = await texteDe(page.getByRole('dialog', { name: 'Ventes en brouillon' }));
+  verifier(venuDAilleurs.includes('Ticket de la caisse 2') && venuDAilleurs.includes('d’une autre caisse'),
+    'la liste dit d’où vient le ticket, pour savoir à qui on le prend');
+  await page.getByTestId('reprendre-brouillon').first().click();
+  // Un ticket est déjà à l'écran : on prévient avant de l'écraser.
+  await page.getByRole('dialog', { name: 'Reprendre ce brouillon' })
+    .getByRole('button', { name: 'Remplacer le ticket' }).click();
+  await attendreTotal('5900F');
+  verifier(true, 'le ticket de l’autre caisse se reprend ici, après avoir prévenu');
+  const reste = await page.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    return (await db.getAll('SELECT id FROM ventes_brouillons')).length;
+  });
+  verifier(reste === 0, 'repris, il disparaît pour tout le monde : la table est vide');
+  await page.keyboard.press('F10');
+  await page.locator('text=Panier vide').waitFor();
+
+  // On refait le ticket de la vente, que les assertions suivantes attendent.
+  await page.keyboard.press('F2');
+  await page.keyboard.type('cim');
+  await page.keyboard.press('Enter');
+  await page.locator('button:has-text("CIM-50")').click();
   await attendreTotal('11800F');
 
   await page.keyboard.press('F11');

@@ -1,7 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { usePowerSync, useQuery } from '@powersync/react';
-import type { ArticleRow, CaisseRow, DepotRow } from '@quinca/shared-types';
+import type { ArticleRow, CaisseRow, DepotRow, VenteBrouillonRow } from '@quinca/shared-types';
 import { articleFromRow, type Article } from '../../../core/articles';
+import { brouillonFromRow, type Brouillon } from '../../../core/ventes';
+import { BROUILLONS_QUERY } from '../../../infrastructure/powersync/repositories/BrouillonsRepository';
 import { catalogueQuery } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
 import { CAISSES_ACTIVES_QUERY } from '../../../infrastructure/powersync/repositories/ClientsRepository';
 import { DEPOTS_ACTIFS_QUERY } from '../../../infrastructure/powersync/repositories/DepotsRepository';
@@ -38,6 +40,19 @@ export function useCatalogue(filialeId: string | null, depotId: string | null, f
   );
 
   return { articles, isLoading, rechercherUnique };
+}
+
+/**
+ * Ventes mises de côté dans la filiale, toutes caisses confondues : un ticket
+ * commencé sur un poste se reprend depuis un autre.
+ */
+export function useBrouillons(filialeId: string | null) {
+  const { data, isLoading } = useQuery<VenteBrouillonRow & { utilisateur_nom: string | null; utilisateur_prenom: string | null }>(
+    BROUILLONS_QUERY,
+    [filialeId ?? ''],
+  );
+  const brouillons = useMemo<Brouillon[]>(() => data.map(brouillonFromRow), [data]);
+  return { brouillons, isLoading };
 }
 
 /** Réglages du poste pour la filiale courante, résolus avec les lignes caisse/dépôt. */

@@ -322,6 +322,25 @@ export const TABLES = {
     notes: 'text',
     ...COMMUNES_HORODATAGE,
   },
+  /**
+   * Vente mise de côté au comptoir, partagée entre les postes de la filiale.
+   * Ce n'est pas une pièce : rien n'est vendu, rien ne sort du stock, aucun
+   * numéro n'est tiré — d'où sa table à elle (voir la migration 20261029000000).
+   */
+  ventes_brouillons: {
+    libelle: 'text',
+    filiale_id: 'text',
+    client_id: 'text',
+    /** Le panier d'un bloc : tableau JSON de lignes. Rien n'interroge une ligne de brouillon. */
+    lignes: 'text',
+    remise: 'real',
+    remise_auto: 'integer',
+    total_ttc: 'real',
+    articles: 'real',
+    utilisateur_id: 'text',
+    poste: 'text',
+    ...COMMUNES_HORODATAGE,
+  },
   lignes_vente: {
     vente_id: 'text',
     filiale_id: 'text',
@@ -579,6 +598,7 @@ export type ClientRow = Row<'clients'>;
 export type FournisseurRow = Row<'fournisseurs'>;
 export type VenteRow = Row<'ventes'>;
 export type LigneVenteRow = Row<'lignes_vente'>;
+export type VenteBrouillonRow = Row<'ventes_brouillons'>;
 export type ReglementClientRow = Row<'reglements_clients'>;
 export type LivraisonRow = Row<'livraisons'>;
 export type CommandeFournisseurRow = Row<'commandes_fournisseurs'>;
