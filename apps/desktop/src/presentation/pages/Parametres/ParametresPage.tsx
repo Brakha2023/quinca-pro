@@ -7,6 +7,7 @@ import DocumentsPanel from '../../features/parametres/DocumentsPanel';
 import EntreprisePanel from '../../features/parametres/EntreprisePanel';
 import FiscalitePanel from '../../features/parametres/FiscalitePanel';
 import NumerotationPanel from '../../features/parametres/NumerotationPanel';
+import SecuritePanel from '../../features/parametres/SecuritePanel';
 import PreferencesPanel from '../../features/parametres/PreferencesPanel';
 import RolesPanel from '../../features/parametres/RolesPanel';
 import UtilisateursPanel from '../../features/parametres/UtilisateursPanel';
@@ -63,7 +64,7 @@ export default function ParametresPage() {
   const infosFiliale = { nom: filiale?.nom ?? 'QuincaPro', adresse: filiale?.adresse, telephone: filiale?.telephone };
   const peutModifierEntreprise = peut('parametres.entreprise');
   /** Les quatre premières sections décrivent une filiale : elles ont besoin de sa fiche. */
-  const surLaFiliale = ['entreprise', 'fiscalite', 'documents', 'numerotation'].includes(section);
+  const surLaFiliale = ['entreprise', 'fiscalite', 'documents', 'numerotation', 'securite'].includes(section);
 
   return (
     <div className="space-y-6">
@@ -138,6 +139,7 @@ export default function ParametresPage() {
               {section === 'fiscalite' && <FiscalitePanel entreprise={entreprise} peutModifier={peutModifierEntreprise} />}
               {section === 'documents' && <DocumentsPanel entreprise={entreprise} peutModifier={peutModifierEntreprise} />}
               {section === 'numerotation' && <NumerotationPanel entreprise={entreprise} peutModifier={peutModifierEntreprise} />}
+              {section === 'securite' && <SecuritePanel entreprise={entreprise} peutModifier={peutModifierEntreprise} />}
             </>
           )}
 

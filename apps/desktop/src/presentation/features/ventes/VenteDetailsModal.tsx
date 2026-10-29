@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { flushSync } from 'react-dom';
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
-import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, avoirClient, lignesFactureDepuisVente, recapVenteEnregistree } from '../../../core/ventes';
+import { DocumentTextIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import {
+  LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, avoirClient, lignesFactureDepuisVente,
+  recapVenteEnregistree, venteModifiable,
+} from '../../../core/ventes';
 import type { ModePaiement, StatutVente } from '@quinca/shared-types';
-import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
+import type { VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import Modal from '../../components/ui/Modal';
-import { inputClass } from '../../components/ui/FormField';
-import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { useDepots } from '../articles/hooks';
 import { useClient } from '../clients/hooks';
 import FactureVente from '../pos/FactureVente';
-import { useRepository } from '../../hooks/useRepository';
+import AnnulationVenteModal from './AnnulationVenteModal';
+import VenteEditionModal from './VenteEditionModal';
 import { formaterFcfa } from '../../hooks/useFormatage';
-import { useNotifier } from '../../notifications/useNotifier';
 import { useLignesVente } from './hooks';
 
 export const STATUT_VENTE_STYLE: Record<StatutVente, string> = {
@@ -30,15 +31,12 @@ export function formaterDateHeure(iso: string | null): string {
 /** Détail d'un ticket : lignes, montants, annulation (avec motif) si en attente. */
 export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClose }: { vente: VenteVueRow; filialeId: string; peutAnnuler: boolean; onClose: () => void }) {
   const lignes = useLignesVente(vente.id);
-  const repository = useRepository(VentesRepository);
-  const notifier = useNotifier();
-  const { utilisateur } = useCurrentUtilisateur();
   const { filiale } = useFilialeCourante();
   const client = useClient(vente.client_id);
   const { depots } = useDepots(filialeId);
-  const [motif, setMotif] = useState('');
   const [annulation, setAnnulation] = useState(false);
   const [facture, setFacture] = useState(false);
+  const [correction, setCorrection] = useState(false);
   const statut = (vente.statut ?? 'EN_ATTENTE') as StatutVente;
   // Une vente sans date n'est pas une facture : rien à rééditer.
   const dateVente = vente.date_vente ? new Date(vente.date_vente) : null;
@@ -49,17 +47,6 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
     window.print();
   };
 
-  const annuler = async () => {
-    if (motif.trim().length < 3) { notifier('erreur', 'Indiquez un motif d\'annulation.'); return; }
-    try {
-      await repository.annuler({ filialeId, utilisateurId: utilisateur?.id ?? null }, vente.id, motif.trim());
-      notifier('succes', `Vente ${vente.numero} annulée.`);
-      onClose();
-    } catch (error) {
-      notifier('erreur', error instanceof Error ? error.message : 'Annulation impossible.');
-    }
-  };
-
   return (
     <Modal
       titre={`Ticket ${vente.numero}`}
@@ -67,22 +54,19 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
       largeur="max-w-3xl"
       onClose={onClose}
       pied={
-        annulation ? (
-          <>
-            <input value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Motif de l'annulation" className={`${inputClass} flex-1`} autoFocus />
-            <button type="button" onClick={() => setAnnulation(false)} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Retour</button>
-            <button type="button" onClick={annuler} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg">Confirmer l'annulation</button>
-          </>
-        ) : (
-          <>
-            {peutAnnuler && statut === 'EN_ATTENTE' && (
-              <button type="button" onClick={() => setAnnulation(true)} className="mr-auto px-4 py-2 text-red-600 hover:bg-red-50 font-medium rounded-lg">Annuler cette vente</button>
-            )}
-            <button type="button" onClick={imprimerFacture} disabled={!dateVente} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="reimprimer-facture-a4">
-              <DocumentTextIcon className="w-4 h-4" /> Facture A4
+        <>
+          {peutAnnuler && venteModifiable(statut) && (
+            <button type="button" onClick={() => setAnnulation(true)} className="mr-auto px-4 py-2 text-red-600 hover:bg-red-50 font-medium rounded-lg" data-testid="annuler-vente">Annuler cette vente</button>
+          )}
+          {peutAnnuler && venteModifiable(statut) && (
+            <button type="button" onClick={() => setCorrection(true)} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="corriger-vente">
+              <PencilSquareIcon className="w-4 h-4" /> Corriger
             </button>
-          </>
-        )
+          )}
+          <button type="button" onClick={imprimerFacture} disabled={!dateVente} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="reimprimer-facture-a4">
+            <DocumentTextIcon className="w-4 h-4" /> Facture A4
+          </button>
+        </>
       }
     >
       <div className="space-y-4">
@@ -115,6 +99,17 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
           <div className="bg-neutral-50 rounded-lg p-3"><p className="text-xs text-neutral-500">Perçu / Rendu / Reste</p><p className="font-mono">{formaterFcfa(vente.montant_percu)} / {formaterFcfa(vente.monnaie)} / <span className={vente.reste_a_payer ? 'text-orange-700' : ''}>{formaterFcfa(vente.reste_a_payer)}</span></p></div>
         </div>
       </div>
+      {annulation && (
+        <AnnulationVenteModal
+          vente={vente}
+          filialeId={filialeId}
+          onClose={() => setAnnulation(false)}
+          onAnnulee={() => { setAnnulation(false); onClose(); }}
+        />
+      )}
+      {correction && (
+        <VenteEditionModal vente={vente} filialeId={filialeId} onClose={() => { setCorrection(false); onClose(); }} />
+      )}
       {facture && dateVente && (
         <FactureVente
           numero={vente.numero ?? ''}

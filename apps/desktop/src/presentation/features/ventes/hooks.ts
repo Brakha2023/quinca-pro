@@ -8,7 +8,7 @@ export function useVentes(filialeId: string | null, filtres: FiltresVentes = {})
   const { sql, params } = useMemo(
     () => ventesQuery(filialeId, filtres),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
-    [filialeId, filtres.jour, filtres.dateDebut, filtres.dateFin, filtres.caisseId, filtres.statut, filtres.recherche, filtres.limite],
+    [filialeId, filtres.jour, filtres.dateDebut, filtres.dateFin, filtres.caisseId, filtres.statut, filtres.recherche, filtres.montantTtc, filtres.limite],
   );
   const { data, isLoading } = useQuery<VenteVueRow>(sql, params);
   return { ventes: data, isLoading };

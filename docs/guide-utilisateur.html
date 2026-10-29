@@ -247,6 +247,7 @@ puis on ne s'en sert plus au quotidien.</p>
     <li>Saisissez l'adresse et le mot de passe ci-dessus, puis <em>Se connecter</em>.</li>
     <li>La fenêtre de changement de mot de passe s'ouvre aussitôt. Choisissez un mot de passe solide et notez-le hors de l'application.</li>
     <li>Le menu complet apparaît. Allez dans <span class="chemin-ui">Paramètres → Utilisateurs</span> pour créer les comptes du personnel (voir le chapitre 4).</li>
+    <li>Posez le <strong>code d'annulation</strong> de chaque filiale : <span class="chemin-ui">Paramètres → Sécurité</span>. Tant qu'il n'y en a pas, aucune vente ne peut être annulée (voir 6.1.3).</li>
   </ol>
 </div>
 
@@ -530,9 +531,51 @@ en attente de validation, et ventes annulées — hors totaux.</p>
 <ul>
   <li><strong>Ouvrir un ticket</strong> montre son détail et permet de le rééditer.</li>
   <li><strong>Valider</strong> une vente en attente, si votre rôle l'autorise.</li>
-  <li><strong>Annuler</strong> une vente validée remet la marchandise en stock et solde la créance. Droit distinct, rarement accordé.</li>
+  <li><strong>Corriger</strong> un ticket <em>en attente</em> : quantités, articles, remise, client, règlement (voir 6.1.2).</li>
+  <li><strong>Annuler</strong> une vente en attente : la marchandise revient en stock, la créance se défait et l'argent ressort de la caisse. Le <strong>code du gérant</strong> est demandé (voir 6.1.3).</li>
   <li><em>Imprimer / PDF</em> sort le journal des ventes A4, avec emplacement de visa.</li>
 </ul>
+
+<h4>6.1.1 — Retrouver un ticket par son montant</h4>
+<p>Un client revient avec un problème mais n'a pas son ticket : il se rappelle rarement d'un numéro,
+jamais d'une heure — mais il se rappelle de ce qu'il a payé. Le champ <strong>Montant TTC</strong>,
+à côté de la recherche, ne garde que les tickets de ce montant exact. <em>Effacer le montant</em>
+rend la journée entière. Le montant retenu s'écrit sur le journal imprimé, pour qu'une liste
+partielle ne se lise pas comme la journée complète.</p>
+
+<h4>6.1.2 — Corriger un ticket en attente</h4>
+<p>Deux sacs saisis au lieu de trois, un article en trop, la remise convenue oubliée : tant que la
+journée n'est pas validée, le ticket se rattrape. Ouvrez-le, puis <em>Corriger</em>. Vous pouvez
+changer les quantités, retirer une ligne, ajouter un article, revoir la remise, le client et le
+règlement.</p>
+<div class="pasapas">
+  <div class="etiquette">Ce que la correction fait vraiment</div>
+  <ol>
+    <li>Le <strong>numéro, la date et la caisse ne changent pas</strong> : c'est le même ticket, corrigé — pas une vente de plus.</li>
+    <li>La marchandise d'avant <strong>revient en stock</strong>, la nouvelle en ressort. Les deux mouvements se lisent dans <span class="chemin-ui">Stock → Mouvements</span>.</li>
+    <li>L'ancien encaissement est <strong>repris en caisse</strong>, le nouveau y entre. Le journal de caisse montre les deux : une correction se voit, elle ne s'efface pas.</li>
+    <li>Le compte du client suit : ancienne créance défaite, nouvelle posée.</li>
+  </ol>
+</div>
+<p>Les mêmes règles qu'au comptoir s'appliquent : montant remis insuffisant, plafond de crédit,
+stock disponible. Une vente <strong>validée</strong> ne se corrige plus — elle est entrée dans la
+journée de caisse. À ce stade, il ne reste que l'annulation.</p>
+
+<h4>6.1.3 — Le code du gérant, pour annuler</h4>
+<p>Annuler une vente est le geste le plus lourd du comptoir. L'application demande donc un
+<strong>code de six caractères</strong>, que le gérant dicte au comptoir, en plus du motif. Sans ce
+code, rien ne part.</p>
+<div class="note">
+  <span class="titre">Le gérant choisit le code</span>
+  <p><span class="chemin-ui">Paramètres → Sécurité</span>. Six caractères, lettres et chiffres. Il
+  appartient à la <strong>filiale</strong>, pas à une personne : chaque filiale a le sien, et il se
+  change quand on veut, sans toucher aux comptes. Il n'est jamais enregistré en clair — oublié, il
+  se remplace.</p>
+  <p><strong>Tant qu'aucun code n'est posé, aucune vente ne peut être annulée.</strong> C'est la
+  première chose à régler après l'installation.</p>
+</div>
+<p>Le code se vérifie sur le poste, <strong>même sans réseau</strong> : une coupure n'empêche pas de
+rattraper une erreur de caisse.</p>
 
 <h3>6.2 — Catalogue</h3>
 <p><span class="chemin-ui">Catalogue</span> tient les articles de la filiale : code, désignation,

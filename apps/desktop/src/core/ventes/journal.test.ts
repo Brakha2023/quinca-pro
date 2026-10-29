@@ -45,6 +45,15 @@ describe('perimetreJournalVentes', () => {
     expect(perimetreJournalVentes({ dateDebut: '2026-10-18', dateFin: '2026-10-18' })).toBe('journée du 18/10/2026 · toutes caisses');
   });
 
+  // Le montant est un filtre comme un autre : une liste partielle doit dire
+  // sur quoi elle porte, sinon elle se lit comme la journée entière.
+  it('écrit le montant cherché', () => {
+    const perimetre = perimetreJournalVentes({ dateDebut: '2026-10-18', dateFin: '2026-10-18', montantTtc: 11800 });
+    expect(perimetre).toContain('montant');
+    expect(perimetre).toContain('11');
+    expect(perimetreJournalVentes({ dateDebut: '2026-10-18', dateFin: '2026-10-18', montantTtc: 0 })).not.toContain('montant');
+  });
+
   it('écrit la période et les filtres retenus', () => {
     expect(perimetreJournalVentes({ dateDebut: '2026-10-01', dateFin: '2026-10-18', caisseNom: 'Caisse principale', statutLabel: 'Annulée', recherche: ' KONÉ ' }))
       .toBe('du 01/10/2026 au 18/10/2026 · caisse « Caisse principale » · statut « Annulée » · recherche « KONÉ »');

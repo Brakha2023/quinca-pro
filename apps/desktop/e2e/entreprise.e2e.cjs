@@ -115,6 +115,38 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   await page.locator('[aria-live]', { hasText: 'Préfixes enregistrés' }).waitFor();
   verifier(true, 'préfixes enregistrés');
 
+  console.log('Sécurité : le code d’annulation');
+  await page.goto(`${BASE_URL}/#/parametres/securite`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('[data-testid=etat-code-annulation]').waitFor();
+  verifier((await texteDe(page, '[data-testid=etat-code-annulation]')).includes('Aucun code'),
+    'sans code, l’écran dit qu’aucune vente ne peut être annulée');
+
+  await page.fill('[data-testid=nouveau-code-annulation]', 'a1b-2c3');
+  verifier((await page.inputValue('[data-testid=nouveau-code-annulation]')) === 'A1B2C3',
+    'le code se nettoie à la frappe : il se dicte, il ne se ponctue pas');
+  await page.fill('[data-testid=confirmer-code-annulation]', 'A1B2C9');
+  verifier(await page.locator('[data-testid=enregistrer-code-annulation]').isDisabled(),
+    'deux saisies qui diffèrent : rien ne s’enregistre');
+  await page.fill('[data-testid=nouveau-code-annulation]', '000000');
+  await page.locator('[data-testid=motif-code]').waitFor();
+  verifier((await texteDe(page, '[data-testid=motif-code]')).includes('devine'),
+    'un code tout en zéros est refusé');
+
+  await page.fill('[data-testid=nouveau-code-annulation]', 'A1B2C3');
+  await page.fill('[data-testid=confirmer-code-annulation]', 'A1B2C3');
+  await page.click('[data-testid=enregistrer-code-annulation]');
+  await page.locator('[aria-live]', { hasText: 'Code d’annulation enregistré' }).waitFor();
+  const empreinte = await page.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    return (await db.get('SELECT code_annulation FROM parametres_filiale WHERE id = ?', ['pf-1'])).code_annulation;
+  });
+  // Ce qui descend sur les postes ne doit jamais permettre de relire le code.
+  verifier(/^pbkdf2\$\d+\$/.test(empreinte) && !empreinte.includes('A1B2C3'),
+    `seule l'empreinte est enregistrée (${String(empreinte).slice(0, 18)}…)`);
+  await page.locator('[data-testid=etat-code-annulation]').getByText('Un code est en place').waitFor();
+  verifier(true, 'l’écran confirme que la filiale a son code');
+
   console.log('Ce que le papier en fait');
   // Un document d'un tout autre module : s'il a repris l'en-tête, les vingt-sept
   // l'ont repris, puisqu'ils passent tous par le même composant.

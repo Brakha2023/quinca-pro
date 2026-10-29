@@ -1,5 +1,6 @@
 import type { EntrepriseForm, ReglagesDocuments } from '../../../core/parametres';
-import { normaliserPrefixe } from '../../../core/parametres';
+import { motifCodeInvalide, normaliserCodeAnnulation, normaliserPrefixe } from '../../../core/parametres';
+import { calculerEmpreinte } from '../../auth/empreinteLocale';
 import { BaseRepository } from './BaseRepository';
 
 /**
@@ -74,6 +75,25 @@ export class EntrepriseRepository extends BaseRepository {
   ): Promise<void> {
     await this.db.writeTransaction(async (tx) => {
       await this.patch(tx, 'parametres_filiale', id, { [champ]: dataUrl });
+    });
+  }
+
+  /**
+   * Le code d'annulation des ventes, ou son retrait (`null`).
+   *
+   * Seule l'empreinte est écrite : le code dicté par le gérant ne quitte pas
+   * cet appel. La ligne descend ensuite sur tous les postes de la filiale,
+   * pour qu'une annulation reste possible un jour de coupure.
+   */
+  async enregistrerCodeAnnulation(id: string, code: string | null): Promise<void> {
+    let empreinte: string | null = null;
+    if (code !== null) {
+      const motif = motifCodeInvalide(code);
+      if (motif) throw new Error(motif);
+      empreinte = await calculerEmpreinte(normaliserCodeAnnulation(code));
+    }
+    await this.db.writeTransaction(async (tx) => {
+      await this.patch(tx, 'parametres_filiale', id, { code_annulation: empreinte });
     });
   }
 

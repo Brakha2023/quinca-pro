@@ -72,8 +72,46 @@ const pagesImprimees = async (page) => {
     out.stockRobinetForce = (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a2])).quantite;
     out.v4ttc = v4.preparee.totaux.total_ttc;
 
-    // 5. Annulation de la vente à crédit : stock, client, livraison contre-passés
-    await ventes.annuler({ filialeId: F, utilisateurId: U }, v2.id, 'Erreur de saisie');
+    // 4 bis. Correction d'un ticket en attente : v1 passe de 10 à 6 sacs.
+    const v1Avant = await db.get('SELECT * FROM ventes WHERE id = ?', [v1.id]);
+    const corrigee = await ventes.modifier({ filialeId: F, utilisateurId: U }, v1.id, {
+      lignes: [ligne(await article(a1), 6)], remise: 0, client: null,
+      paiement: { mode_paiement: 'ESPECES', montant_percu: 60000 }, livraison: null, notes: '',
+    });
+    out.correction = {
+      numeroInchange: corrigee.numero === v1.preparee.numero,
+      dateInchangee: (await db.get('SELECT date_vente FROM ventes WHERE id = ?', [v1.id])).date_vente === v1Avant.date_vente,
+      ttc: corrigee.totaux.total_ttc,
+      lignes: (await db.getAll('SELECT quantite FROM lignes_vente WHERE vente_id = ?', [v1.id])).map((l) => l.quantite),
+      stock: (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a1])).quantite,
+      caisse: (await db.get('SELECT solde_actuel FROM caisses WHERE id = ?', ['caisse-1'])).solde_actuel,
+      mouvements: (await db.getAll('SELECT type, quantite FROM mouvements_stock WHERE article_id = ? ORDER BY created_at', [a1])).length,
+      statut: (await db.get('SELECT statut FROM ventes WHERE id = ?', [v1.id])).statut,
+    };
+    // Corriger une vente validée n'a pas de sens : elle est entrée dans la journée.
+    await db.execute("UPDATE ventes SET statut = 'VALIDEE' WHERE id = ?", [v4.id]);
+    try {
+      await ventes.modifier({ filialeId: F, utilisateurId: U }, v4.id, { lignes: [ligne(await article(a2), 1)], remise: 0, client: null, paiement: { mode_paiement: 'ESPECES', montant_percu: 11800 }, livraison: null, notes: '' });
+      out.refusCorrection = 'NON';
+    } catch (e) { out.refusCorrection = e.message; }
+    await db.execute("UPDATE ventes SET statut = 'EN_ATTENTE' WHERE id = ?", [v4.id]);
+
+    // 5. Annulation de la vente à crédit : le code du gérant est exigé.
+    const annulationCtx = { filialeId: F, utilisateurId: U };
+    try { await ventes.annuler(annulationCtx, v2.id, 'Erreur de saisie', 'A1B2C3'); out.sansCode = 'NON'; }
+    catch (e) { out.sansCode = e.message; }
+
+    const { calculerEmpreinte } = await import('/src/infrastructure/auth/empreinteLocale.ts');
+    await db.execute(
+      "INSERT OR REPLACE INTO parametres_filiale (id, filiale_id, nom_commercial, pays, assujetti_tva, taux_tva, prix_saisis, devise, code_annulation) VALUES (?, ?, 'Filiale Abidjan', 'Côte d''Ivoire', 1, 18, 'TTC', 'XOF', ?)",
+      [crypto.randomUUID(), F, await calculerEmpreinte('A1B2C3')],
+    );
+    try { await ventes.annuler(annulationCtx, v2.id, 'Erreur de saisie', 'ZZZZZZ'); out.mauvaisCode = 'NON'; }
+    catch (e) { out.mauvaisCode = e.message; }
+    out.statutAvantAnnulation = (await db.get('SELECT statut FROM ventes WHERE id = ?', [v2.id])).statut;
+
+    // Le code se dicte au comptoir : la casse et les espaces ne comptent pas.
+    await ventes.annuler(annulationCtx, v2.id, 'Erreur de saisie', 'a1b 2c3');
     out.apresAnnulation = { client: (await lireClient()).solde_actuel, statut: (await db.get('SELECT statut FROM ventes WHERE id = ?', [v2.id])).statut, livraison: (await db.get('SELECT statut FROM livraisons WHERE vente_id = ?', [v2.id])).statut, stockRobinet: (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a2])).quantite };
 
     // 6. Validation de journée
@@ -88,11 +126,34 @@ const pagesImprimees = async (page) => {
   verifier(r.livraison?.statut === 'A_PREPARER' && r.livraison.adresse_livraison === 'Cocody', 'bon de livraison créé');
   // Le numéro revient avec la vente : le bon s'imprime dans la foulée.
   verifier(r.numeroLivraison.rendu === r.numeroLivraison.enBase && /^LIV-/.test(r.numeroLivraison.rendu), `numéro du bon rendu à l'encaissement (${r.numeroLivraison.rendu})`);
+
+  // Correction d'un ticket en attente : 10 sacs ramenés à 6.
+  verifier(r.correction.numeroInchange && r.correction.dateInchangee, 'correction : même numéro, même date — c’est le même ticket');
+  verifier(r.correction.lignes.length === 1 && r.correction.lignes[0] === 6, 'correction : la ligne porte la nouvelle quantité');
+  verifier(r.correction.ttc === 35400, `correction : total recalculé (${r.correction.ttc} F)`);
+  // 100 − 10 (vente) + 10 (retour) − 6 (nouvelle sortie) = 94.
+  verifier(r.correction.stock === 94, `correction : le stock suit (${r.correction.stock} sacs)`);
+  // 59 000 (v1) + 21 240 (v4) − 59 000 (reprise) + 35 400 (ticket corrigé).
+  verifier(r.correction.caisse === 56640, `correction : la caisse suit, l'ancien encaissement repris (${r.correction.caisse} F)`);
+  // Entrée, sortie, retour, nouvelle sortie : rien n'est effacé du journal.
+  verifier(r.correction.mouvements === 4, `correction : les mouvements de stock se lisent tous (${r.correction.mouvements})`);
+  verifier(r.correction.statut === 'EN_ATTENTE', 'correction : le ticket reste en attente');
+  verifier(/en attente/.test(r.refusCorrection), `correction refusée sur une vente validée : « ${r.refusCorrection} »`);
   verifier(r.refus === 'VenteInvalideError' && r.nbVentes === 2, 'crédit hors plafond refusé, rien écrit');
   verifier(r.refusStock === 'StockInsuffisantError' && r.stockRobinetForce === -1 && r.v4ttc === 21240, 'stock insuffisant refusé, vente forcée par gérant → stock −1, remise de 2 360 F appliquée');
+  verifier(/Aucun code/.test(r.sansCode), `sans code de filiale, aucune annulation : « ${String(r.sansCode).slice(0, 60)}… »`);
+  verifier(/incorrect/.test(r.mauvaisCode) && r.statutAvantAnnulation === 'EN_ATTENTE', 'mauvais code : la vente ne bouge pas');
   verifier(r.apresAnnulation.client === 0 && r.apresAnnulation.statut === 'ANNULEE' && r.apresAnnulation.livraison === 'ANNULEE' && r.apresAnnulation.stockRobinet === 1, 'annulation : créance, livraison et stock contre-passés');
   verifier(r.validees === 2, 'validation de journée : 2 ventes en attente validées (l’annulée ignorée)');
-  verifier(r.treso.length === 2 && r.treso.every((t) => t.type === 'RECETTE' && t.categorie === 'VENTE'), '2 recettes de trésorerie (ventes encaissées)');
+  // Le journal de caisse porte, dans l'ordre : les deux encaissements, la
+  // reprise de celui qui a été corrigé, le ticket corrigé, puis l'annulation.
+  // Rien n'est effacé — une correction se lit.
+  const treso = r.treso.map((t) => `${t.type}/${t.categorie} ${t.montant}`).join(' | ');
+  // La vente annulée était à crédit : rien n'avait été encaissé, il n'y a donc
+  // pas de ligne d'annulation à contre-passer.
+  verifier(treso === 'RECETTE/VENTE 59000 | RECETTE/VENTE 21240 | DEPENSE/CORRECTION_VENTE 59000 | RECETTE/VENTE 35400',
+    `journal de caisse : la correction s'y lit (${treso})`);
+  verifier(r.treso.filter((t) => t.categorie === 'VENTE').length === 3, '3 recettes de vente : les deux tickets, plus le corrigé');
 
   console.log('Interface');
   await page.goto(`${BASE_URL}/#/pos`);
@@ -254,6 +315,45 @@ const pagesImprimees = async (page) => {
   await page.locator('tbody tr').first().waitFor();
   verifier((await page.locator('tbody tr').count()) === 4, 'page Ventes : 4 tickets du jour');
 
+  // Un client ne retient pas un numéro de ticket ; il retient ce qu'il a payé.
+  await page.getByTestId('filtre-montant').fill('35400');
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1);
+  verifier((await texteDe(page.locator('tbody tr').first())).includes('35 400'), 'filtre montant TTC : le seul ticket de 35 400 F');
+  await page.getByTestId('filtre-montant').fill('999999');
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 0);
+  verifier((await page.textContent('main')).includes('Aucune vente'), 'filtre montant TTC : aucun ticket à ce montant');
+  await page.getByTestId('effacer-filtre-montant').click();
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 4);
+  verifier(true, 'filtre montant TTC : effacé, toute la journée revient');
+
+  console.log('Corriger un ticket en attente');
+  // Le ticket du comptoir : 2 sacs, 11 800 F. On passe à 3, puis on revient —
+  // la suite du scénario attend le ticket d'origine.
+  const corriger = async (quantite, percu, attendu) => {
+    await page.locator('tbody tr').first().getByTitle('Détail').click();
+    await page.getByTestId('corriger-vente').click();
+    const edition = page.getByRole('dialog', { name: /Corriger le ticket/ });
+    await edition.locator('[data-testid="quantite-CIM-50"]').waitFor();
+    await edition.locator('[data-testid="quantite-CIM-50"]').fill(String(quantite));
+    await edition.getByTestId('percu-correction').fill(String(percu));
+    await edition.getByTestId('enregistrer-correction').click();
+    await page.locator('[aria-live] > div', { hasText: 'corrigé' }).waitFor();
+    await page.waitForFunction((t) => document.querySelector('tbody tr')?.textContent.replace(/\s+/g, ' ').includes(t), attendu);
+  };
+  await corriger(3, 20000, '17 700');
+  verifier(true, 'correction par l’écran : 3 sacs, le ticket passe à 17 700 F');
+  // Montant remis insuffisant : les règles de caisse tiennent aussi ici.
+  await page.locator('tbody tr').first().getByTitle('Détail').click();
+  await page.getByTestId('corriger-vente').click();
+  const edition = page.getByRole('dialog', { name: /Corriger le ticket/ });
+  await edition.locator('[data-testid="quantite-CIM-50"]').fill('10');
+  await edition.locator('[data-testid=apercu-correction]').getByText('insuffisant').waitFor();
+  verifier(await edition.getByTestId('enregistrer-correction').isDisabled(), 'correction : un montant remis insuffisant bloque l’enregistrement');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await corriger(2, 12000, '11 800');
+  verifier(true, 'correction par l’écran : retour à 2 sacs, 11 800 F');
+
   // Le journal partait à l'imprimante avec le menu et les tuiles ; c'est
   // maintenant un document à part.
   await page.getByTestId('imprimer-journal-ventes').click();
@@ -283,13 +383,21 @@ const pagesImprimees = async (page) => {
   verifier((await reedition.locator('[data-testid=facture-mention]').count()) === 0, 'réédition : aucune mention sur une vente valide');
   verifier((await page.evaluate(() => window.__impressions.length)) === 1, 'réédition : document envoyé à l’impression');
 
-  // Annulation depuis l'interface : motif obligatoire, puis bouton rouge (sans confirm() natif, absent sous Tauri).
+  // Annulation depuis l'interface : motif, puis le code que le gérant dicte.
   const enAttenteAvant = await page.locator('tbody tr', { hasText: 'En attente' }).count();
-  await page.getByRole('dialog').getByRole('button', { name: 'Annuler cette vente' }).click();
-  await page.getByRole('dialog').getByPlaceholder(/motif/i).fill('Retour d’articles');
-  await page.getByRole('dialog').getByRole('button', { name: "Confirmer l'annulation" }).click();
+  await page.getByTestId('annuler-vente').click();
+  const boiteAnnulation = page.getByRole('dialog', { name: /Annuler la vente/ });
+  await boiteAnnulation.waitFor();
+  await boiteAnnulation.getByTestId('motif-annulation').fill('Retour d’articles');
+  verifier(await boiteAnnulation.getByTestId('confirmer-annulation').isDisabled(), 'annulation : sans le code du gérant, le bouton reste fermé');
+  await boiteAnnulation.getByTestId('code-annulation').fill('ZZZZZZ');
+  await boiteAnnulation.getByTestId('confirmer-annulation').click();
+  await page.locator('[aria-live] > div', { hasText: 'incorrect' }).waitFor();
+  verifier((await page.locator('tbody tr', { hasText: 'En attente' }).count()) === enAttenteAvant, 'annulation : un mauvais code ne touche à rien');
+  await boiteAnnulation.getByTestId('code-annulation').fill('A1B2C3');
+  await boiteAnnulation.getByTestId('confirmer-annulation').click();
   await page.locator('tbody tr').first().locator('text=Annulée').waitFor();
-  verifier((await page.locator('tbody tr', { hasText: 'En attente' }).count()) === enAttenteAvant - 1, 'annulation UI : le ticket passe en Annulée');
+  verifier((await page.locator('tbody tr', { hasText: 'En attente' }).count()) === enAttenteAvant - 1, 'annulation UI : avec le bon code, le ticket passe en Annulée');
 
   await page.locator('tbody tr').first().getByTitle('Détail').click();
   await page.evaluate(() => { window.print = () => {}; });

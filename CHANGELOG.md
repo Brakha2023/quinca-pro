@@ -42,6 +42,18 @@ qu'on fait patienter.
 - **Saisie des montants groupée par milliers.** Remise et montant reçu : « 1250000 » s'affiche
   **1 250 000** pendant la frappe. Un zéro de trop se voit tout de suite au lieu de se découvrir au
   comptage du soir.
+- **Retrouver un ticket par son montant.** L'écran *Ventes* gagne un champ *Montant TTC* : un
+  client ne retient pas un numéro de ticket, mais il retient ce qu'il a payé. Le montant retenu
+  s'écrit sur le journal imprimé.
+- **Corriger un ticket en attente** (Ventes → ouvrir le ticket → *Corriger*) : quantités, articles,
+  remise, client, règlement. Le numéro, la date et la caisse ne changent pas — c'est le même ticket,
+  pas une vente de plus. La marchandise revient en stock et en ressort, l'encaissement est repris
+  puis refait, le compte du client suit : tout se lit dans les journaux, une correction ne s'efface
+  pas. Une vente **validée** ne se corrige plus, elle s'annule.
+- **Le code du gérant, pour annuler une vente.** L'annulation demande désormais un code de six
+  caractères en plus du motif, dicté au comptoir par le gérant. Il appartient à la filiale, se règle
+  dans **Paramètres → Sécurité**, n'est jamais enregistré en clair, et se vérifie sur le poste même
+  sans réseau.
 - **Le caissier choisit ce qu'il imprime, à la fin de la vente** : *facture ×2 + bon de livraison*,
   *facture ×2*, ou *ticket 80 mm*. Les deux exemplaires sont réellement envoyés à l'imprimante —
   rien à régler dans la fenêtre du système — et chacun dit à qui il revient, *Exemplaire client* et
@@ -61,8 +73,18 @@ qu'on fait patienter.
   pas prouver seul qu'un article n'a jamais servi. Hors ligne, l'application le dit au lieu
   d'effacer. Aucune migration.
 
+### Attention
+
+- **Aucune vente ne peut être annulée tant que le gérant n'a pas posé le code d'annulation de sa
+  filiale** (Paramètres → Sécurité). C'est le premier geste après la mise à jour : sans lui, une
+  vente saisie par erreur ne se rattrape que par une correction, et pas du tout si elle est validée.
+
 ### Base de données
 
+- Appliquer `supabase/migrations/20261030000000_code_annulation.sql` (une colonne
+  `parametres_filiale.code_annulation`, qui ne garde qu'une empreinte PBKDF2 du code — jamais le
+  code lui-même). Les règles de synchronisation n'ont pas à être redéployées : le flux lit
+  `SELECT * FROM parametres_filiale` et la publication PowerSync porte la nouvelle colonne d'office.
 - Appliquer `supabase/migrations/20261029000000_ventes_brouillons.sql` (table `ventes_brouillons`,
   une ligne par ticket mis de côté, portée par la filiale).
 - **Redéployer les règles de synchronisation** (PowerSync → Sync Streams → Deploy) : sans cela un

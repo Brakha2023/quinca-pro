@@ -1,11 +1,11 @@
 import type { ComponentType } from 'react';
 import {
   AdjustmentsHorizontalIcon, BuildingOffice2Icon, DocumentTextIcon, HashtagIcon,
-  ReceiptPercentIcon, ShieldCheckIcon, UserGroupIcon,
+  LockClosedIcon, ReceiptPercentIcon, ShieldCheckIcon, UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 export type SectionParametres =
-  | 'entreprise' | 'fiscalite' | 'documents' | 'numerotation'
+  | 'entreprise' | 'fiscalite' | 'documents' | 'numerotation' | 'securite'
   | 'roles' | 'utilisateurs' | 'preferences';
 
 export interface OngletParametres {
@@ -44,6 +44,11 @@ export const SECTIONS_PARAMETRES: OngletParametres[] = [
     id: 'numerotation', label: 'Numérotation', icon: HashtagIcon,
     permission: 'parametres.lire',
     accroche: 'Le préfixe de chaque nature de pièce, et le code de ce poste.',
+  },
+  {
+    id: 'securite', label: 'Sécurité', icon: LockClosedIcon,
+    permission: 'parametres.lire',
+    accroche: 'Le code que le gérant donne pour autoriser l’annulation d’une vente.',
   },
   {
     id: 'roles', label: 'Rôles & permissions', icon: ShieldCheckIcon,

@@ -205,6 +205,11 @@ export interface Entreprise {
   mentions_legales: string;
   documents: ReglagesDocuments;
   prefixes: Record<string, string>;
+  /**
+   * Empreinte du code d'annulation des ventes — jamais le code lui-même.
+   * Nulle : la filiale n'en a pas encore, et aucune vente ne s'y annule.
+   */
+  code_annulation: string | null;
   updated_at: string | null;
 }
 
@@ -238,6 +243,7 @@ export function entrepriseFromRow(row: ParametresFilialeRow): Entreprise {
     mentions_legales: texte(row.mentions_legales),
     documents: lireReglagesDocuments(row.formats_documents as string | null),
     prefixes: lirePrefixes(row.prefixes_numerotation as string | null),
+    code_annulation: row.code_annulation ? String(row.code_annulation) : null,
     updated_at: row.updated_at ? String(row.updated_at) : null,
   };
 }

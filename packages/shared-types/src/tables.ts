@@ -82,6 +82,11 @@ export const TABLES = {
     formats_documents: 'text',
     /** JSON : préfixe de numérotation par nature de pièce. */
     prefixes_numerotation: 'text',
+    /**
+     * Empreinte PBKDF2 du code que le gérant donne pour autoriser l'annulation
+     * d'une vente (jamais le code en clair). Nulle = aucune annulation.
+     */
+    code_annulation: 'text',
     ...COMMUNES_HORODATAGE,
   },
   /**

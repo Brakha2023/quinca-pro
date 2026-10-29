@@ -6,6 +6,7 @@ import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powe
 import { usePermissions } from '../../auth/usePermissions';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import NoteHistorique from '../../components/ui/NoteHistorique';
+import ChampMontant from '../../components/ui/ChampMontant';
 import { controleInlineClass } from '../../components/ui/FormField';
 import { useCaisses } from '../../features/clients/hooks';
 import JournalVentesDocument from '../../features/ventes/JournalVentesDocument';
@@ -32,11 +33,13 @@ export default function VentesPage() {
   const [caisseId, setCaisseId] = useState('');
   const [statut, setStatut] = useState<StatutVente | ''>('');
   const [recherche, setRecherche] = useState('');
+  /** Montant TTC cherché, en francs ; 0 = aucun filtre. */
+  const [montantTtc, setMontantTtc] = useState(0);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<VenteVueRow | null>(null);
   const [apercu, setApercu] = useState(false);
 
-  const { ventes, isLoading } = useVentes(filialeId, { dateDebut, dateFin, caisseId: caisseId || null, statut: statut || null, recherche });
+  const { ventes, isLoading } = useVentes(filialeId, { dateDebut, dateFin, caisseId: caisseId || null, statut: statut || null, recherche, montantTtc });
   const peutValider = peut('ventes.valider');
 
   // Les mêmes totaux que le journal imprimé : une seule règle, dans `core/ventes`.
@@ -100,6 +103,19 @@ export default function VentesPage() {
         <select value={caisseId} onChange={(e) => setCaisseId(e.target.value)} className={controleInlineClass}><option value="">Toutes les caisses</option>{caisses.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}</select>
         <select value={statut} onChange={(e) => setStatut(e.target.value as StatutVente | '')} className={controleInlineClass}><option value="">Tous les statuts</option>{STATUTS_VENTE.map((s) => <option key={s} value={s}>{LIBELLES_STATUT_VENTE[s]}</option>)}</select>
         <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N° ticket ou client…" className={`${controleInlineClass} w-56`} />
+        {/* Un client ne retient pas un numéro de ticket ; il retient ce qu'il a payé. */}
+        <ChampMontant
+          valeur={montantTtc}
+          onChange={setMontantTtc}
+          zeroVide
+          placeholder="Montant TTC…"
+          aria-label="Montant TTC"
+          data-testid="filtre-montant"
+          className={`${controleInlineClass} w-40 text-right font-mono`}
+        />
+        {montantTtc > 0 && (
+          <button onClick={() => setMontantTtc(0)} className="text-sm text-primary-700 hover:underline" data-testid="effacer-filtre-montant">Effacer le montant</button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
@@ -148,6 +164,7 @@ export default function VentesPage() {
             caisseNom: caisses.find((c) => c.id === caisseId)?.nom ?? null,
             statutLabel: statut ? LIBELLES_STATUT_VENTE[statut] : null,
             recherche,
+            montantTtc,
           }}
           onClose={() => setApercu(false)}
         />

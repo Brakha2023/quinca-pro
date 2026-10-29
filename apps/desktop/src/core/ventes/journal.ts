@@ -1,5 +1,5 @@
 import type { ModePaiement, StatutVente } from '@quinca/shared-types';
-import { arrondirFcfa } from '../commun/prix';
+import { arrondirFcfa, formaterFcfa } from '../commun/prix';
 
 /**
  * Journal des ventes : ce qu'on lit en haut de l'écran, et ce qu'on imprime au
@@ -54,6 +54,8 @@ export function perimetreJournalVentes(filtres: {
   caisseNom?: string | null;
   statutLabel?: string | null;
   recherche?: string;
+  /** Montant TTC cherché, en francs ; 0 = pas de filtre. */
+  montantTtc?: number | null;
 }): string {
   const jour = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—');
   const periode = filtres.dateDebut === filtres.dateFin ? `journée du ${jour(filtres.dateDebut)}` : `du ${jour(filtres.dateDebut)} au ${jour(filtres.dateFin)}`;
@@ -62,5 +64,6 @@ export function perimetreJournalVentes(filtres: {
     filtres.caisseNom ? `caisse « ${filtres.caisseNom} »` : 'toutes caisses',
     filtres.statutLabel ? `statut « ${filtres.statutLabel} »` : null,
     filtres.recherche?.trim() ? `recherche « ${filtres.recherche.trim()} »` : null,
+    filtres.montantTtc ? `montant ${formaterFcfa(filtres.montantTtc)} TTC` : null,
   ].filter(Boolean).join(' · ');
 }

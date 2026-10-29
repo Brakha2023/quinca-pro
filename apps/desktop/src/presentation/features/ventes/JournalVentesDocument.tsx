@@ -13,7 +13,7 @@ import { formaterDateHeure } from './VenteDetailsModal';
 interface Props {
   ventes: VenteVueRow[];
   filiale: { nom: string; adresse?: string | null; telephone?: string | null };
-  filtres: { dateDebut: string; dateFin: string; caisseNom: string | null; statutLabel: string | null; recherche: string };
+  filtres: { dateDebut: string; dateFin: string; caisseNom: string | null; statutLabel: string | null; recherche: string; montantTtc?: number | null };
   onClose: () => void;
 }
 
