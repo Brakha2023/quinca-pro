@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
 import type { LigneTransfertStockRow, MouvementStockRow, TransfertStockRow, TypeMouvementStock } from '@quinca/shared-types';
-import { construireBon, type LigneTransfertStock, type TransfertStockVue } from '../../../core/stock';
+import { construireBon, resumeBon, type BonStockRow, type LigneTransfertStock, type TransfertStockVue } from '../../../core/stock';
 import {
+  bonsStockQuery,
   mouvementsQuery,
   stocksParArticleQuery,
   stocksQuery,
   type FiltresAlertes,
+  type FiltresBons,
   type FiltresMouvements,
   type FiltresStock,
   type StockVueRow,
@@ -68,6 +70,18 @@ export function useMouvements(filialeId: string | null, filtres: FiltresMouvemen
   );
   const { data, isLoading } = useQuery<MouvementVue>(sql, params);
   return { mouvements: data, isLoading };
+}
+
+/** Les bons déjà enregistrés par un onglet de saisie, les plus récents d'abord. */
+export function useBonsStock(filialeId: string | null, filtres: FiltresBons) {
+  const { sql, params } = useMemo(
+    () => bonsStockQuery(filialeId, filtres),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
+    [filialeId, filtres.types, filtres.depotId, filtres.recherche, filtres.debut, filtres.fin, filtres.limite],
+  );
+  const { data, isLoading } = useQuery<BonStockRow>(sql, params);
+  const bons = useMemo(() => data.map(resumeBon), [data]);
+  return { bons, isLoading };
 }
 
 /** Quantité en stock d'un article dans un dépôt (0 si aucune ligne). */

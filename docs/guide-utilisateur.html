@@ -189,7 +189,7 @@
   <li><div><span class="titre-chap">Paramètres — rôles et utilisateurs</span><br /><span class="desc">Créer un rôle, cocher ses droits, l'affecter à quelqu'un.</span></div></li>
   <li><div><span class="titre-chap">Le point de vente</span><br /><span class="desc">Encaisser, la remise en francs, les brouillons, le ticket et la facture.</span></div></li>
   <li><div><span class="titre-chap">Ventes et catalogue</span><br /><span class="desc">Relire une vente, l'annuler, tenir les articles et les prix.</span></div></li>
-  <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Entrées, sorties, transferts, inventaire, production, alertes.</span></div></li>
+  <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Alertes, entrées, sorties, transferts, inventaire, production, et l'historique de chacun.</span></div></li>
   <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire, proforma, compte client, versements, relances.</span></div></li>
   <li><div><span class="titre-chap">Fournisseurs</span><br /><span class="desc">Commandes, réceptions, factures d'achat, règlements.</span></div></li>
   <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses, transferts entre filiales et leur bordereau.</span></div></li>
@@ -611,6 +611,7 @@ s'imprime et s'exporte.</p>
 <table>
   <caption>Les neuf sous-écrans de Stock</caption>
   <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
+  <tr><td class="chemin">Alertes</td><td>Ce qui est en rupture ou sous le minimum, et ce qu'il faut commander. C'est l'écran d'accueil du menu Stock.</td></tr>
   <tr><td class="chemin">Suivi de stock</td><td>L'état des quantités, dépôt par dépôt, avec la valeur au coût moyen.</td></tr>
   <tr><td class="chemin">Entrée</td><td>Faire entrer de la marchandise : achat fournisseur, retour client.</td></tr>
   <tr><td class="chemin">Sortie / Casse</td><td>Déstockage, perte, casse. La sortie retient le coût du jour.</td></tr>
@@ -619,10 +620,30 @@ s'imprime et s'exporte.</p>
   <tr><td class="chemin">Inventaire</td><td>Saisir le comptage réel et constater l'écart.</td></tr>
   <tr><td class="chemin">Production</td><td>Fabriquer un article à partir d'autres (assemblage, découpe).</td></tr>
   <tr><td class="chemin">Mouvements</td><td>Le journal de tout ce qui est entré et sorti, filtrable.</td></tr>
-  <tr><td class="chemin">Alertes</td><td>Ce qui est en rupture ou sous le minimum, et ce qu'il faut commander.</td></tr>
 </table>
 
-<h3>7.1 — Enregistrer une entrée d'achat</h3>
+<h3>7.1 — Saisie ou historique : chaque écran a deux faces</h3>
+<p>En haut à droite de <span class="chemin-ui">Entrée</span>, <span class="chemin-ui">Sortie /
+Casse</span>, <span class="chemin-ui">Transfert entre dépôts</span>, <span class="chemin-ui">Transfert
+entre filiales</span>, <span class="chemin-ui">Inventaire</span> et <span class="chemin-ui">Production</span>,
+deux boutons : <strong>Saisie</strong> et <strong>Historique</strong>. L'écran s'ouvre toujours sur
+la saisie ; l'historique montre <strong>les bons déjà enregistrés par ce même écran</strong>, et eux
+seuls — on y cherche son bon d'entrée sans traverser la journée de la caisse.</p>
+<ul>
+  <li>Une ligne par <strong>bon</strong>, et non par article : le bon est la pièce qui a été signée. Le détail ligne par ligne reste dans <span class="chemin-ui">Stock → Mouvements</span>.</li>
+  <li>On filtre par <strong>période</strong>, par <strong>dépôt</strong>, ou en cherchant un numéro de bon, un article ou un motif. Un bon dont une seule ligne répond reste affiché <strong>entier</strong>, avec tous ses totaux.</li>
+  <li>L'icône d'imprimante en bout de ligne <strong>réédite le bon</strong> tel qu'il a été signé le jour de la saisie.</li>
+  <li>La valeur affichée est celle que la marchandise coûtait au moment du mouvement : pour une casse, c'est la perte sèche.</li>
+  <li>Un transfert écrit deux mouvements par article (la sortie puis l'entrée). Il n'est compté <strong>qu'une fois</strong>, du dépôt de départ vers celui d'arrivée.</li>
+  <li>L'inventaire n'affiche pas une quantité mais un <strong>écart net</strong> signé : seuls les articles mal comptés ont produit un mouvement.</li>
+</ul>
+<div class="note">
+  <span class="titre">Douze mois</span>
+  <p>Comme partout, l'historique du poste s'arrête à douze mois (voir 2.5). Au-delà, les bons
+  restent sur le serveur.</p>
+</div>
+
+<h3>7.2 — Enregistrer une entrée d'achat</h3>
 <div class="pasapas">
   <div class="etiquette">Pas à pas</div>
   <ol>
@@ -639,7 +660,7 @@ s'imprime et s'exporte.</p>
   livrée à moitié ne se facture pas en entier, et le document l'annonce.</p>
 </div>
 
-<h3>7.2 — Les alertes de stock et la liste de commande</h3>
+<h3>7.3 — Les alertes de stock et la liste de commande</h3>
 <p><span class="chemin-ui">Stock → Alertes</span> se filtre par nature (ruptures, stocks faibles,
 ou les deux), par dépôt, par famille et par recherche. <em>Imprimer / PDF</em> sort la
 <strong>liste de commande</strong> : pour chaque article, la quantité à commander, son coût estimé,
@@ -650,7 +671,7 @@ le total à engager, et un visa du gérant.</p>
   <li>Le document signale aussi les articles <strong>sans seuil</strong> : ceux-là ne déclencheront jamais d'alerte tant qu'on ne les renseigne pas.</li>
 </ul>
 
-<h3>7.3 — Transférer de la marchandise vers une autre filiale</h3>
+<h3>7.4 — Transférer de la marchandise vers une autre filiale</h3>
 <div class="pasapas">
   <div class="etiquette">Pas à pas — côté expéditeur</div>
   <ol>
@@ -662,7 +683,7 @@ le total à engager, et un visa du gérant.</p>
 <div class="pasapas">
   <div class="etiquette">Pas à pas — côté destinataire</div>
   <ol>
-    <li>Le bon apparaît dans le même écran, côté réceptions.</li>
+    <li>Le bon apparaît dans le même écran, onglet <strong>Historique</strong>, côté réceptions.</li>
     <li>À l'arrivée de la marchandise, choisissez le dépôt d'entrée et validez la réception.</li>
     <li>Si un article est inconnu du catalogue local, il est <strong>créé automatiquement</strong> avec le prix de vente de l'expéditeur, et l'écran vous annonce nommément les créations à vérifier.</li>
   </ol>
@@ -671,7 +692,7 @@ le total à engager, et un visa du gérant.</p>
 dépôt de départ. Le lien entre les deux catalogues se fait par le <strong>code article</strong> :
 veillez à ce qu'il soit le même d'une filiale à l'autre.</p>
 
-<h3>7.4 — Inventaire</h3>
+<h3>7.5 — Inventaire</h3>
 <p>On saisit le comptage réel ; l'application affiche l'écart avec le théorique et enregistre la
 régularisation. L'inventaire se retrouve ensuite dans <span class="chemin-ui">Historiques →
 Inventaires</span>.</p>

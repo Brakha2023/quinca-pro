@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { inventaireSchema } from '../../../core/stock';
+import { TYPES_BON_INVENTAIRE, inventaireSchema } from '../../../core/stock';
 import type { Article } from '../../../core/articles';
 import { StockRepository } from '../../../infrastructure/powersync/repositories/StockRepository';
 import { inputClass } from '../../components/ui/FormField';
@@ -7,7 +7,8 @@ import { useRepository } from '../../hooks/useRepository';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import ArticlePicker from './ArticlePicker';
-import { BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
+import { BasculeVue, BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale, type VueOnglet } from './EnteteBon';
+import HistoriqueBons from './HistoriqueBons';
 import { useStocks } from './hooks';
 import { useContexteMouvement } from './useContexteMouvement';
 import { useConfirmation } from '../../confirmation/useConfirmation';
@@ -32,6 +33,7 @@ export default function InventairePanel({ filialeId, filiale }: { filialeId: str
   const confirmer = useConfirmation();
   const ctx = useContexteMouvement(filialeId);
   const { depots } = useDepots(filialeId, { actifs: true });
+  const [vue, setVue] = useState<VueOnglet>('saisie');
   const [depotId, setDepotId] = useState('');
   const depotEffectif = depotId || depots[0]?.id || '';
   const { stocks } = useStocks(filialeId, { depotId: depotEffectif || null });
@@ -96,10 +98,30 @@ export default function InventairePanel({ filialeId, filiale }: { filialeId: str
     }
   };
 
+  if (vue === 'historique') {
+    return (
+      <CarteBon
+        titre="Inventaire physique"
+        description="Les inventaires déjà validés. Seuls les écarts y figurent : un article compté juste n'a produit aucun mouvement. L'écart net donne le solde du comptage, et la valeur ce que ces écarts représentent."
+        bascule={<BasculeVue vue={vue} onChange={setVue} />}
+      >
+        <HistoriqueBons
+          filialeId={filialeId}
+          filiale={filiale}
+          types={TYPES_BON_INVENTAIRE}
+          libelleQuantite="Écart net"
+          quantiteSignee
+          videMessage="Aucun inventaire validé sur cette période."
+        />
+      </CarteBon>
+    );
+  }
+
   return (
     <CarteBon
       titre="Inventaire physique"
       description="Saisissez la quantité comptée ; seules les lignes renseignées sont prises en compte et seuls les écarts génèrent un mouvement."
+      bascule={<BasculeVue vue={vue} onChange={setVue} />}
       actions={
         <>
           {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}

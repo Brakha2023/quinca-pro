@@ -16,7 +16,7 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 ## 0.4.0 — 29 octobre 2026
 
 Le comptoir, revu là où il coûtait du temps : la remise, la saisie des montants, et les clients
-qu'on fait patienter.
+qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Modifié
 
@@ -34,6 +34,15 @@ qu'on fait patienter.
 
 ### Ajouté
 
+- **Chaque écran de stock montre ses propres bons.** *Entrée*, *Sortie / Casse*, *Transfert entre
+  dépôts*, *Transfert entre filiales* et *Inventaire* gagnent la bascule **Saisie / Historique**
+  que *Production* avait déjà. L'historique liste une ligne par **bon** — la pièce qui a été signée,
+  pas le mouvement article par article — avec sa date, son dépôt, ses articles, sa valeur et qui
+  l'a saisi ; l'icône d'imprimante le réédite tel quel. On filtre par période, par dépôt, ou en
+  cherchant un numéro, un article ou un motif : un bon dont une seule ligne répond reste affiché
+  entier, avec tous ses totaux. Un transfert n'est compté qu'une fois bien qu'il écrive deux
+  mouvements par article, et un inventaire affiche l'**écart net** signé plutôt qu'une quantité.
+  Le journal complet, toutes natures mêlées, reste l'onglet *Mouvements*. Aucune migration.
 - **Ventes en brouillon, partagées entre les caisses.** La touche F9 met le ticket de côté et
   libère le comptoir pour le client suivant ; la liste des tickets en attente les rend avec leur
   remise. Commencé à la caisse 1, un ticket se reprend à la caisse 2 : la liste dit d'où il vient
@@ -72,6 +81,15 @@ qu'on fait patienter.
   La vérification passe par le serveur : le poste ne garde que douze mois d'activité, il ne peut
   pas prouver seul qu'un article n'a jamais servi. Hors ligne, l'application le dit au lieu
   d'effacer. Aucune migration.
+
+### Modifié — menu Stock
+
+- **Le menu Stock s'ouvre sur les alertes.** *Alertes* passe en tête du sous-menu et devient
+  l'écran d'accueil de `Stock` : ce qui manque se voit avant qu'on saisisse quoi que ce soit. Les
+  autres sous-écrans gardent leur ordre et leur adresse — `#/stock/suivi` reste `#/stock/suivi`.
+- **La liste des transferts inter-filiales est passée derrière *Historique***, dans l'onglet
+  *Transfert entre filiales*. C'est de là que se fait toujours une réception : un clic de plus
+  qu'avant.
 
 ### Attention
 

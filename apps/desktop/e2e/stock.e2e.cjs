@@ -86,7 +86,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(r.alertes.length === 0, 'aucune alerte (stocks au-dessus des minimums)');
 
   console.log('Interface');
-  await page.goto(`${BASE_URL}/#/stock`);
+  // `#/stock` ouvre désormais les alertes : le suivi se demande par sa route.
+  await page.goto(`${BASE_URL}/#/stock/suivi`);
   await page.reload({ waitUntil: 'networkidle' });
   await page.locator('main h1', { hasText: 'Gestion du stock' }).waitFor();
   await page.locator('tbody tr', { hasText: 'CIM-50' }).first().waitFor();
@@ -180,10 +181,61 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier((await bonTransfert.locator('tbody tr').count()) === 1, 'réédition : l’article transféré ne compte qu’une fois');
   await bonTransfert.getByRole('button', { name: "Fermer l'aperçu" }).click();
 
+  console.log('Historique de chaque onglet de saisie');
+  // Chaque onglet montre ses propres bons, et eux seuls : le magasinier qui
+  // cherche son bon d'entrée ne doit pas lire la journée de la caisse.
+  const lignesBons = (n) => page.waitForFunction((attendu) => document.querySelectorAll('[data-testid^="bon-"]').length === attendu, n);
+  const ouvrirHistorique = async (onglet) => {
+    await page.locator('main').getByRole('link', { name: onglet, exact: true }).click();
+    await page.locator('main').getByTestId('vue-historique').click();
+  };
+
+  await ouvrirHistorique('Entrée');
+  await lignesBons(4);
+  const recapEntrees = (await page.getByTestId('bons-recap').textContent()).replace(/\s+/g, ' ');
+  verifier(recapEntrees.includes('4 bon(s)'), `entrées : 4 bons regroupés par référence (${recapEntrees})`);
+  verifier((await page.locator('tbody tr', { hasText: 'SOCIMAT CI' }).count()) === 2, 'entrées : la provenance suit le bon');
+  verifier((await page.locator('tbody tr', { hasText: 'Retour client' }).count()) === 1, 'entrées : le retour client est une entrée, pas une nature à part');
+  await page.getByTestId('bons-recherche').fill('BL-2');
+  await lignesBons(1);
+  verifier(true, 'entrées : recherche par numéro de bon');
+  await page.getByTestId('bons-recherche').fill('Vis 50mm');
+  await lignesBons(3);
+  verifier(true, 'entrées : recherche par article — les 3 bons qui en portent');
+  await page.getByTestId('bons-recherche').fill('');
+  await lignesBons(4);
+
+  // Réimpression depuis l'historique : la même pièce que le jour de la saisie.
+  await page.locator('[data-testid^="imprimer-bon-"]').first().click();
+  const bonHistorique = page.locator('#zone-impression.apercu-impression');
+  await bonHistorique.waitFor();
+  verifier((await bonHistorique.textContent()).includes("Bon d'entrée"), 'entrées : le bon se réimprime depuis l’historique');
+  await bonHistorique.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
+  await ouvrirHistorique('Sortie / Casse');
+  await page.locator('text=Aucune sortie enregistrée sur cette période.').waitFor();
+  verifier(true, 'sorties : la casse refusée n’a rien laissé — la liste le dit au lieu de rester vide');
+
+  await ouvrirHistorique('Transfert entre dépôts');
+  await lignesBons(1);
+  const ligneTransfert = (await page.locator('tbody tr').first().textContent()).replace(/\s+/g, ' ');
+  verifier(ligneTransfert.includes('Principal → Annexe'), `transferts : les deux dépôts sur une seule ligne (${ligneTransfert})`);
+  // Colonne « Lignes » : le transfert écrit deux mouvements par article, il n'en compte qu'un.
+  const lignesDuTransfert = (await page.locator('tbody tr td:nth-child(6)').first().textContent()).trim();
+  verifier(lignesDuTransfert === '1' && ligneTransfert.includes('225 000 F'), `transferts : 1 ligne comptée et une seule valeur (et non 2), au coût de départ (${lignesDuTransfert} · ${ligneTransfert.includes('225 000 F')})`);
+
+  await ouvrirHistorique('Inventaire');
+  await lignesBons(1);
+  const ligneInventaire = (await page.locator('tbody tr').first().textContent()).replace(/\s+/g, ' ');
+  verifier(ligneInventaire.includes('-2'), `inventaires : l’écart net signé (${ligneInventaire})`);
+  verifier(ligneInventaire.includes('9 000 F'), 'inventaires : l’écart chiffré au coût moyen (2 sacs à 4 500)');
+
   // Sous-menu Stock dans la barre latérale : les sections sont des routes.
   const sousMenu = page.locator('[data-testid=sous-menu-stock]');
   await sousMenu.waitFor();
   verifier((await sousMenu.locator('a').count()) === 9, 'sous-menu Stock : 9 sections dans la barre latérale');
+  const sections = (await sousMenu.locator('a').allTextContents()).map((t) => t.trim());
+  verifier(sections[0] === 'Alertes', `sous-menu Stock : les alertes en tête (${sections.slice(0, 3).join(' · ')})`);
   await sousMenu.getByRole('link', { name: 'Production' }).click();
   await page.waitForURL(/#\/stock\/production$/);
   await page.locator('main h2', { hasText: 'Production' }).waitFor();
@@ -361,6 +413,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   console.log('Transfert entre filiales : écran, bon imprimé, export');
   await sousMenu.getByRole('link', { name: 'Transfert entre filiales' }).click();
   await page.waitForURL(/#\/stock\/transfert-filiale$/);
+  // L'onglet s'ouvre sur la saisie ; l'historique des bons est l'autre face.
+  await page.locator('main').getByTestId('vue-historique').click();
   const compteurTransferts = page.getByTestId('compteur-transferts');
   await compteurTransferts.waitFor();
   // La requête vivante arrive après le premier rendu : lire le compteur tout de

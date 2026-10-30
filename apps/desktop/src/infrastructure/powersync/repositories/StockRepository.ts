@@ -148,6 +148,82 @@ export function mouvementsQuery(filialeId: string | null, filtres: FiltresMouvem
   };
 }
 
+export interface FiltresBons {
+  /** Les natures de mouvement de l'onglet : un historique ne montre que ses propres bons. */
+  types: readonly TypeMouvementStock[];
+  depotId?: string | null;
+  recherche?: string;
+  debut?: string;
+  fin?: string;
+  limite?: number;
+}
+
+/**
+ * Les bons déjà enregistrés, un par référence.
+ *
+ * Le regroupement est fait ici, et non après lecture : la limite porte alors
+ * sur le nombre de bons et non sur le nombre de mouvements — un bon de
+ * quarante lignes ne chasse pas les bons suivants de la liste.
+ *
+ * Un transfert entre dépôts écrit deux mouvements par article (la sortie puis
+ * l'entrée). Une règle unique vaut donc partout : **les lignes d'un bon sont
+ * les mouvements qui ne sont pas `TRANSFERT_ENTREE`**, sans quoi tout
+ * transfert — lignes, quantités et valeur — paraîtrait double. La sortie porte
+ * le coût moyen du dépôt de départ, qui est justement ce que le transfert vaut.
+ *
+ * `MAX(m.type)` donne la nature du bon : dans chaque famille d'onglet, un bon
+ * n'a qu'un seul type, sauf le transfert où `TRANSFERT_SORTIE` l'emporte — le
+ * sens dans lequel le bon a été saisi.
+ */
+export function bonsStockQuery(filialeId: string | null, filtres: FiltresBons) {
+  const types = filtres.types.length > 0 ? filtres.types : (['AJUSTEMENT'] as const);
+  const conditions = [`m.filiale_id = ?`, `m.reference IS NOT NULL`, `m.reference != ''`, `m.type IN (${types.map(() => '?').join(', ')})`];
+  const params: Array<string | number> = [filialeId ?? '', ...types];
+  if (filtres.debut) { conditions.push('m.created_at >= ?'); params.push(`${filtres.debut}T00:00:00.000Z`); }
+  if (filtres.fin) { conditions.push('m.created_at <= ?'); params.push(`${filtres.fin}T23:59:59.999Z`); }
+  // Dépôt et recherche portent sur le bon entier : un bon dont une seule ligne
+  // répond reste affiché avec tous ses totaux, et non amputé des autres lignes.
+  if (filtres.depotId) {
+    conditions.push('EXISTS (SELECT 1 FROM mouvements_stock md WHERE md.reference = m.reference AND md.filiale_id = m.filiale_id AND md.depot_id = ?)');
+    params.push(filtres.depotId);
+  }
+  const q = filtres.recherche?.trim();
+  if (q) {
+    conditions.push(`(m.reference LIKE ? OR m.motif LIKE ? OR EXISTS (
+      SELECT 1 FROM mouvements_stock mr JOIN articles ar ON ar.id = mr.article_id
+      WHERE mr.reference = m.reference AND mr.filiale_id = m.filiale_id AND (ar.code LIKE ? OR ar.designation LIKE ?)))`);
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  params.push(filtres.limite ?? 200);
+
+  return {
+    sql: `SELECT m.reference AS reference,
+                 MIN(m.created_at) AS date,
+                 MAX(m.type) AS type,
+                 MAX(CASE WHEN m.type != 'TRANSFERT_ENTREE' THEN d.nom END) AS depot_nom,
+                 MAX(CASE WHEN m.type = 'TRANSFERT_ENTREE' THEN d.nom END) AS depot_destination_nom,
+                 MAX(f.raison_sociale) AS fournisseur_nom,
+                 MAX(m.motif) AS motif,
+                 MAX(u.nom) AS utilisateur_nom,
+                 MAX(u.prenom) AS utilisateur_prenom,
+                 COUNT(CASE WHEN m.type != 'TRANSFERT_ENTREE' THEN 1 END) AS nombre_lignes,
+                 COALESCE(SUM(CASE WHEN m.type != 'TRANSFERT_ENTREE' THEN m.quantite ELSE 0 END), 0) AS quantite,
+                 COALESCE(SUM(CASE WHEN m.type != 'TRANSFERT_ENTREE' AND m.cout_unitaire IS NOT NULL THEN ABS(m.quantite) * m.cout_unitaire ELSE 0 END), 0) AS valeur,
+                 COUNT(CASE WHEN m.type != 'TRANSFERT_ENTREE' THEN m.cout_unitaire END) AS lignes_valorisees,
+                 GROUP_CONCAT(CASE WHEN m.type != 'TRANSFERT_ENTREE' THEN a.designation END, ', ') AS articles
+          FROM mouvements_stock m
+          JOIN articles a ON a.id = m.article_id
+          JOIN depots d ON d.id = m.depot_id
+          LEFT JOIN utilisateurs u ON u.id = m.utilisateur_id
+          LEFT JOIN fournisseurs f ON f.id = m.fournisseur_id
+          WHERE ${conditions.join(' AND ')}
+          GROUP BY m.reference
+          ORDER BY date DESC
+          LIMIT ?`,
+    params,
+  };
+}
+
 export interface LigneAAppliquer {
   article_id: string;
   quantite: number;

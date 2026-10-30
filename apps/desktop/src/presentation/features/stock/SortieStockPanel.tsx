@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { sortieStockSchema } from '../../../core/stock';
+import { TYPES_BON_SORTIE, sortieStockSchema } from '../../../core/stock';
 import { StockRepository } from '../../../infrastructure/powersync/repositories/StockRepository';
 import FormField, { inputClass } from '../../components/ui/FormField';
 import { useRepository } from '../../hooks/useRepository';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
-import { BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
+import { BasculeVue, BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale, type VueOnglet } from './EnteteBon';
+import HistoriqueBons from './HistoriqueBons';
 import LignesBonEditor, { type LigneBonUI } from './LignesBonEditor';
 import { useContexteMouvement } from './useContexteMouvement';
 
@@ -15,6 +16,7 @@ export default function SortieStockPanel({ filialeId, filiale }: { filialeId: st
   const ctx = useContexteMouvement(filialeId);
   const { depots } = useDepots(filialeId, { actifs: true });
 
+  const [vue, setVue] = useState<VueOnglet>('saisie');
   const [depotId, setDepotId] = useState('');
   const [type, setType] = useState<'SORTIE_DESTOCKAGE' | 'CASSE'>('SORTIE_DESTOCKAGE');
   const [reference, setReference] = useState('');
@@ -46,10 +48,28 @@ export default function SortieStockPanel({ filialeId, filiale }: { filialeId: st
     }
   };
 
+  if (vue === 'historique') {
+    return (
+      <CarteBon
+        titre="Sortie de stock"
+        description="Les bons de sortie déjà enregistrés : déstockages et casses. La valeur est celle que la marchandise coûtait au moment où elle est sortie — pour une casse, c'est la perte sèche."
+        bascule={<BasculeVue vue={vue} onChange={setVue} />}
+      >
+        <HistoriqueBons
+          filialeId={filialeId}
+          filiale={filiale}
+          types={TYPES_BON_SORTIE}
+          videMessage="Aucune sortie enregistrée sur cette période."
+        />
+      </CarteBon>
+    );
+  }
+
   return (
     <CarteBon
       titre="Sortie de stock"
       description="Déstockage (usage interne, don, échantillon) ou casse. Le disponible du dépôt est contrôlé : aucun bon n'est enregistré partiellement."
+      bascule={<BasculeVue vue={vue} onChange={setVue} />}
       actions={
         <>
           {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}

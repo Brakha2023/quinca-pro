@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { transfertStockSchema } from '../../../core/stock';
+import { TYPES_BON_TRANSFERT, transfertStockSchema } from '../../../core/stock';
 import { StockRepository } from '../../../infrastructure/powersync/repositories/StockRepository';
 import { useRepository } from '../../hooks/useRepository';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
-import { BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
+import { BasculeVue, BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale, type VueOnglet } from './EnteteBon';
+import HistoriqueBons from './HistoriqueBons';
 import LignesBonEditor, { type LigneBonUI } from './LignesBonEditor';
 import { useContexteMouvement } from './useContexteMouvement';
 
@@ -14,6 +15,7 @@ export default function TransfertStockPanel({ filialeId, filiale }: { filialeId:
   const ctx = useContexteMouvement(filialeId);
   const { depots } = useDepots(filialeId, { actifs: true });
 
+  const [vue, setVue] = useState<VueOnglet>('saisie');
   const [sourceId, setSourceId] = useState('');
   const [destinationId, setDestinationId] = useState('');
   const [reference, setReference] = useState('');
@@ -46,14 +48,42 @@ export default function TransfertStockPanel({ filialeId, filiale }: { filialeId:
     }
   };
 
+  if (vue === 'historique') {
+    return (
+      <CarteBon
+        titre="Transfert entre dépôts de la filiale"
+        description="Les transferts déjà effectués entre les dépôts de la filiale. Un transfert est compté une fois, du dépôt de départ vers celui d'arrivée."
+        bascule={<BasculeVue vue={vue} onChange={setVue} />}
+      >
+        <HistoriqueBons
+          filialeId={filialeId}
+          filiale={filiale}
+          types={TYPES_BON_TRANSFERT}
+          avecDestination
+          videMessage="Aucun transfert entre dépôts sur cette période."
+        />
+      </CarteBon>
+    );
+  }
+
+  // Le garde-fou ne vaut que pour la saisie : l'historique se consulte même si un dépôt a depuis été fermé.
   if (depots.length < 2) {
-    return <p className="text-sm text-neutral-500">Il faut au moins deux dépôts actifs dans la filiale pour effectuer un transfert.</p>;
+    return (
+      <CarteBon
+        titre="Transfert entre dépôts de la filiale"
+        description="Il faut au moins deux dépôts actifs dans la filiale pour effectuer un transfert."
+        bascule={<BasculeVue vue={vue} onChange={setVue} />}
+      >
+        <p className="text-sm text-neutral-500">Créez un second dépôt dans « Catalogue → Dépôts », ou consultez l'historique des transferts déjà faits.</p>
+      </CarteBon>
+    );
   }
 
   return (
     <CarteBon
       titre="Transfert entre dépôts de la filiale"
       description="Sortie du dépôt source et entrée au dépôt destination, au coût moyen du dépôt source, dans la même écriture. Pour expédier vers une autre filiale, voir « Transfert entre filiales » : la marchandise y voyage, et le bon attend la réception."
+      bascule={<BasculeVue vue={vue} onChange={setVue} />}
       actions={
         <>
           {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}

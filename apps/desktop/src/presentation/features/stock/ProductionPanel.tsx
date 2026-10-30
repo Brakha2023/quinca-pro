@@ -17,7 +17,7 @@ import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import { formaterDateHeure } from '../ventes/VenteDetailsModal';
 import ArticlePicker from './ArticlePicker';
-import { SelectDepot, boutonPrimaire, boutonSecondaire } from './EnteteBon';
+import { BasculeVue, SelectDepot, boutonPrimaire, boutonSecondaire, type VueOnglet } from './EnteteBon';
 import { useStocks } from './hooks';
 import { useContexteMouvement } from './useContexteMouvement';
 
@@ -309,10 +309,7 @@ function HistoriqueProductions({ filialeId }: { filialeId: string }) {
 
 /** Production : saisie (matières → produits, impact stock, coût de revient) et historique. */
 export default function ProductionPanel({ filialeId }: { filialeId: string }) {
-  const [vue, setVue] = useState<'saisie' | 'historique'>('saisie');
-  const onglet = (v: typeof vue, label: string) => (
-    <button type="button" onClick={() => setVue(v)} className={`px-3 py-1.5 text-sm font-medium rounded-lg ${vue === v ? 'bg-primary-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}>{label}</button>
-  );
+  const [vue, setVue] = useState<VueOnglet>('saisie');
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
@@ -320,7 +317,7 @@ export default function ProductionPanel({ filialeId }: { filialeId: string }) {
           <h2 className="text-lg font-semibold text-neutral-900">Production</h2>
           <p className="text-sm text-neutral-500">Les matières premières sortent du stock au coût moyen ; les articles produits y entrent au coût de revient (pertes comprises).</p>
         </div>
-        <div className="flex gap-1 bg-neutral-50 border border-neutral-200 rounded-lg p-1 shrink-0">{onglet('saisie', 'Saisie')}{onglet('historique', 'Historique')}</div>
+        <BasculeVue vue={vue} onChange={setVue} />
       </div>
       {vue === 'saisie' ? <SaisieProduction filialeId={filialeId} /> : <HistoriqueProductions filialeId={filialeId} />}
     </div>

@@ -53,15 +53,54 @@ export function ChampsReferenceMotif({ reference, motif, onReference, onMotif, p
   );
 }
 
-export function CarteBon({ titre, description, children, actions }: { titre: string; description: string; children: ReactNode; actions: ReactNode }) {
+/** Les deux faces d'un onglet de stock : ce qu'on saisit, et ce qui a déjà été saisi. */
+export type VueOnglet = 'saisie' | 'historique';
+
+/**
+ * Bascule entre la saisie et l'historique.
+ *
+ * Tous les onglets du menu Stock portent la même, au même endroit : un
+ * magasinier qui apprend le geste sur un onglet le retrouve sur les autres.
+ */
+export function BasculeVue({ vue, onChange }: { vue: VueOnglet; onChange: (v: VueOnglet) => void }) {
+  const bouton = (v: VueOnglet, label: string) => (
+    <button
+      type="button"
+      onClick={() => onChange(v)}
+      aria-pressed={vue === v}
+      className={`px-3 py-1.5 text-sm font-medium rounded-lg ${vue === v ? 'bg-primary-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
+      data-testid={`vue-${v}`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex gap-1 bg-neutral-50 border border-neutral-200 rounded-lg p-1 shrink-0 print:hidden">
+      {bouton('saisie', 'Saisie')}
+      {bouton('historique', 'Historique')}
+    </div>
+  );
+}
+
+export function CarteBon({ titre, description, children, actions, bascule }: {
+  titre: string;
+  description: string;
+  children: ReactNode;
+  /** Barre de validation en pied ; absente, le pied ne s'affiche pas (historique). */
+  actions?: ReactNode;
+  bascule?: ReactNode;
+}) {
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">{titre}</h2>
-        <p className="text-sm text-neutral-500">{description}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-neutral-900">{titre}</h2>
+          <p className="text-sm text-neutral-500">{description}</p>
+        </div>
+        {bascule}
       </div>
       {children}
-      <div className="flex justify-end gap-3 pt-2 border-t border-neutral-200">{actions}</div>
+      {actions && <div className="flex justify-end gap-3 pt-2 border-t border-neutral-200">{actions}</div>}
     </div>
   );
 }

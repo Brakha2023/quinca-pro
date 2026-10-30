@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { entreeStockSchema } from '../../../core/stock';
+import { TYPES_BON_ENTREE, entreeStockSchema } from '../../../core/stock';
 import { StockRepository } from '../../../infrastructure/powersync/repositories/StockRepository';
 import FormField, { inputClass } from '../../components/ui/FormField';
 import { useRepository } from '../../hooks/useRepository';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import SelectFournisseur from '../fournisseurs/SelectFournisseur';
-import { BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
+import { BasculeVue, BonImprimable, BoutonImprimerBon, CarteBon, ChampsReferenceMotif, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale, type VueOnglet } from './EnteteBon';
+import HistoriqueBons from './HistoriqueBons';
 import LignesBonEditor, { totalLigneBon, type LigneBonUI } from './LignesBonEditor';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { useContexteMouvement } from './useContexteMouvement';
@@ -17,6 +18,7 @@ export default function EntreeStockPanel({ filialeId, filiale }: { filialeId: st
   const ctx = useContexteMouvement(filialeId);
   const { depots } = useDepots(filialeId, { actifs: true });
 
+  const [vue, setVue] = useState<VueOnglet>('saisie');
   const [depotId, setDepotId] = useState('');
   const [type, setType] = useState<'ENTREE_ACHAT' | 'RETOUR_CLIENT'>('ENTREE_ACHAT');
   const [fournisseurId, setFournisseurId] = useState('');
@@ -69,10 +71,29 @@ export default function EntreeStockPanel({ filialeId, filiale }: { filialeId: st
     }
   };
 
+  if (vue === 'historique') {
+    return (
+      <CarteBon
+        titre="Entrée en stock"
+        description="Les bons d'entrée déjà enregistrés : achats réceptionnés et retours clients. Chaque bon se réimprime tel qu'il a été signé."
+        bascule={<BasculeVue vue={vue} onChange={setVue} />}
+      >
+        <HistoriqueBons
+          filialeId={filialeId}
+          filiale={filiale}
+          types={TYPES_BON_ENTREE}
+          avecFournisseur
+          videMessage="Aucune entrée enregistrée sur cette période."
+        />
+      </CarteBon>
+    );
+  }
+
   return (
     <CarteBon
       titre="Entrée en stock"
       description="Réception d'achat ou retour client. Le coût moyen des articles est recalculé à partir du coût unitaire saisi."
+      bascule={<BasculeVue vue={vue} onChange={setVue} />}
       actions={
         <>
           {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ArrowDownTrayIcon, PaperAirplaneIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import {
   LIBELLES_STATUT_TRANSFERT_STOCK,
@@ -26,7 +26,7 @@ import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import BonTransfertFilialeDocument from './BonTransfertFilialeDocument';
-import { CarteBon, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale } from './EnteteBon';
+import { BasculeVue, CarteBon, SelectDepot, boutonPrimaire, boutonSecondaire, type InfosFiliale, type VueOnglet } from './EnteteBon';
 import LignesBonEditor, { type LigneBonUI } from './LignesBonEditor';
 import { useLignesTransfert, useTransfertsStock } from './hooks';
 
@@ -60,6 +60,7 @@ export default function TransfertFilialeStockPanel({ filialeId, filiale, filiale
   const { depots } = useDepots(filialeId, { actifs: true });
   const autresFiliales = useMemo(() => filiales.filter((f) => f.id !== filialeId), [filiales, filialeId]);
 
+  const [vue, setVue] = useState<VueOnglet>('saisie');
   const [debut, setDebut] = useState('');
   const [fin, setFin] = useState('');
   const [sens, setSens] = useState<'TOUS' | 'ENVOIS' | 'RECEPTIONS'>('TOUS');
@@ -120,15 +121,35 @@ export default function TransfertFilialeStockPanel({ filialeId, filiale, filiale
     }
   };
 
+  const bascule = <BasculeVue vue={vue} onChange={setVue} />;
+
+  if (vue === 'saisie') {
+    // Le garde-fou ne vaut que pour l'envoi : l'historique reste consultable.
+    const manque = autresFiliales.length === 0
+      ? 'Aucune autre filiale active : le transfert entre filiales demande au moins deux filiales.'
+      : depots.length === 0 ? 'Aucun dépôt actif dans cette filiale.' : null;
+    return (
+      <>
+        {manque ? (
+          <CarteBon titre="Envoyer de la marchandise à une autre filiale" description={manque} bascule={bascule}>
+            <p className="text-sm text-neutral-500">L'historique reste consultable : les bons déjà échangés y figurent, et c'est de là qu'une réception se fait.</p>
+          </CarteBon>
+        ) : (
+          <Formulaire filialeId={filialeId} depots={depots} filiales={autresFiliales} bascule={bascule} />
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {autresFiliales.length === 0 ? (
-        <p className="text-sm text-neutral-500">Aucune autre filiale active : le transfert entre filiales demande au moins deux filiales.</p>
-      ) : depots.length === 0 ? (
-        <p className="text-sm text-neutral-500">Aucun dépôt actif dans cette filiale.</p>
-      ) : (
-        <Formulaire filialeId={filialeId} depots={depots} filiales={autresFiliales} />
-      )}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-neutral-900">Transferts entre filiales</h2>
+          <p className="text-sm text-neutral-500">Les bons échangés avec les autres filiales, dans les deux sens. C'est ici qu'une marchandise en transit se réceptionne.</p>
+        </div>
+        {bascule}
+      </div>
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-3 print:hidden">
@@ -238,7 +259,7 @@ function BonImprimable({ transfert, filiale, onClose }: { transfert: TransfertSt
   return <BonTransfertFilialeDocument bon={construireBonTransfert(transfert, lignes)} filiale={filiale} onClose={onClose} />;
 }
 
-function Formulaire({ filialeId, depots, filiales }: { filialeId: string; depots: Depot[]; filiales: Array<{ id: string; nom: string | null }> }) {
+function Formulaire({ filialeId, depots, filiales, bascule }: { filialeId: string; depots: Depot[]; filiales: Array<{ id: string; nom: string | null }>; bascule: ReactNode }) {
   const repository = useRepository(TransfertsStockRepository);
   const notifier = useNotifier();
   const confirmer = useConfirmation();
@@ -288,6 +309,7 @@ function Formulaire({ filialeId, depots, filiales }: { filialeId: string; depots
     <CarteBon
       titre="Envoyer de la marchandise à une autre filiale"
       description="La marchandise sort du dépôt de départ tout de suite et le bon reste « en transit » : la filiale destinataire la fait entrer dans son stock à l'arrivée."
+      bascule={bascule}
       actions={
         <>
           <button type="button" onClick={reinitialiser} className={boutonSecondaire} disabled={lignes.length === 0}>Vider</button>
