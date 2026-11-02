@@ -189,7 +189,7 @@
   <li><div><span class="titre-chap">Paramètres — rôles et utilisateurs</span><br /><span class="desc">Créer un rôle, cocher ses droits, l'affecter à quelqu'un.</span></div></li>
   <li><div><span class="titre-chap">Le point de vente</span><br /><span class="desc">Encaisser, la remise en francs, les brouillons, le ticket et la facture.</span></div></li>
   <li><div><span class="titre-chap">Ventes et catalogue</span><br /><span class="desc">Relire une vente, l'annuler, tenir les articles et les prix.</span></div></li>
-  <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Alertes, entrées, sorties, transferts, inventaire, production, et l'historique de chacun.</span></div></li>
+  <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Alertes, stock dormant, entrées, sorties, transferts, inventaire, production, et l'historique de chacun.</span></div></li>
   <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire, proforma, compte client, versements, relances.</span></div></li>
   <li><div><span class="titre-chap">Fournisseurs</span><br /><span class="desc">Commandes, réceptions, factures d'achat, règlements.</span></div></li>
   <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses, transferts entre filiales et leur bordereau.</span></div></li>
@@ -611,12 +611,12 @@ s'imprime et s'exporte.</p>
 <table>
   <caption>Les neuf sous-écrans de Stock</caption>
   <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
-  <tr><td class="chemin">Alertes</td><td>Ce qui est en rupture ou sous le minimum, et ce qu'il faut commander. C'est l'écran d'accueil du menu Stock.</td></tr>
+  <tr><td class="chemin">Alertes</td><td>Ce qui est en rupture ou sous le minimum, ce qu'il faut commander, et le stock qui dort. C'est l'écran d'accueil du menu Stock.</td></tr>
   <tr><td class="chemin">Suivi de stock</td><td>L'état des quantités, dépôt par dépôt, avec la valeur au coût moyen.</td></tr>
   <tr><td class="chemin">Entrée</td><td>Faire entrer de la marchandise : achat fournisseur, retour client.</td></tr>
   <tr><td class="chemin">Sortie / Casse</td><td>Déstockage, perte, casse. La sortie retient le coût du jour.</td></tr>
   <tr><td class="chemin">Transfert entre dépôts</td><td>Déplacer de la marchandise d'un dépôt à l'autre, dans la même filiale.</td></tr>
-  <tr><td class="chemin">Transfert entre filiales</td><td>Envoyer de la marchandise à une autre filiale (voir 7.3).</td></tr>
+  <tr><td class="chemin">Transfert entre filiales</td><td>Envoyer de la marchandise à une autre filiale (voir 7.5).</td></tr>
   <tr><td class="chemin">Inventaire</td><td>Saisir le comptage réel et constater l'écart.</td></tr>
   <tr><td class="chemin">Production</td><td>Fabriquer un article à partir d'autres (assemblage, découpe).</td></tr>
   <tr><td class="chemin">Mouvements</td><td>Le journal de tout ce qui est entré et sorti, filtrable.</td></tr>
@@ -688,7 +688,31 @@ le total à engager, et un visa du gérant.</p>
   <li>Le document signale aussi les articles <strong>sans seuil</strong> : ceux-là ne déclencheront jamais d'alerte tant qu'on ne les renseigne pas.</li>
 </ul>
 
-<h3>7.4 — Transférer de la marchandise vers une autre filiale</h3>
+<h3>7.4 — Le stock qui dort, et celui qui tourne</h3>
+<p>Même écran, sous les alertes : <span class="chemin-ui">Stock → Alertes</span>, bloc
+<strong>Rotation du stock</strong>. Les alertes disent ce qui manque ; celui-ci dit l'inverse —
+<strong>l'argent qui dort sur les rayons</strong>. C'est la question qu'on se pose avant de
+recommander, de brader, ou de rendre la place à un article qui se vend.</p>
+<ul>
+  <li><strong>Stock dormant</strong> : les articles en stock qui n'ont pas eu de sortie depuis le délai choisi (30, 60, 90 ou 180 jours). Du plus cher au moins cher : c'est la somme immobilisée qui décide, pas le nombre d'articles.</li>
+  <li><strong>Stock actif</strong> : ceux qui sont sortis sur la période, du plus sorti au moins sorti.</li>
+  <li>Le bandeau annonce <strong>combien dort et quelle part du stock cela représente</strong> — le chiffre à surveiller d'un mois sur l'autre.</li>
+  <li>Une <strong>sortie</strong>, ici, est une vente, un déstockage ou une consommation en production : ce qui est vraiment parti. Ni une casse — une perte n'est pas une vente —, ni un transfert entre dépôts, qui ne fait que déplacer la marchandise.</li>
+  <li>Un article <strong>sans stock</strong> n'y figure pas : il ne dort pas, il manque, et c'est l'affaire des alertes juste au-dessus.</li>
+  <li>Les filtres de l'écran (dépôt, famille, recherche) valent aussi pour ces deux listes. Choisir un dépôt juge le dépôt : un article vendu ailleurs y dort quand même.</li>
+</ul>
+<p><em>Imprimer / PDF</em> sort la feuille <strong>Stock dormant et stock actif</strong>, à emporter
+dans les rayons : chaque article avec sa quantité, sa valeur et sa dernière sortie, la part
+immobilisée et un visa du gérant. <em>Exporter Excel</em> donne un classeur de deux feuilles, une
+par liste. L'écran n'affiche que les quinze premières lignes de chaque côté ; la feuille et le
+classeur, eux, portent tout.</p>
+<div class="note">
+  <span class="titre">« Aucune sortie connue »</span>
+  <p>Le poste garde douze mois de mouvements (voir 2.5). Un article affiché sans dernière sortie
+  n'en a donc pas eu depuis au moins un an : c'est le dormant le plus sûr.</p>
+</div>
+
+<h3>7.5 — Transférer de la marchandise vers une autre filiale</h3>
 <div class="pasapas">
   <div class="etiquette">Pas à pas — côté expéditeur</div>
   <ol>
@@ -709,7 +733,7 @@ le total à engager, et un visa du gérant.</p>
 dépôt de départ. Le lien entre les deux catalogues se fait par le <strong>code article</strong> :
 veillez à ce qu'il soit le même d'une filiale à l'autre.</p>
 
-<h3>7.5 — Inventaire</h3>
+<h3>7.6 — Inventaire</h3>
 <p>On saisit le comptage réel ; l'application affiche l'écart avec le théorique et enregistre la
 régularisation. L'inventaire se retrouve ensuite dans <span class="chemin-ui">Historiques →
 Inventaires</span>.</p>

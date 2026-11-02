@@ -5,6 +5,7 @@ import {
   appliquerMouvement,
   fusionnerLignes,
   repartirRemiseGlobale,
+  TYPES_SORTIE_ROTATION,
   type EntreeStock,
   type EtatStock,
   type Inventaire,
@@ -109,6 +110,73 @@ export function stocksParArticleQuery(filialeId: string | null, filtres: Filtres
           FROM articles a
           ${jointure}
           LEFT JOIN familles_articles f ON f.id = a.famille_id
+          WHERE ${conditions.join(' AND ')}
+          GROUP BY a.id
+          ORDER BY a.designation`,
+    params,
+  };
+}
+
+export interface FiltresRotation {
+  depotId?: string | null;
+  familleId?: string | null;
+  recherche?: string;
+  /** Début de la période observée (ISO) : ce qui est sorti depuis est compté. */
+  depuis: string;
+}
+
+/**
+ * Stock par article, avec sa **dernière sortie** et ce qui est sorti sur la
+ * période : de quoi séparer ce qui dort de ce qui tourne (voir `rotation.ts`).
+ *
+ * Les sorties sont regroupées une fois pour toutes dans une sous-requête,
+ * plutôt que relues article par article : un magasin a quelques milliers
+ * d'articles et des dizaines de milliers de mouvements.
+ *
+ * Le dépôt filtre les deux côtés — le stock et les sorties — sans quoi un
+ * article vendu depuis un autre dépôt paraîtrait tourner ici.
+ */
+export function rotationStockQuery(filialeId: string | null, filtres: FiltresRotation) {
+  const types = TYPES_SORTIE_ROTATION;
+  // Les paramètres suivent l'ordre du texte SQL, et non celui du raisonnement :
+  // la jointure des stocks vient avant la sous-requête des sorties.
+  const params: Array<string | number> = [];
+  let jointureStock = 'LEFT JOIN stocks s ON s.article_id = a.id';
+  if (filtres.depotId) {
+    jointureStock += ' AND s.depot_id = ?';
+    params.push(filtres.depotId);
+  }
+
+  params.push(filtres.depuis, filialeId ?? '', ...types);
+  let conditionDepot = '';
+  if (filtres.depotId) {
+    conditionDepot = ' AND m.depot_id = ?';
+    params.push(filtres.depotId);
+  }
+
+  const conditions = ['a.filiale_id = ?', 'a.est_actif = 1'];
+  params.push(filialeId ?? '');
+  if (filtres.familleId) { conditions.push('a.famille_id = ?'); params.push(filtres.familleId); }
+  const q = filtres.recherche?.trim();
+  if (q) { conditions.push('(a.code LIKE ? OR a.designation LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+
+  return {
+    sql: `SELECT a.id AS article_id, a.code, a.designation, a.unite, f.nom AS famille_nom,
+                 COALESCE(SUM(s.quantite), 0) AS quantite,
+                 COALESCE(SUM(s.quantite * s.cout_moyen), 0) AS valeur,
+                 MAX(sorties.derniere_sortie) AS derniere_sortie,
+                 COALESCE(MAX(sorties.quantite_sortie), 0) AS quantite_sortie
+          FROM articles a
+          ${jointureStock}
+          LEFT JOIN familles_articles f ON f.id = a.famille_id
+          LEFT JOIN (
+            SELECT m.article_id AS article_id,
+                   MAX(m.created_at) AS derniere_sortie,
+                   COALESCE(SUM(CASE WHEN m.created_at >= ? THEN ABS(m.quantite) ELSE 0 END), 0) AS quantite_sortie
+            FROM mouvements_stock m
+            WHERE m.filiale_id = ? AND m.type IN (${types.map(() => '?').join(', ')})${conditionDepot}
+            GROUP BY m.article_id
+          ) sorties ON sorties.article_id = a.id
           WHERE ${conditions.join(' AND ')}
           GROUP BY a.id
           ORDER BY a.designation`,

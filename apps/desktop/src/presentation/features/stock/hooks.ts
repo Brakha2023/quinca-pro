@@ -1,15 +1,17 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
 import type { LigneTransfertStockRow, MouvementStockRow, TransfertStockRow, TypeMouvementStock } from '@quinca/shared-types';
-import { construireBon, resumeBon, type BonStockRow, type LigneTransfertStock, type TransfertStockVue } from '../../../core/stock';
+import { classerRotation, construireBon, resumeBon, type BonStockRow, type LigneTransfertStock, type RotationRow, type TransfertStockVue } from '../../../core/stock';
 import {
   bonsStockQuery,
   mouvementsQuery,
+  rotationStockQuery,
   stocksParArticleQuery,
   stocksQuery,
   type FiltresAlertes,
   type FiltresBons,
   type FiltresMouvements,
+  type FiltresRotation,
   type FiltresStock,
   type StockVueRow,
 } from '../../../infrastructure/powersync/repositories/StockRepository';
@@ -82,6 +84,32 @@ export function useBonsStock(filialeId: string | null, filtres: FiltresBons) {
   const { data, isLoading } = useQuery<BonStockRow>(sql, params);
   const bons = useMemo(() => data.map(resumeBon), [data]);
   return { bons, isLoading };
+}
+
+/**
+ * Stock dormant et stock actif du périmètre.
+ *
+ * Le classement se fait ici et non dans la requête : « dormant » dépend de
+ * l'heure qu'il est, et une requête ne doit pas rendre un résultat qui change
+ * de sens entre deux rafraîchissements.
+ */
+export function useRotationStock(
+  filialeId: string | null,
+  filtres: FiltresRotation,
+  options: { seuilJours: number; maintenant: Date },
+) {
+  const { sql, params } = useMemo(
+    () => rotationStockQuery(filialeId, filtres),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dépend des champs du filtre
+    [filialeId, filtres.depotId, filtres.familleId, filtres.recherche, filtres.depuis],
+  );
+  const { data, isLoading } = useQuery<RotationRow>(sql, params);
+  const { seuilJours, maintenant } = options;
+  const { dormants, actifs } = useMemo(
+    () => classerRotation(data, { seuilJours, maintenant }),
+    [data, seuilJours, maintenant],
+  );
+  return { dormants, actifs, isLoading };
 }
 
 /** Quantité en stock d'un article dans un dépôt (0 si aucune ligne). */

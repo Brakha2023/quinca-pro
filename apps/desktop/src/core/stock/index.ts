@@ -2,6 +2,7 @@ export * from './mouvement';
 export * from './documents';
 export * from './remiseGlobale';
 export * from './alertes';
+export * from './rotation';
 export * from './etatStock';
 export * from './production';
 export * from './bon';

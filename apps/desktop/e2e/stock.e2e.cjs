@@ -319,7 +319,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   }, { F: filialeId, U: userId });
 
   await sousMenu.getByRole('link', { name: 'Alertes' }).click();
-  await page.locator('text=Valeur du stock').waitFor();
+  // La carte, et non le récapitulatif de rotation qui parle aussi de « valeur du stock ».
+  await page.locator('text=Valeur du stock (coût moyen)').waitFor();
   const compteurAlertes = page.getByTestId('compteur-alertes');
   await compteurAlertes.locator('text=2').first().waitFor();
   const resume = async () => (await compteurAlertes.textContent()).replace(/\s+/g, ' ');
@@ -364,6 +365,77 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await compteurAlertes.locator('text=3').first().waitFor();
   verifier(true, 'filtre par dépôt : l’article absent du dépôt y est en rupture, il ne disparaît pas');
   verifier(true, 'alertes affichées');
+
+  console.log('Rotation : stock dormant et stock actif');
+  // Trois articles fabriqués exprès : un sorti il y a quatre mois, un sorti
+  // ces jours-ci, et un dont la seule sortie est une casse.
+  await page.getByTestId('filtre-depot-alerte').selectOption('');
+  await page.evaluate(async ({ F, U }) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { ArticlesRepository } = await import('/src/infrastructure/powersync/repositories/ArticlesRepository.ts');
+    const { StockRepository } = await import('/src/infrastructure/powersync/repositories/StockRepository.ts');
+    const { articleFormSchema } = await import('/src/core/articles/index.ts');
+    const articles = new ArticlesRepository(db);
+    const stock = new StockRepository(db);
+    const ctx = { filialeId: F, utilisateurId: U };
+    const depot = await db.get("SELECT id FROM depots WHERE nom = 'Principal'");
+    const creer = (code, designation, prix) => articles.create(F, articleFormSchema.parse({ code, designation, prix_achat: prix, prix_vente: prix * 2 }));
+    const dor = await creer('ROT-DOR', 'Robinet dormant', 9000);
+    const act = await creer('ROT-ACT', 'Tuyau qui tourne', 1000);
+    const cas = await creer('ROT-CAS', 'Carreau cassé', 5000);
+    await stock.enregistrerEntree(ctx, { depot_id: depot.id, type: 'ENTREE_ACHAT', reference: 'BL-ROT', motif: '', lignes: [
+      { article_id: dor, quantite: 10, cout_unitaire: 9000 },
+      { article_id: act, quantite: 50, cout_unitaire: 1000 },
+      { article_id: cas, quantite: 4, cout_unitaire: 5000 },
+    ] });
+    await stock.enregistrerSortie(ctx, { depot_id: depot.id, type: 'SORTIE_DESTOCKAGE', reference: 'SOR-DOR', motif: 'Chantier', lignes: [{ article_id: dor, quantite: 2 }] });
+    await stock.enregistrerSortie(ctx, { depot_id: depot.id, type: 'SORTIE_DESTOCKAGE', reference: 'SOR-ACT', motif: 'Chantier', lignes: [{ article_id: act, quantite: 5 }] });
+    await stock.enregistrerSortie(ctx, { depot_id: depot.id, type: 'CASSE', reference: 'CAS-ROT', motif: 'Chute', lignes: [{ article_id: cas, quantite: 1 }] });
+    // La sortie du robinet remonte à quatre mois : c'est elle qui l'endort.
+    await db.execute("UPDATE mouvements_stock SET created_at = ? WHERE reference = 'SOR-DOR'", [new Date(Date.now() - 120 * 86400000).toISOString()]);
+  }, { F: filialeId, U: userId });
+
+  await page.locator('[data-testid="dormant-ROT-DOR"]').waitFor();
+  const ligneDormante = (await page.locator('[data-testid="dormant-ROT-DOR"]').textContent()).replace(/\s+/g, ' ');
+  // 119 ou 120 jours : l'écran fixe son « maintenant » à son ouverture, soit
+  // quelques secondes avant que ce scénario ne date la sortie.
+  verifier(ligneDormante.includes('72 000 F') && /il y a (119|120) j/.test(ligneDormante),
+    `rotation : l’article sans sortie depuis quatre mois dort, avec la somme immobilisée (${ligneDormante})`);
+  await page.locator('[data-testid="actif-ROT-ACT"]').waitFor();
+  verifier(true, 'rotation : l’article sorti ces jours-ci est rangé dans l’actif');
+  verifier((await page.locator('[data-testid="dormant-ROT-CAS"]').count()) === 1 && (await page.locator('[data-testid="actif-ROT-CAS"]').count()) === 0,
+    'rotation : une casse ne réveille pas un article — ce n’est pas une vente');
+  const compteurRotation = (await page.getByTestId('compteur-rotation').textContent()).replace(/\s+/g, ' ');
+  verifier(/\d+ % de la valeur du stock/.test(compteurRotation), `rotation : la part du stock qui dort est chiffrée (${compteurRotation})`);
+
+  await page.getByTestId('seuil-dormance').selectOption('180');
+  await page.locator('[data-testid="actif-ROT-DOR"]').waitFor();
+  verifier(true, 'rotation : à 180 jours, le même article repasse dans l’actif');
+  await page.getByTestId('seuil-dormance').selectOption('90');
+  await page.locator('[data-testid="dormant-ROT-DOR"]').waitFor();
+
+  await page.getByTestId('imprimer-rotation').click();
+  const rotation = page.locator('#zone-impression');
+  await rotation.locator('[data-testid=ligne-dormant]').first().waitFor();
+  const papierRotation = (await rotation.textContent()).replace(/\s+/g, ' ');
+  verifier(papierRotation.includes('Stock dormant et stock actif') && papierRotation.includes('Filiale Abidjan'), 'document rotation : titre et en-tête de la maison');
+  verifier(papierRotation.includes('sans sortie depuis 90 jours · tous dépôts · toutes familles'), 'document rotation : le périmètre observé est écrit sur la feuille');
+  verifier(papierRotation.includes('ROT-DOR') && papierRotation.includes('72 000 F'), 'document rotation : l’article dormant et la somme qui dort');
+  verifier(papierRotation.includes('ROT-ACT') && papierRotation.includes('Stock actif'), 'document rotation : la liste de ce qui tourne');
+  verifier(papierRotation.includes('% de la valeur du stock') && papierRotation.includes('Visa du gérant'), 'document rotation : part immobilisée et visa');
+  verifier(!papierRotation.includes('Consolidation') && !papierRotation.includes('Dormant au-delà de'), 'document rotation : ni menu ni filtres de l’application');
+  await rotation.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
+  const telechargementRotation = page.waitForEvent('download');
+  await page.getByTestId('exporter-rotation').click();
+  const fichierRotation = await telechargementRotation;
+  const classeurRotation = require('xlsx').readFile(await fichierRotation.path());
+  verifier(/^rotation-stock-90j-\d{4}-\d{2}-\d{2}\.xlsx$/.test(fichierRotation.suggestedFilename()), `export Excel : fichier ${fichierRotation.suggestedFilename()}`);
+  verifier(classeurRotation.SheetNames.join(' / ') === 'Stock dormant / Stock actif', `export Excel : une feuille par liste (${classeurRotation.SheetNames.join(', ')})`);
+  const feuilleDormants = require('xlsx').utils.sheet_to_json(classeurRotation.Sheets['Stock dormant']);
+  const robinet = feuilleDormants.find((l) => l.Code === 'ROT-DOR');
+  verifier(robinet && robinet.Valeur === 72000 && robinet['Jours sans sortie'] >= 119,
+    `export Excel : valeur immobilisée et jours sans sortie relus depuis le classeur (${robinet && robinet['Jours sans sortie']} j)`);
 
   console.log('Transfert entre filiales');
   // La marchandise voyage : Abidjan sort du stock tout de suite, Bouaké fait

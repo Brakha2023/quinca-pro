@@ -34,6 +34,16 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Ajouté
 
+- **Le stock qui dort se voit** (Stock → Alertes, bloc *Rotation du stock*). Deux listes en face
+  l'une de l'autre : **stock dormant**, les articles en stock sans aucune sortie depuis 30, 60, 90
+  ou 180 jours au choix, rangés du plus cher au moins cher — c'est la somme immobilisée qui décide,
+  pas le nombre d'articles ; et **stock actif**, ce qui est sorti sur la période, du plus sorti au
+  moins sorti. Le bandeau dit combien dort et **quelle part du stock** cela représente. Une sortie,
+  ici, est une vente, un déstockage ou une consommation en production : ni la casse, qui est une
+  perte, ni un transfert entre dépôts, qui ne fait que déplacer la marchandise. Un article sans
+  stock n'y figure pas — il ne dort pas, il manque, et les alertes s'en occupent déjà. La feuille
+  A4 *Stock dormant et stock actif* s'imprime avec la dernière sortie de chaque article et un visa
+  du gérant, et l'export Excel rend un classeur de deux feuilles. Aucune migration.
 - **Une entrée d'achat porte la marchandise au compte du fournisseur.** Quand un fournisseur est
   désigné dans *Stock → Entrée*, la validation crée la pièce d'achat correspondante (réceptionnée,
   restant à payer) et la dette apparaît aussitôt sur son compte, à son relevé et dans la liste des
