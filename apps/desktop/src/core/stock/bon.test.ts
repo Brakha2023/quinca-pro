@@ -13,6 +13,8 @@ const mvt = (over: Partial<MouvementDuBon> = {}): MouvementDuBon => ({
   quantite_apres: 10,
   cout_unitaire: 4500,
   remise_percent: 0,
+  remise_montant: 0,
+  date_livraison: null,
   motif: 'BL 42',
   fournisseur_nom: 'SOCIMAT CI',
   utilisateur: 'Awa Koné',
@@ -71,6 +73,27 @@ describe('construireBon', () => {
     expect(bon?.avec_remise).toBe(true);
     expect(bon?.lignes[0]?.remise_percent).toBe(10);
     expect(bon?.total_valeur).toBe(40500);
+  });
+
+  it('additionne les parts de remise du bon : le brut se déduit du net', () => {
+    const bon = construireBon('ENT-4', [
+      mvt({ cout_unitaire: 4300, remise_montant: 2000, quantite: 10 }),
+      mvt({ id: 'm2', article_code: 'VIS-50', cout_unitaire: 2000, remise_montant: 1000, quantite: 5 }),
+    ]);
+    expect(bon?.avec_remise).toBe(true);
+    expect(bon?.remise_globale).toBe(3000);
+    expect(bon?.total_valeur).toBe(53000);
+    // Brut annoncé sur le bon : net + remise, sans rien reconstituer.
+    expect((bon?.total_valeur ?? 0) + (bon?.remise_globale ?? 0)).toBe(56000);
+  });
+
+  it('retient l’arrivée réelle de la marchandise, saisie une fois pour le bon', () => {
+    const bon = construireBon('ENT-5', [
+      mvt({ date_livraison: null }),
+      mvt({ id: 'm2', date_livraison: '2026-10-12T18:30:00.000Z' }),
+    ]);
+    expect(bon?.date_livraison).toBe('2026-10-12T18:30:00.000Z');
+    expect(construireBon('ENT-6', [mvt()])?.date_livraison).toBeNull();
   });
 
   it('n’affiche pas de colonne remise quand aucune n’a été accordée', () => {

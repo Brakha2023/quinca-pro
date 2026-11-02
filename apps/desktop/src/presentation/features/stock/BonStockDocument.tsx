@@ -19,6 +19,8 @@ const quantite = (valeur: number, unite: string) =>
  * permet de recontrôler un écart sans rouvrir le logiciel.
  */
 export default function BonStockDocument({ bon, filiale, onClose }: Props) {
+  /** Colonnes que le libellé d'un total enjambe, avant les deux colonnes de chiffres. */
+  const colonnesLibelle = bon.avec_remise ? 6 : 5;
   return (
     <DocumentImprimable titre={bon.titre} filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
@@ -26,6 +28,7 @@ export default function BonStockDocument({ bon, filiale, onClose }: Props) {
           <strong>Pièce</strong>
           <br />N° {bon.reference}
           <br />Date : {new Date(bon.date).toLocaleString('fr-FR')}
+          {bon.date_livraison ? <><br />Livré le : {new Date(bon.date_livraison).toLocaleString('fr-FR')}</> : null}
           <br />Établi par : {bon.utilisateur || '—'}
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
@@ -56,7 +59,7 @@ export default function BonStockDocument({ bon, filiale, onClose }: Props) {
               <td className="num">{l.quantite > 0 ? '+' : ''}{quantite(l.quantite, l.unite)}</td>
               <td className="num">{l.quantite_avant}</td>
               <td className="num">{l.quantite_apres}</td>
-              {bon.avec_remise && <td className="num">{l.remise_percent > 0 ? `${l.remise_percent} %` : '—'}</td>}
+              {bon.avec_remise && <td className="num">{l.remise_montant > 0 ? formaterFcfa(l.remise_montant) : l.remise_percent > 0 ? `${l.remise_percent} %` : '—'}</td>}
               {bon.valorise && (
                 <>
                   <td className="num">{l.cout_unitaire != null ? formaterFcfa(l.cout_unitaire) : '—'}</td>
@@ -68,8 +71,25 @@ export default function BonStockDocument({ bon, filiale, onClose }: Props) {
         </tbody>
         {bon.valorise && (
           <tfoot>
+            {/* Le brut et la remise ne s'affichent que si une remise a été
+                accordée : ailleurs, trois lignes de total pour un seul chiffre
+                ne feraient que brouiller la lecture du bon. */}
+            {bon.remise_globale > 0 && (
+              <>
+                <tr>
+                  <th colSpan={colonnesLibelle}>Total brut</th>
+                  <th />
+                  <th className="num">{formaterFcfa(bon.total_valeur + bon.remise_globale)}</th>
+                </tr>
+                <tr>
+                  <th colSpan={colonnesLibelle}>Remise globale</th>
+                  <th />
+                  <th className="num" data-testid="bon-remise">− {formaterFcfa(bon.remise_globale)}</th>
+                </tr>
+              </>
+            )}
             <tr>
-              <th colSpan={bon.avec_remise ? 6 : 5}>Total du bon</th>
+              <th colSpan={colonnesLibelle}>{bon.remise_globale > 0 ? 'Net du bon' : 'Total du bon'}</th>
               <th />
               <th className="num" data-testid="bon-total">{formaterFcfa(bon.total_valeur)}</th>
             </tr>

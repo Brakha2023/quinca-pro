@@ -29,7 +29,7 @@ export default function AchatModal({ filialeId, filiale, fournisseur, onClose }:
   const [enCours, setEnCours] = useState(false);
   const [facture, setFacture] = useState<string | null>(null);
   const depotEffectif = depotId || depots[0]?.id || '';
-  const totaux = totauxAchat({ tva_percent: tva, lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, remise_percent: 0, cout_unitaire: l.cout_unitaire === '' ? 0 : l.cout_unitaire })) });
+  const totaux = totauxAchat({ tva_percent: tva, lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, cout_unitaire: l.cout_unitaire === '' ? 0 : l.cout_unitaire })) });
 
   const valider = async () => {
     const parsed = achatSchema.safeParse({

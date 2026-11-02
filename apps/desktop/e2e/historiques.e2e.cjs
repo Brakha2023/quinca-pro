@@ -149,8 +149,12 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   await page.keyboard.press('Escape');
 
   await sousMenu.getByRole('link', { name: 'Commandes fournisseurs' }).click();
-  await lignes(1);
+  // Trois pièces : le bon de commande envoyé, et les deux entrées en stock
+  // reçues d'un fournisseur — elles sont portées à son compte, donc listées ici.
+  await lignes(3);
   verifier((await texteDe(page, '[data-testid="piece-BC-HISTO"]')).includes('SOCIMAT CI'), 'commandes : le bon de commande est listé');
+  verifier((await texteDe(page, '[data-testid="piece-BL-1001"]')).includes('940 000 F'),
+    'commandes : l’entrée en stock d’un fournisseur figure à son compte, au net reçu');
   await page.getByTestId('ouvrir-BC-HISTO').click();
   await page.locator('#zone-impression .document-titre', { hasText: 'Bon de commande fournisseur' }).waitFor();
   verifier(true, 'commandes : un bon sans réception rouvre son bon, pas une facture');

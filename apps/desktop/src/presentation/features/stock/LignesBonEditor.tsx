@@ -1,7 +1,8 @@
 import { TrashIcon } from '@heroicons/react/24/outline';
 import type { Article } from '../../../core/articles';
 import { inputClass } from '../../components/ui/FormField';
-import { montantApresRemise } from '../../../core/commun/prix';
+import { arrondirMontant } from '../../../core/commun/prix';
+import { totalBrutBon, totalNetBon } from '../../../core/stock';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import ArticlePicker from './ArticlePicker';
 import { useStockArticleDepot } from './hooks';
@@ -10,22 +11,11 @@ export interface LigneBonUI {
   article: Article;
   quantite: number;
   cout_unitaire: number | '';
-  /** Remise accordée sur la ligne, en % du coût unitaire. */
-  remise_percent: number;
 }
 
-/**
- * Remise saisie, ramenée dans [0, 100] dès la frappe : au-delà, le total
- * afficherait 0 F et la validation ne refuserait qu'à la fin.
- */
-export const remiseSaisie = (valeur: string): number => {
-  const n = Number(valeur);
-  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 100) : 0;
-};
-
-/** Montant net d'une ligne : quantité × coût unitaire, remise déduite. */
+/** Montant d'une ligne : quantité × coût unitaire. La remise, elle, porte sur le bon entier. */
 export const totalLigneBon = (l: LigneBonUI): number =>
-  montantApresRemise((l.cout_unitaire === '' ? 0 : l.cout_unitaire) * l.quantite, l.remise_percent);
+  arrondirMontant((l.cout_unitaire === '' ? 0 : l.cout_unitaire) * l.quantite);
 
 interface Props {
   filialeId: string;
@@ -34,6 +24,12 @@ interface Props {
   lignes: LigneBonUI[];
   onChange: (lignes: LigneBonUI[]) => void;
   avecCout?: boolean;
+  /**
+   * Remise accordée sur le bon entier, en francs : le pied affiche alors le
+   * brut, le rabais et le net, pour que la saisie se relise comme le bon de
+   * livraison du fournisseur.
+   */
+  remiseGlobale?: number;
   /** Bloque visuellement les quantités supérieures au disponible (sorties). */
   controlerDisponible?: boolean;
 }
@@ -49,14 +45,18 @@ function CelluleStock({ articleId, depotId, quantiteDemandee, controler }: { art
 }
 
 /** Saisie des lignes d'un bon : ajout par recherche d'article, quantité, coût optionnel. */
-export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, avecCout = false, controlerDisponible = false }: Props) {
+export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, avecCout = false, remiseGlobale = 0, controlerDisponible = false }: Props) {
   const ajouter = (article: Article) => {
     if (lignes.some((l) => l.article.id === article.id)) return;
-    onChange([...lignes, { article, quantite: 1, cout_unitaire: avecCout ? article.prix_achat : '', remise_percent: 0 }]);
+    onChange([...lignes, { article, quantite: 1, cout_unitaire: avecCout ? article.prix_achat : '' }]);
   };
   const modifier = (i: number, patch: Partial<LigneBonUI>) => onChange(lignes.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   const supprimer = (i: number) => onChange(lignes.filter((_, j) => j !== i));
-  const total = lignes.reduce((s, l) => s + totalLigneBon(l), 0);
+  const brut = totalBrutBon(lignes);
+  const remise = Math.min(Math.max(remiseGlobale, 0), brut);
+  const net = totalNetBon(lignes, remise);
+  /** Nombre de colonnes du tableau : le pied s'y adosse. */
+  const colonnes = avecCout ? 6 : 4;
 
   return (
     <div className="space-y-3">
@@ -69,8 +69,7 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
               <th className="px-3 py-2 text-right">Stock dispo</th>
               <th className="px-3 py-2 text-right w-32">Quantité</th>
               {avecCout && <th className="px-3 py-2 text-right w-36">Coût unitaire</th>}
-              {avecCout && <th className="px-3 py-2 text-right w-24">Remise %</th>}
-              {avecCout && <th className="px-3 py-2 text-right">Total net</th>}
+              {avecCout && <th className="px-3 py-2 text-right">Montant</th>}
               <th className="px-3 py-2 w-10" />
             </tr>
           </thead>
@@ -89,12 +88,7 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
                 </td>
                 {avecCout && (
                   <td className="px-3 py-2">
-                    <input type="number" min="0" step="1" value={l.cout_unitaire} onChange={(e) => modifier(i, { cout_unitaire: e.target.value === '' ? '' : Number(e.target.value) })} className={`${inputClass} text-right font-mono`} />
-                  </td>
-                )}
-                {avecCout && (
-                  <td className="px-3 py-2">
-                    <input type="number" min="0" max="100" step="any" value={l.remise_percent} onFocus={(e) => e.target.select()} onChange={(e) => modifier(i, { remise_percent: remiseSaisie(e.target.value) })} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} />
+                    <input type="number" min="0" step="1" value={l.cout_unitaire} onChange={(e) => modifier(i, { cout_unitaire: e.target.value === '' ? '' : Number(e.target.value) })} className={`${inputClass} text-right font-mono`} data-testid={`cout-${l.article.code}`} />
                   </td>
                 )}
                 {avecCout && <td className="px-3 py-2 text-right font-mono text-sm">{formaterFcfa(totalLigneBon(l))}</td>}
@@ -106,12 +100,30 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
               </tr>
             ))}
             {lignes.length === 0 && (
-              <tr><td colSpan={avecCout ? 7 : 4} className="px-3 py-6 text-center text-sm text-neutral-400">Aucune ligne — recherchez un article ci-dessus.</td></tr>
+              <tr><td colSpan={colonnes} className="px-3 py-6 text-center text-sm text-neutral-400">Aucune ligne — recherchez un article ci-dessus.</td></tr>
             )}
           </tbody>
           {avecCout && lignes.length > 0 && (
-            <tfoot className="bg-neutral-50 font-semibold text-sm">
-              <tr><td colSpan={5} className="px-3 py-2 text-right">Total net de remise</td><td className="px-3 py-2 text-right font-mono" data-testid="total-bon">{formaterFcfa(total)}</td><td /></tr>
+            <tfoot className="bg-neutral-50 text-sm">
+              {remise > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={colonnes - 2} className="px-3 py-2 text-right text-neutral-600">Total brut</td>
+                    <td className="px-3 py-2 text-right font-mono text-neutral-600" data-testid="brut-bon">{formaterFcfa(brut)}</td>
+                    <td />
+                  </tr>
+                  <tr>
+                    <td colSpan={colonnes - 2} className="px-3 py-2 text-right text-neutral-600">Remise globale</td>
+                    <td className="px-3 py-2 text-right font-mono text-neutral-600" data-testid="remise-bon">− {formaterFcfa(remise)}</td>
+                    <td />
+                  </tr>
+                </>
+              )}
+              <tr className="font-semibold">
+                <td colSpan={colonnes - 2} className="px-3 py-2 text-right">{remise > 0 ? 'Net à payer' : 'Total du bon'}</td>
+                <td className="px-3 py-2 text-right font-mono" data-testid="total-bon">{formaterFcfa(net)}</td>
+                <td />
+              </tr>
             </tfoot>
           )}
         </table>

@@ -26,6 +26,8 @@ interface Props {
   avecFournisseur?: boolean;
   /** Le dépôt d'arrivée n'existe que pour un transfert. */
   avecDestination?: boolean;
+  /** L'arrivée réelle de la marchandise et la remise obtenue : propres aux entrées. */
+  avecLivraison?: boolean;
   videMessage: string;
 }
 
@@ -37,7 +39,7 @@ interface Props {
  * signée. Le journal ligne par ligne reste l'onglet « Mouvements », qui lui
  * mélange toutes les natures — y compris les ventes.
  */
-export default function HistoriqueBons({ filialeId, filiale, types, libelleQuantite = 'Quantité', quantiteSignee, avecFournisseur, avecDestination, videMessage }: Props) {
+export default function HistoriqueBons({ filialeId, filiale, types, libelleQuantite = 'Quantité', quantiteSignee, avecFournisseur, avecDestination, avecLivraison, videMessage }: Props) {
   const { depots } = useDepots(filialeId);
   const [depotId, setDepotId] = useState('');
   const [recherche, setRecherche] = useState('');
@@ -64,7 +66,7 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
         </select>
         <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N° de bon, article, motif…" className={`${controleInlineClass} w-64`} data-testid="bons-recherche" />
         <span className="ml-auto text-sm text-neutral-600 whitespace-nowrap" data-testid="bons-recap">
-          <strong>{recap.nombre}</strong> bon(s) · {recap.lignes} ligne(s){recap.valeur > 0 && <> · valeur <strong className="font-mono">{formaterFcfa(recap.valeur)}</strong></>}
+          <strong>{recap.nombre}</strong> bon(s) · {recap.lignes} ligne(s){recap.valeur > 0 && <> · valeur <strong className="font-mono">{formaterFcfa(recap.valeur)}</strong></>}{avecLivraison && recap.remise > 0 && <> · remises <strong className="font-mono">{formaterFcfa(recap.remise)}</strong></>}
         </span>
       </div>
 
@@ -73,6 +75,7 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
             <tr>
               <th className={`${cellule} text-left`}>Date</th>
+              {avecLivraison && <th className={`${cellule} text-left`}>Livré le</th>}
               <th className={`${cellule} text-left`}>N° de bon</th>
               <th className={`${cellule} text-left`}>Nature</th>
               <th className={`${cellule} text-left`}>{avecDestination ? 'Dépôts' : 'Dépôt'}</th>
@@ -89,6 +92,7 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
             {bons.map((b) => (
               <tr key={b.reference} className="hover:bg-neutral-50" data-testid={`bon-${b.reference}`}>
                 <td className={`${cellule} text-sm text-neutral-600 whitespace-nowrap`}>{dateHeure(b.date)}</td>
+                {avecLivraison && <td className={`${cellule} text-sm text-neutral-600 whitespace-nowrap`} data-testid={`livraison-${b.reference}`}>{b.date_livraison ? dateHeure(b.date_livraison) : '—'}</td>}
                 <td className={`${cellule} text-sm font-mono`}>{b.reference}</td>
                 <td className={`${cellule} text-sm text-neutral-600`}>{b.libelle}</td>
                 <td className={`${cellule} text-sm text-neutral-600`}>{b.depot ?? '—'}{avecDestination && b.depot_destination ? ` → ${b.depot_destination}` : ''}</td>
@@ -96,7 +100,11 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
                 <td className={`${cellule} text-sm max-w-xs truncate`} title={b.articles}>{b.articles || '—'}</td>
                 <td className={`${cellule} text-sm text-right font-mono`}>{b.nombre_lignes}</td>
                 <td className={`${cellule} text-sm text-right font-mono font-semibold whitespace-nowrap ${b.quantite < 0 ? 'text-red-600' : ''}`}>{quantiteSignee && b.quantite > 0 ? `+${b.quantite}` : b.quantite}</td>
-                <td className={`${cellule} text-sm text-right font-mono whitespace-nowrap`}>{b.valeur == null ? '—' : formaterFcfa(b.valeur)}</td>
+                <td className={`${cellule} text-sm text-right font-mono whitespace-nowrap`}>
+                  {b.valeur == null ? '—' : formaterFcfa(b.valeur)}
+                  {/* La valeur est nette : la remise obtenue se lit dessous plutôt que dans une colonne de plus. */}
+                  {b.remise > 0 && <span className="block text-xs text-neutral-500">remise {formaterFcfa(b.remise)}</span>}
+                </td>
                 <td className={`${cellule} text-sm text-neutral-600 whitespace-nowrap`}>{b.utilisateur ?? '—'}</td>
                 <td className={`${cellule} text-center print:hidden`}>
                   <button type="button" onClick={() => setApercu(b.reference)} className="p-1.5 rounded text-primary-700 hover:bg-primary-50" title={`Imprimer le bon ${b.reference}`} data-testid={`imprimer-bon-${b.reference}`}>

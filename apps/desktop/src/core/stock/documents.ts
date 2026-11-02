@@ -1,12 +1,11 @@
 import { z } from 'zod';
+import { totalBrutBon } from './remiseGlobale';
 
 /** Ligne d'un bon (entrée, sortie, transfert) : un article et une quantité, coût optionnel. */
 export const ligneBonSchema = z.object({
   article_id: z.string().min(1, 'Article obligatoire'),
   quantite: z.coerce.number().positive('Quantité > 0'),
   cout_unitaire: z.union([z.literal(''), z.coerce.number().min(0)]).optional().default(''),
-  /** Remise accordée sur la ligne, en % du coût unitaire. */
-  remise_percent: z.coerce.number().min(0, 'Remise ≥ 0').max(100, 'Remise ≤ 100').default(0),
 });
 export type LigneBon = z.infer<typeof ligneBonSchema>;
 
@@ -21,8 +20,18 @@ export const entreeStockSchema = z
     type: z.enum(['ENTREE_ACHAT', 'RETOUR_CLIENT']).default('ENTREE_ACHAT'),
     /** Fournisseur ayant livré : facultatif, et sans objet sur un retour client. */
     fournisseur_id: z.string().nullable().optional().default(null),
+    /** Remise accordée sur le bon entier, en francs (voir `repartirRemiseGlobale`). */
+    remise: z.coerce.number().min(0, 'Remise ≥ 0').default(0),
+    /** Arrivée réelle de la marchandise (`datetime-local`) ; vide = non renseignée. */
+    date_livraison: z.string().trim().optional().default(''),
     ...enteteBase,
     lignes: z.array(ligneBonSchema).min(1, 'Au moins une ligne'),
+  })
+  // Une remise qui dépasse le bon donnerait un coût d'achat négatif, donc un
+  // coût moyen faux pour longtemps : mieux vaut la refuser à la saisie.
+  .refine((e) => e.remise <= totalBrutBon(e.lignes), {
+    message: 'La remise dépasse le total du bon',
+    path: ['remise'],
   })
   // Un retour client ne vient pas d'un fournisseur : la provenance est effacée
   // plutôt que refusée, le type pouvant changer après la saisie.

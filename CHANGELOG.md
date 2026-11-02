@@ -34,6 +34,27 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Ajouté
 
+- **Une entrée d'achat porte la marchandise au compte du fournisseur.** Quand un fournisseur est
+  désigné dans *Stock → Entrée*, la validation crée la pièce d'achat correspondante (réceptionnée,
+  restant à payer) et la dette apparaît aussitôt sur son compte, à son relevé et dans la liste des
+  règlements à faire — la marchandise reçue est la marchandise due. Le bon d'entrée et la pièce
+  fournisseur portent **le même numéro** ; si ce numéro est déjà pris, la pièce reçoit le sien et
+  cite le bon d'entrée en note. Une entrée sans fournisseur, comme un retour client, n'engage
+  toujours rien. Un achat à ventiler (TVA, acompte) se saisit comme avant dans
+  *Fournisseurs → Achat*.
+- **La remise d'une entrée se donne en francs, sur le bon entier.** « Je vous fais 15 000 sur le
+  tout » : c'est ainsi qu'elle se négocie avec un fournisseur. Le rabais est redescendu sur les
+  lignes **au prorata de leur valeur** — le coût moyen du dépôt se calcule article par article —
+  et la somme des parts égale toujours la remise accordée, au franc près. Le pied de la saisie et
+  le bon imprimé affichent le brut, la remise et le net ; une remise plus grosse que le bon est
+  refusée, elle donnerait un coût d'achat négatif. La **remise de ligne en pourcentage disparaît**
+  de l'écran d'entrée (elle restait sans effet dans *Fournisseurs → Achat*) ; les bons déjà
+  enregistrés continuent de s'imprimer avec la leur.
+- **La date et l'heure de livraison se saisissent.** La marchandise arrive souvent la veille au
+  soir et n'est saisie que le lendemain : l'entrée accepte désormais l'arrivée réelle, qui s'écrit
+  sur le bon (« Livré le »), se lit dans sa colonne de l'historique des entrées et date la pièce
+  portée au compte du fournisseur. Laissée vide, c'est l'heure de la saisie qui fait foi, comme
+  avant.
 - **Chaque écran de stock montre ses propres bons.** *Entrée*, *Sortie / Casse*, *Transfert entre
   dépôts*, *Transfert entre filiales* et *Inventaire* gagnent la bascule **Saisie / Historique**
   que *Production* avait déjà. L'historique liste une ligne par **bon** — la pièce qui a été signée,
@@ -99,6 +120,10 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Base de données
 
+- Appliquer `supabase/migrations/20261102000000_entree_remise_globale_livraison.sql` (deux colonnes
+  sur `mouvements_stock` : `remise_montant`, la part de la remise du bon portée par la ligne, et
+  `date_livraison`, l'arrivée réelle de la marchandise). Les règles de synchronisation n'ont pas à
+  être redéployées : le flux lit `SELECT * FROM mouvements_stock`.
 - Appliquer `supabase/migrations/20261030000000_code_annulation.sql` (une colonne
   `parametres_filiale.code_annulation`, qui ne garde qu'une empreinte PBKDF2 du code — jamais le
   code lui-même). Les règles de synchronisation n'ont pas à être redéployées : le flux lit

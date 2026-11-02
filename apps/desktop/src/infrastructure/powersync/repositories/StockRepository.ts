@@ -4,15 +4,16 @@ import {
   STOCK_VIDE,
   appliquerMouvement,
   fusionnerLignes,
+  repartirRemiseGlobale,
   type EntreeStock,
   type EtatStock,
   type Inventaire,
   type SortieStock,
   type TransfertStock,
 } from '../../../core/stock';
-import { montantApresRemise } from '../../../core/commun/prix';
 import { numeroPiece } from '../../desktop/identitePoste';
 import { BaseRepository } from './BaseRepository';
+import { porterLivraisonAuCompte } from './compteFournisseur';
 
 export interface ContexteMouvement {
   filialeId: string;
@@ -203,6 +204,8 @@ export function bonsStockQuery(filialeId: string | null, filtres: FiltresBons) {
                  MAX(CASE WHEN m.type != 'TRANSFERT_ENTREE' THEN d.nom END) AS depot_nom,
                  MAX(CASE WHEN m.type = 'TRANSFERT_ENTREE' THEN d.nom END) AS depot_destination_nom,
                  MAX(f.raison_sociale) AS fournisseur_nom,
+                 MAX(m.date_livraison) AS date_livraison,
+                 COALESCE(SUM(CASE WHEN m.type != 'TRANSFERT_ENTREE' THEN m.remise_montant ELSE 0 END), 0) AS remise,
                  MAX(m.motif) AS motif,
                  MAX(u.nom) AS utilisateur_nom,
                  MAX(u.prenom) AS utilisateur_prenom,
@@ -235,8 +238,10 @@ export interface OptionsMouvement {
   autoriserNegatif?: boolean;
   /** Fournisseur ayant livré la marchandise (entrées d'achat). */
   fournisseurId?: string | null;
-  /** Remise de ligne consentie, en % : conservée pour justifier le coût net retenu. */
-  remisePercent?: number;
+  /** Part de la remise du bon portée par la ligne, en francs : justifie le coût net retenu. */
+  remiseMontant?: number;
+  /** Arrivée réelle de la marchandise, quand elle a été saisie (bon de livraison). */
+  dateLivraison?: string | null;
 }
 
 /**
@@ -246,17 +251,49 @@ export interface OptionsMouvement {
  * insuffisant, article inconnu) annule tout le bon.
  */
 export class StockRepository extends BaseRepository {
+  /**
+   * Entrée en stock : achat réceptionné ou retour client.
+   *
+   * La remise se négocie sur le bon entier et en francs ; elle est redescendue
+   * sur les lignes au prorata de leur valeur (voir `repartirRemiseGlobale`),
+   * car le stock se valorise article par article. Le coût **net** est ce qui
+   * alimente le coût moyen pondéré du dépôt.
+   *
+   * Quand un fournisseur est désigné, la même transaction porte la livraison à
+   * son compte : la marchandise entrée est la marchandise due, et un bon
+   * d'entrée qui n'engagerait rien obligerait à ressaisir l'achat ailleurs.
+   */
   enregistrerEntree(ctx: ContexteMouvement, entree: EntreeStock): Promise<string> {
     const reference = entree.reference || numeroPiece('ENT');
+    const dateLivraison = entree.date_livraison ? new Date(entree.date_livraison).toISOString() : null;
     return this.db.writeTransaction(async (tx) => {
-      for (const ligne of fusionnerLignes(entree.lignes)) {
-        // Le stock est valorisé au coût **net** : c'est lui qui alimente le coût moyen pondéré.
-        const brut = ligne.cout_unitaire === '' ? null : ligne.cout_unitaire;
+      const parts = repartirRemiseGlobale(fusionnerLignes(entree.lignes), entree.remise);
+      for (const { ligne, remise, cout_unitaire_net } of parts) {
         await this.appliquer(tx, ctx, entree.depot_id, entree.type, {
           article_id: ligne.article_id,
           quantite: ligne.quantite,
-          cout_unitaire: brut === null ? null : montantApresRemise(brut, ligne.remise_percent),
-        }, reference, entree.motif || null, { fournisseurId: entree.fournisseur_id, remisePercent: ligne.remise_percent });
+          cout_unitaire: cout_unitaire_net,
+        }, reference, entree.motif || null, { fournisseurId: entree.fournisseur_id, remiseMontant: remise, dateLivraison });
+      }
+      // Une ligne sans coût saisi ne doit rien : on ne sait pas ce qu'elle
+      // vaut. Un bon qui n'en porte aucun ne crée donc aucune pièce — une
+      // pièce à 0 F encombrerait les achats du fournisseur sans rien dire.
+      const dues = parts
+        .filter((p) => p.cout_unitaire_net != null)
+        .map((p) => ({ article_id: p.ligne.article_id, quantite: p.ligne.quantite, cout_unitaire: p.cout_unitaire_net as number }));
+      if (entree.fournisseur_id && dues.length > 0) {
+        await porterLivraisonAuCompte(tx, {
+          filialeId: ctx.filialeId,
+          utilisateurId: ctx.utilisateurId,
+          fournisseurId: entree.fournisseur_id,
+          reference,
+          depotId: entree.depot_id,
+          dateLivraison,
+          remise: entree.remise,
+          motif: entree.motif || null,
+          now: this.maintenant(),
+          lignes: dues,
+        });
       }
       return reference;
     });
@@ -373,8 +410,8 @@ export class StockRepository extends BaseRepository {
     }
 
     await tx.execute(
-      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, motif, fournisseur_id, remise_percent, utilisateur_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, motif, fournisseur_id, remise_montant, date_livraison, utilisateur_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         this.nouvelId(), ligne.article_id, depotId, ctx.filialeId, type,
         Math.abs(resultat.quantite), resultat.quantite_avant, resultat.quantite_apres,
@@ -382,7 +419,7 @@ export class StockRepository extends BaseRepository {
         // lui, un bon de casse ou de transfert ne dit pas ce qu'il a coûté, et
         // le coût moyen d'aujourd'hui ne le dira plus jamais exactement.
         ligne.cout_unitaire ?? resultat.cout_moyen,
-        reference, motif, options.fournisseurId ?? null, options.remisePercent ?? 0, ctx.utilisateurId, now,
+        reference, motif, options.fournisseurId ?? null, options.remiseMontant ?? 0, options.dateLivraison ?? null, ctx.utilisateurId, now,
       ],
     );
   }

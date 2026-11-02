@@ -179,6 +179,10 @@ export const TABLES = {
     fournisseur_id: 'text',
     /** Remise de ligne en % ; `cout_unitaire` est déjà net de cette remise. */
     remise_percent: 'real',
+    /** Part de la remise globale du bon portée par la ligne, en francs ; `cout_unitaire` en est déjà net. */
+    remise_montant: 'real',
+    /** Arrivée réelle de la marchandise (bon de livraison) ; `created_at` reste l'heure de la saisie. */
+    date_livraison: 'text',
     type: 'text',
     quantite: 'real',
     quantite_avant: 'real',

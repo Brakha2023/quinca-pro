@@ -117,6 +117,8 @@ export function useBonStock(filialeId: string | null, reference: string | null) 
               quantite_apres: m.quantite_apres ?? 0,
               cout_unitaire: m.cout_unitaire,
               remise_percent: m.remise_percent ?? 0,
+              remise_montant: m.remise_montant ?? 0,
+              date_livraison: m.date_livraison,
               motif: m.motif,
               fournisseur_nom: m.fournisseur_nom,
               utilisateur: [m.utilisateur_prenom, m.utilisateur_nom].filter(Boolean).join(' '),

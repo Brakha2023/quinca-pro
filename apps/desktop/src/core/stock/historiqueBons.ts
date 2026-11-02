@@ -30,6 +30,10 @@ export interface BonStockRow {
   depot_nom: string | null;
   depot_destination_nom: string | null;
   fournisseur_nom: string | null;
+  /** Arrivée réelle de la marchandise ; nulle sur les bons qui ne la saisissent pas. */
+  date_livraison: string | null;
+  /** Remise accordée sur le bon entier, en francs. */
+  remise: number | null;
   motif: string | null;
   utilisateur_nom: string | null;
   utilisateur_prenom: string | null;
@@ -52,6 +56,10 @@ export interface ResumeBon {
   /** Dépôt d'arrivée d'un transfert ; `null` partout ailleurs. */
   depot_destination: string | null;
   fournisseur: string | null;
+  /** `null` quand la livraison n'a pas été datée : c'est `date` qui fait foi. */
+  date_livraison: string | null;
+  /** Remise accordée sur le bon, en francs ; 0 s'il n'y en a pas. */
+  remise: number;
   motif: string | null;
   utilisateur: string | null;
   nombre_lignes: number;
@@ -73,6 +81,8 @@ export function resumeBon(row: BonStockRow): ResumeBon {
     depot: row.depot_nom,
     depot_destination: row.depot_destination_nom,
     fournisseur: row.fournisseur_nom,
+    date_livraison: row.date_livraison || null,
+    remise: arrondirFcfa(row.remise ?? 0),
     motif: row.motif,
     utilisateur: [row.utilisateur_prenom, row.utilisateur_nom].filter(Boolean).join(' ') || null,
     nombre_lignes: row.nombre_lignes ?? 0,
@@ -83,10 +93,11 @@ export function resumeBon(row: BonStockRow): ResumeBon {
 }
 
 /** Ce que le bandeau annonce au-dessus de la liste. */
-export function recapBons(bons: ResumeBon[]): { nombre: number; lignes: number; valeur: number } {
+export function recapBons(bons: ResumeBon[]): { nombre: number; lignes: number; valeur: number; remise: number } {
   return {
     nombre: bons.length,
     lignes: bons.reduce((s, b) => s + b.nombre_lignes, 0),
     valeur: arrondirFcfa(bons.reduce((s, b) => s + (b.valeur ?? 0), 0)),
+    remise: arrondirFcfa(bons.reduce((s, b) => s + b.remise, 0)),
   };
 }

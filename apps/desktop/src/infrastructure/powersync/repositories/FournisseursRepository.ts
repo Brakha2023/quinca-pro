@@ -10,6 +10,7 @@ import {
 } from '../../../core/fournisseurs';
 import { fusionnerLignes } from '../../../core/stock';
 import { BaseRepository } from './BaseRepository';
+import { mouvementerDetteFournisseur } from './compteFournisseur';
 import { StockRepository } from './StockRepository';
 
 export interface FiltresFournisseurs {
@@ -283,12 +284,6 @@ export class FournisseursRepository extends BaseRepository {
   }
 
   private async mouvementerDette(tx: Transaction, fournisseurId: string, facture: number, reglement: number): Promise<void> {
-    const f = await tx.get<FournisseurRow>('SELECT * FROM fournisseurs WHERE id = ?', [fournisseurId]);
-    const cumul_factures = (f.cumul_factures ?? 0) + facture;
-    const cumul_reglements = (f.cumul_reglements ?? 0) + reglement;
-    await this.patch(tx, 'fournisseurs', fournisseurId, {
-      cumul_factures, cumul_reglements,
-      solde_actuel: calculerDette({ solde_initial: f.solde_initial ?? 0, cumul_factures, cumul_reglements }),
-    });
+    await mouvementerDetteFournisseur(tx, fournisseurId, facture, reglement, this.maintenant());
   }
 }

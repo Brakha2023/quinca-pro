@@ -14,8 +14,12 @@ export interface MouvementDuBon {
   quantite_avant: number;
   quantite_apres: number;
   cout_unitaire: number | null;
-  /** Remise accordée sur la ligne, en % ; `cout_unitaire` en est déjà net. */
+  /** Remise accordée sur la ligne, en % ; `cout_unitaire` en est déjà net. (Bons d'avant la remise globale.) */
   remise_percent: number;
+  /** Part de la remise du bon portée par la ligne, en francs ; `cout_unitaire` en est déjà net. */
+  remise_montant: number;
+  /** Arrivée réelle de la marchandise, quand elle a été saisie. */
+  date_livraison: string | null;
   motif: string | null;
   fournisseur_nom: string | null;
   utilisateur: string;
@@ -32,6 +36,7 @@ export interface LigneBonImprime {
   quantite_apres: number;
   cout_unitaire: number | null;
   remise_percent: number;
+  remise_montant: number;
   /** Quantité × coût unitaire net ; null quand le coût n'est pas renseigné (sorties). */
   valeur: number | null;
 }
@@ -45,11 +50,15 @@ export interface BonStock {
   /** Dépôt d'arrivée d'un transfert. */
   depot_destination: string | null;
   fournisseur: string | null;
+  /** Arrivée réelle de la marchandise ; null quand elle n'a pas été saisie. */
+  date_livraison: string | null;
   motif: string | null;
   utilisateur: string;
   lignes: LigneBonImprime[];
-  /** Somme des valeurs connues ; 0 si aucune ligne n'est valorisée. */
+  /** Somme des valeurs connues, **nette** de remise ; 0 si aucune ligne n'est valorisée. */
   total_valeur: number;
+  /** Remise accordée sur le bon entier, en francs ; 0 s'il n'y en a pas. */
+  remise_globale: number;
   /** Au moins une ligne porte un coût : la colonne valeur a un sens. */
   valorise: boolean;
   /** Au moins une remise a été accordée : la colonne n'est affichée que dans ce cas. */
@@ -92,6 +101,7 @@ export function construireBon(reference: string, mouvements: MouvementDuBon[]): 
     quantite_apres: m.quantite_apres,
     cout_unitaire: m.cout_unitaire,
     remise_percent: m.remise_percent,
+    remise_montant: m.remise_montant,
     valeur: m.cout_unitaire == null ? null : arrondirFcfa(Math.abs(m.quantite) * m.cout_unitaire),
   }));
 
@@ -102,11 +112,13 @@ export function construireBon(reference: string, mouvements: MouvementDuBon[]): 
     depot: premier.depot_nom,
     depot_destination: estTransfert ? (ordonnes.find((m) => m.type === 'TRANSFERT_ENTREE')?.depot_nom ?? null) : null,
     fournisseur: ordonnes.find((m) => m.fournisseur_nom)?.fournisseur_nom ?? null,
+    date_livraison: ordonnes.find((m) => m.date_livraison)?.date_livraison ?? null,
     motif: ordonnes.find((m) => m.motif)?.motif ?? null,
     utilisateur: premier.utilisateur,
     lignes,
     total_valeur: arrondirFcfa(lignes.reduce((s, l) => s + (l.valeur ?? 0), 0)),
+    remise_globale: arrondirFcfa(lignes.reduce((s, l) => s + l.remise_montant, 0)),
     valorise: lignes.some((l) => l.valeur != null),
-    avec_remise: lignes.some((l) => l.remise_percent > 0),
+    avec_remise: lignes.some((l) => l.remise_percent > 0 || l.remise_montant > 0),
   };
 }

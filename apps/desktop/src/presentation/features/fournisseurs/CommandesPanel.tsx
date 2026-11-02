@@ -14,7 +14,7 @@ import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
-import { remiseSaisie } from '../stock/LignesBonEditor';
+import { remiseSaisie } from '../../../core/commun/prix';
 import ArticlePicker from '../stock/ArticlePicker';
 import { formaterDateHeure } from '../ventes/VenteDetailsModal';
 import BonCommandeDocument from './BonCommandeDocument';

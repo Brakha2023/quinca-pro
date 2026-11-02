@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { grouperMilliers, lireMontant, margePourcent, montantApresRemise, prixHtDepuisTtc, prixTtcDepuisHt } from './prix';
+import { grouperMilliers, lireMontant, margePourcent, montantApresRemise, prixHtDepuisTtc, prixTtcDepuisHt, remiseSaisie } from './prix';
 
 describe('prix', () => {
   it('convertit TTC ↔ HT avec la TVA', () => {
@@ -54,5 +54,22 @@ describe('saisie des montants', () => {
     for (const montant of [0, 7, 999, 1000, 1250000, 987654321]) {
       expect(lireMontant(grouperMilliers(montant))).toBe(montant);
     }
+  });
+});
+
+describe('remiseSaisie', () => {
+  it('garde une remise valide', () => {
+    expect(remiseSaisie('20')).toBe(20);
+    expect(remiseSaisie('7.5')).toBe(7.5);
+  });
+
+  it('borne la saisie à 100 au lieu de laisser le total tomber à zéro', () => {
+    expect(remiseSaisie('150')).toBe(100);
+  });
+
+  it('ramène à zéro une saisie négative, vide ou illisible', () => {
+    expect(remiseSaisie('-5')).toBe(0);
+    expect(remiseSaisie('')).toBe(0);
+    expect(remiseSaisie('abc')).toBe(0);
   });
 });

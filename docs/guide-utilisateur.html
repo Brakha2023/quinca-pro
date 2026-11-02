@@ -636,6 +636,7 @@ seuls — on y cherche son bon d'entrée sans traverser la journée de la caisse
   <li>La valeur affichée est celle que la marchandise coûtait au moment du mouvement : pour une casse, c'est la perte sèche.</li>
   <li>Un transfert écrit deux mouvements par article (la sortie puis l'entrée). Il n'est compté <strong>qu'une fois</strong>, du dépôt de départ vers celui d'arrivée.</li>
   <li>L'inventaire n'affiche pas une quantité mais un <strong>écart net</strong> signé : seuls les articles mal comptés ont produit un mouvement.</li>
+  <li>L'historique des <strong>entrées</strong> porte deux colonnes de plus : <em>Livré le</em>, l'arrivée réelle de la marchandise quand elle a été saisie, et <em>Remise</em>, le rabais obtenu sur le bon. Le bandeau totalise les remises de la période.</li>
 </ul>
 <div class="note">
   <span class="titre">Douze mois</span>
@@ -648,16 +649,32 @@ seuls — on y cherche son bon d'entrée sans traverser la journée de la caisse
   <div class="etiquette">Pas à pas</div>
   <ol>
     <li><span class="chemin-ui">Stock → Entrée</span>. Choisissez le dépôt de destination.</li>
-    <li>Choisissez le <strong>fournisseur</strong> : c'est lui qui fera le lien avec son compte et sa facture d'achat.</li>
-    <li>Ajoutez les articles reçus, avec la quantité et le prix d'achat. Saisissez la remise de ligne s'il y en a une.</li>
-    <li>Validez. Le stock monte, le coût moyen du dépôt est recalculé <strong>sur le net de remise</strong>.</li>
-    <li>La <strong>facture d'achat A4</strong> s'imprime aussitôt : cartouche fournisseur, lignes valorisées, brut HT, remise, net HT, TVA, net à payer en toutes lettres.</li>
+    <li>Choisissez le <strong>fournisseur</strong> : le net du bon sera porté à son compte. Laissez vide pour une entrée qui n'engage rien.</li>
+    <li>Saisissez la <strong>date et l'heure de livraison</strong> si la marchandise est arrivée avant la saisie — la veille au soir, par exemple. Vide, c'est l'heure de la saisie qui fait foi.</li>
+    <li>Ajoutez les articles reçus, avec la quantité et le prix d'achat.</li>
+    <li>Portez la <strong>remise globale en francs</strong> si le fournisseur en a accordé une : elle se donne sur le bon entier, jamais article par article.</li>
+    <li>Relisez le pied du tableau : <em>Total brut</em>, <em>Remise globale</em>, <em>Net à payer</em>.</li>
+    <li>Validez. Le stock monte, le coût moyen du dépôt est recalculé <strong>sur le coût net de remise</strong>, et le message confirme le montant porté au compte du fournisseur.</li>
+    <li><em>Imprimer le bon</em> sort le <strong>bon d'entrée</strong> : lignes, stock avant / après, remise, brut et net, date de livraison, code-barres.</li>
   </ol>
 </div>
 <div class="note">
-  <span class="titre">Réception partielle</span>
-  <p>La facture d'achat ne porte que la marchandise <strong>réellement reçue</strong>. Une commande
-  livrée à moitié ne se facture pas en entier, et le document l'annonce.</p>
+  <span class="titre">La remise est répartie, pas oubliée</span>
+  <p>Une remise de 5 500 F sur un bon de 55 000 F est redescendue sur les lignes
+  <strong>au prorata de leur valeur</strong> : une ligne qui pèse neuf dixièmes du bon en porte
+  neuf dixièmes. C'est indispensable au coût moyen, qui se calcule article par article. La somme
+  des parts égale toujours la remise accordée, au franc près. Une remise plus grosse que le bon est
+  refusée : elle donnerait un coût d'achat négatif, et un coût moyen faux pour longtemps.</p>
+</div>
+<div class="note">
+  <span class="titre">Ce que le fournisseur voit à son compte</span>
+  <p>L'entrée crée une <strong>pièce d'achat réceptionnée</strong>, au même numéro que le bon
+  d'entrée : elle figure à son relevé (<span class="chemin-ui">Fournisseurs → Compte</span>), sa
+  <strong>facture d'achat</strong> s'imprime, et elle se règle par l'écran des règlements comme
+  n'importe quel achat. Aucune TVA n'y est ventilée et aucun acompte n'y est encaissé : un achat à
+  détailler se saisit dans <span class="chemin-ui">Fournisseurs → Achat</span>, qui demande la TVA
+  et le règlement. Un <strong>retour client</strong> ne doit rien à personne : la provenance
+  fournisseur y est effacée.</p>
 </div>
 
 <h3>7.3 — Les alertes de stock et la liste de commande</h3>

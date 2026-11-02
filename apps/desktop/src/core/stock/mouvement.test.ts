@@ -81,21 +81,43 @@ describe('entreeStockSchema : provenance', () => {
   });
 });
 
-describe('entreeStockSchema : remise illisible', () => {
+describe('entreeStockSchema : remise globale', () => {
+  // Le bon entier vaut 12 500 F (5 × 2 500).
   const base = { depot_id: 'd1', type: 'ENTREE_ACHAT', lignes: [{ article_id: 'a1', quantite: 5, cout_unitaire: 2500 }] };
 
-  it('refuse une remise hors bornes plutôt que de la laisser passer', () => {
-    expect(entreeStockSchema.safeParse({ ...base, lignes: [{ ...base.lignes[0], remise_percent: 150 }] }).success).toBe(false);
-    expect(entreeStockSchema.safeParse({ ...base, lignes: [{ ...base.lignes[0], remise_percent: -1 }] }).success).toBe(false);
+  it('accepte une remise en francs sur le bon entier', () => {
+    expect(entreeStockSchema.parse({ ...base, remise: 2500 }).remise).toBe(2500);
+    expect(entreeStockSchema.parse({ ...base, remise: 12_500 }).remise).toBe(12_500);
   });
 
-  it('refuse une remise non numérique : aucun NaN n’atteint le coût du stock', () => {
-    const r = entreeStockSchema.safeParse({ ...base, lignes: [{ ...base.lignes[0], remise_percent: 'abc' }] });
+  it('refuse une remise plus grosse que le bon : le coût d’achat deviendrait négatif', () => {
+    const r = entreeStockSchema.safeParse({ ...base, remise: 13_000 });
     expect(r.success).toBe(false);
+    expect(r.success === false && r.error.issues[0]?.message).toBe('La remise dépasse le total du bon');
+  });
+
+  it('refuse une remise négative ou illisible : aucun NaN n’atteint le coût du stock', () => {
+    expect(entreeStockSchema.safeParse({ ...base, remise: -1 }).success).toBe(false);
+    expect(entreeStockSchema.safeParse({ ...base, remise: 'abc' }).success).toBe(false);
   });
 
   it('accepte une remise absente et la ramène à zéro', () => {
-    const r = entreeStockSchema.parse(base);
-    expect(r.lignes[0]?.remise_percent).toBe(0);
+    expect(entreeStockSchema.parse(base).remise).toBe(0);
+  });
+
+  it('refuse une remise sur un bon sans aucun coût saisi', () => {
+    expect(entreeStockSchema.safeParse({ depot_id: 'd1', remise: 1000, lignes: [{ article_id: 'a1', quantite: 5 }] }).success).toBe(false);
+  });
+});
+
+describe('entreeStockSchema : date de livraison', () => {
+  const base = { depot_id: 'd1', type: 'ENTREE_ACHAT', lignes: [{ article_id: 'a1', quantite: 5, cout_unitaire: 2500 }] };
+
+  it('retient l’arrivée réelle de la marchandise, telle que le champ la rend', () => {
+    expect(entreeStockSchema.parse({ ...base, date_livraison: '2026-10-12T18:30' }).date_livraison).toBe('2026-10-12T18:30');
+  });
+
+  it('se passe d’une livraison non datée', () => {
+    expect(entreeStockSchema.parse(base).date_livraison).toBe('');
   });
 });

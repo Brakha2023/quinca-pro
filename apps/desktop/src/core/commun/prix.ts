@@ -27,6 +27,15 @@ export function montantApresRemise(montant: number, remisePercent: number | null
   return arrondirMontant(montant * (1 - taux / 100));
 }
 
+/**
+ * Remise en % telle qu'elle se tape, ramenée dans [0, 100] dès la frappe :
+ * au-delà, le total afficherait 0 F et la validation ne refuserait qu'à la fin.
+ */
+export const remiseSaisie = (valeur: string): number => {
+  const n = Number(valeur);
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 100) : 0;
+};
+
 /** Marge en % du prix d'achat ; 0 si le prix d'achat n'est pas renseigné. */
 export function margePourcent(prixAchat: number, prixVente: number): number {
   if (prixAchat <= 0) return 0;

@@ -68,12 +68,23 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     const { entreeStockSchema } = await import('/src/core/stock/index.ts');
     await stock.enregistrerEntree(ctx, entreeStockSchema.parse({ depot_id: d1, type: 'RETOUR_CLIENT', fournisseur_id: fId, lignes: [{ article_id: a2, quantite: 1 }] }));
     out.retourSansFournisseur = (await db.get("SELECT fournisseur_id FROM mouvements_stock WHERE type = 'RETOUR_CLIENT'")).fournisseur_id;
+
+    // La marchandise reçue d'un fournisseur est portée à son compte : la
+    // première entrée vaut 100 × 4 000 + 10 × 2 500 = 425 000 F. Les deux
+    // autres (sans fournisseur, puis retour client) ne lui doivent rien.
+    out.compteFournisseur = await db.get('SELECT cumul_factures, solde_actuel FROM fournisseurs WHERE id = ?', [fId]);
+    out.piecesFournisseur = await db.getAll('SELECT numero, type, statut, total_recu_ttc, reste_a_payer FROM commandes_fournisseurs ORDER BY created_at');
     return out;
   }, { F: filialeId, U: userId });
 
   verifier(r.apresEntrees.quantite === 200 && r.apresEntrees.cout_moyen === 4500, 'entrées cumulées, coût moyen pondéré 4500');
   verifier(r.mouvementsFournisseur.length === 2 && r.mouvementsFournisseur.every((m) => m === 'ENTREE_ACHAT:SOCIMAT CI'), 'entrée : fournisseur enregistré sur chaque ligne et journal filtrable par fournisseur');
   verifier(r.retourSansFournisseur === null, 'retour client : aucune provenance fournisseur retenue');
+  verifier(r.compteFournisseur.solde_actuel === 425000 && r.compteFournisseur.cumul_factures === 425000,
+    `entrée d’achat : le net est porté au compte du fournisseur (${r.compteFournisseur.solde_actuel})`);
+  verifier(r.piecesFournisseur.length === 1 && r.piecesFournisseur[0].numero.startsWith('ENT-')
+    && r.piecesFournisseur[0].statut === 'LIVREE' && r.piecesFournisseur[0].total_recu_ttc === 425000 && r.piecesFournisseur[0].reste_a_payer === 425000,
+    `entrée d’achat : une pièce réceptionnée au numéro du bon, restant à payer (${r.piecesFournisseur.map((p) => `${p.numero}:${p.total_recu_ttc}`).join(', ') || 'aucune'})`);
   verifier(r.sortieRefusee && r.stockVisApresRefus === 10, 'sortie > disponible refusée, stock intact');
   verifier(JSON.stringify(r.apresTransfert) === JSON.stringify([{ code: 'D1', quantite: 150, cout_moyen: 4500 }, { code: 'D2', quantite: 50, cout_moyen: 4500 }]), 'transfert D1→D2 au coût moyen');
   verifier(r.inventaire === 1 && r.apresInventaire === 148, 'inventaire : 1 écart régularisé (150 → 148)');
@@ -116,10 +127,13 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('ul li button', { hasText: 'VIS-50' }).click();
   await page.locator('tbody input[type=number]').first().fill('5');
 
-  // Remise de ligne : le total affiché et le coût qui entre en stock en tiennent compte.
-  await page.locator('[data-testid="remise-VIS-50"]').fill('20');
+  // La remise se négocie sur le bon entier et en francs : 2 500 F sur 12 500 F.
+  await page.getByTestId('remise-globale').fill('2500');
+  await page.getByTestId('date-livraison').fill('2026-10-12T18:30');
+  await page.locator('[data-testid=brut-bon]', { hasText: '12 500 F' }).waitFor();
+  await page.locator('[data-testid=remise-bon]', { hasText: '2 500 F' }).waitFor();
   await page.locator('[data-testid=total-bon]', { hasText: '10 000 F' }).waitFor();
-  verifier(true, 'entrée : remise de ligne déduite du total (5 × 2 500 − 20 %)');
+  verifier(true, 'entrée : remise globale en francs, brut et net affichés (12 500 − 2 500)');
 
   // Export Excel : hors Tauri, le repli navigateur télécharge le classeur.
   const telechargement = page.waitForEvent('download');
@@ -128,11 +142,13 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   const classeur = require('xlsx').readFile(await fichier.path());
   const feuille = require('xlsx').utils.sheet_to_json(classeur.Sheets[classeur.SheetNames[0]]);
   verifier(/\.xlsx$/.test(fichier.suggestedFilename()), `export Excel : fichier ${fichier.suggestedFilename()}`);
-  verifier(feuille.length === 1 && feuille[0].Code === 'VIS-50' && feuille[0]['Remise %'] === 20 && feuille[0]['Total net'] === 10000, 'export Excel : lignes, remise et total relus depuis le classeur');
+  verifier(feuille.length === 1 && feuille[0].Code === 'VIS-50' && feuille[0].Montant === 12500 && feuille[0]['Part de remise'] === 2500 && feuille[0]['Total net'] === 10000,
+    'export Excel : lignes, part de remise et net relus depuis le classeur');
 
   await page.getByRole('button', { name: "Valider l'entrée" }).click();
   await page.locator('[aria-live]', { hasText: 'Entrée ENT-' }).waitFor();
-  verifier(true, 'entrée saisie via l’UI, fournisseur choisi');
+  const avis = (await page.locator('[aria-live]', { hasText: 'Entrée ENT-' }).textContent()).replace(/\s+/g, ' ');
+  verifier(avis.includes('10 000 F') && avis.includes('SOCIMAT CI'), `entrée saisie via l’UI : le net annoncé porté au compte du fournisseur (${avis.trim()})`);
 
   // Le champ fournisseur disparaît quand l'entrée n'est pas un achat.
   await page.locator('main select').nth(1).selectOption('RETOUR_CLIENT');
@@ -147,8 +163,10 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(papier.includes("Bon d'entrée — achat"), 'bon d’entrée : titre du document');
   // L'écran d'entrée propose le premier dépôt actif par ordre alphabétique : « Annexe ».
   verifier(papier.includes('SOCIMAT CI') && papier.includes('Annexe'), 'bon d’entrée : fournisseur et dépôt');
-  verifier(papier.includes('Total du bon') && papier.includes('10 000 F'), 'bon d’entrée : total net de remise');
-  verifier(papier.includes('20 %'), 'bon d’entrée : remise accordée mentionnée');
+  verifier(papier.includes('Total brut') && papier.includes('12 500 F'), 'bon d’entrée : le brut avant remise');
+  verifier(papier.includes('Remise globale') && papier.includes('2 500 F'), 'bon d’entrée : la remise accordée, en francs');
+  verifier(papier.includes('Net du bon') && papier.includes('10 000 F'), 'bon d’entrée : net à payer après remise');
+  verifier(papier.includes('Livré le') && papier.includes('12/10/2026'), 'bon d’entrée : l’arrivée réelle de la marchandise');
   verifier(papier.includes('VIS-50') && papier.includes('+5'), 'bon d’entrée : ligne et quantité signée');
   verifier((await bon.locator('svg.code-barres rect').count()) > 20, 'bon d’entrée : code-barres de la référence');
   await bon.getByRole('button', { name: "Fermer l'aperçu" }).click();
@@ -159,12 +177,24 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   // On attend que la requête filtrée soit arrivée, sinon on lit l'état d'avant.
   await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 3);
   const provenances = await page.locator('[data-testid=mouvement-fournisseur]').allTextContents();
-  const coutNet = await page.evaluate(async () => {
+  const apresSaisie = await page.evaluate(async () => {
     const { db } = await import('/src/infrastructure/powersync/database.ts');
-    const m = await db.get("SELECT cout_unitaire, remise_percent FROM mouvements_stock WHERE type = 'ENTREE_ACHAT' AND remise_percent > 0");
-    return m;
+    const m = await db.get("SELECT cout_unitaire, remise_montant, date_livraison FROM mouvements_stock WHERE type = 'ENTREE_ACHAT' AND remise_montant > 0");
+    const f = await db.get("SELECT solde_actuel FROM fournisseurs WHERE raison_sociale = 'SOCIMAT CI'");
+    const pieces = await db.getAll('SELECT numero, total_recu_ttc, notes FROM commandes_fournisseurs ORDER BY created_at');
+    const lignes = await db.getAll('SELECT code_article, quantite, prix_unitaire_ht, total_ht FROM lignes_commande_fournisseur ORDER BY created_at DESC LIMIT 1');
+    return { m, f, pieces, lignes };
   });
-  verifier(coutNet.cout_unitaire === 2000 && coutNet.remise_percent === 20, 'entrée : stock valorisé au coût net (2 500 − 20 % = 2 000), remise conservée');
+  verifier(apresSaisie.m.cout_unitaire === 2000 && apresSaisie.m.remise_montant === 2500,
+    'entrée : stock valorisé au coût net (12 500 − 2 500 sur 5 unités = 2 000), part de remise conservée');
+  verifier(apresSaisie.m.date_livraison !== null && new Date(apresSaisie.m.date_livraison).getHours() === 18,
+    `entrée : l’heure de livraison saisie est enregistrée (${apresSaisie.m.date_livraison})`);
+  verifier(apresSaisie.f.solde_actuel === 435000, `compte fournisseur : 425 000 + 10 000 de la saisie UI (${apresSaisie.f.solde_actuel})`);
+  verifier(apresSaisie.pieces.length === 2 && apresSaisie.pieces[1].total_recu_ttc === 10000
+    && apresSaisie.pieces[1].notes.includes('Remise globale 2500 F') && apresSaisie.pieces[1].notes.includes('Entrée en stock'),
+    `compte fournisseur : la pièce reprend le net, la remise et le bon d’entrée (${apresSaisie.pieces[1] && apresSaisie.pieces[1].notes})`);
+  verifier(apresSaisie.lignes.length === 1 && apresSaisie.lignes[0].prix_unitaire_ht === 2000 && apresSaisie.lignes[0].total_ht === 10000,
+    'compte fournisseur : la ligne de la pièce est due au coût net, pas au brut');
 
   verifier(provenances.length === 3 && provenances.every((t) => t === 'SOCIMAT CI'), `journal : filtre par fournisseur, provenance affichée (${provenances.join(', ') || 'aucune ligne'})`);
 
@@ -196,6 +226,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(recapEntrees.includes('4 bon(s)'), `entrées : 4 bons regroupés par référence (${recapEntrees})`);
   verifier((await page.locator('tbody tr', { hasText: 'SOCIMAT CI' }).count()) === 2, 'entrées : la provenance suit le bon');
   verifier((await page.locator('tbody tr', { hasText: 'Retour client' }).count()) === 1, 'entrées : le retour client est une entrée, pas une nature à part');
+  const livraisons = (await page.locator('[data-testid^="livraison-"]').allTextContents()).map((t) => t.trim());
+  verifier(livraisons.filter((t) => t.includes('12/10/2026')).length === 1 && livraisons.filter((t) => t === '—').length === 3,
+    `entrées : la livraison datée se lit dans sa colonne, les autres bons restent vierges (${livraisons.join(' | ')})`);
   await page.getByTestId('bons-recherche').fill('BL-2');
   await lignesBons(1);
   verifier(true, 'entrées : recherche par numéro de bon');
