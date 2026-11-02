@@ -83,7 +83,7 @@ function NouvelleProformaModal({ filialeId, clientId, onClose }: { filialeId: st
         </div>
         <ArticlePicker filialeId={filialeId} onSelect={ajouter} placeholder="Ajouter un article à la proforma (code ou désignation)…" />
         <div className="border border-neutral-200 rounded-lg overflow-hidden" data-testid="proforma-lignes">
-          <table className="w-full">
+          <table className="tableau">
             <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right w-28">Qté</th><th className="px-3 py-2 text-right w-36">P.U. TTC</th><th className="px-3 py-2 text-right w-24">Remise %</th><th className="px-3 py-2 text-right">Total TTC</th><th className="w-10" /></tr></thead>
             <tbody className="divide-y divide-neutral-100">
               {lignes.map((l, i) => (
@@ -167,7 +167,7 @@ function DetailProformaModal({ proforma, onClose, onImprimer }: { proforma: Prof
     }>
       <div className="space-y-3">
         <div className="flex flex-wrap gap-3 text-sm"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUT_STYLE[proforma.statut]}`}>{LIBELLES_STATUT_PROFORMA[proforma.statut]}</span>{proforma.vente_numero && <span>Facturée par la vente <strong className="font-mono">{proforma.vente_numero}</strong></span>}{proforma.date_validite && <span>Valable jusqu'au {formaterDate(proforma.date_validite)}</span>}</div>
-        <table className="w-full border border-neutral-200 rounded-lg overflow-hidden">
+        <table className="tableau border border-neutral-200 rounded-lg overflow-hidden">
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Qté</th><th className="px-3 py-2 text-right">P.U. TTC</th><th className="px-3 py-2 text-right">Remise</th><th className="px-3 py-2 text-right">Total TTC</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">{lignes.map((l) => <tr key={l.article_id}><td className="px-3 py-2 text-sm"><span className="font-mono text-primary-700 mr-2">{l.code}</span>{l.designation}</td><td className="px-3 py-2 text-sm text-right font-mono">{l.quantite}</td><td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(l.prix_unitaire_ttc)}</td><td className="px-3 py-2 text-sm text-right font-mono">{l.remise_percent ? `${l.remise_percent} %` : '—'}</td><td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(calculerLigne(l).total_ttc)}</td></tr>)}</tbody>
         </table>
@@ -230,7 +230,7 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
         <button type="button" onClick={() => setModal({ type: 'nouvelle' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle proforma</button>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N°</th><th className="px-3 py-2 text-left">Client</th><th className="px-3 py-2 text-right">Lignes</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-left">Validité</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-left">Vente</th><th className="px-3 py-2 text-center">Actions</th></tr>
           </thead>

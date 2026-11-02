@@ -117,7 +117,7 @@ export default function ArticleDetailsModal({ filialeId, articleId, filiale, onC
             {stock.length === 0 ? (
               <p className="text-sm text-neutral-400">Aucun mouvement de stock : cet article n'est entré dans aucun dépôt.</p>
             ) : (
-              <table className="w-full text-sm" data-testid="stock-article">
+              <table className="tableau text-sm" data-testid="stock-article">
                 <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
                   <tr><th className="px-3 py-2 text-left">Dépôt</th><th className="px-3 py-2 text-right">Quantité</th><th className="px-3 py-2 text-right">Réservée</th><th className="px-3 py-2 text-right">Disponible</th><th className="px-3 py-2 text-right">Coût moyen</th><th className="px-3 py-2 text-right">Valeur</th></tr>
                 </thead>
@@ -142,7 +142,7 @@ export default function ArticleDetailsModal({ filialeId, articleId, filiale, onC
             {mouvements.length === 0 ? (
               <p className="text-sm text-neutral-400">Aucun mouvement enregistré.</p>
             ) : (
-              <table className="w-full text-sm" data-testid="mouvements-article">
+              <table className="tableau text-sm" data-testid="mouvements-article">
                 <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
                   <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Nature</th><th className="px-3 py-2 text-left">Dépôt</th><th className="px-3 py-2 text-right">Qté</th><th className="px-3 py-2 text-right">Après</th><th className="px-3 py-2 text-left">Référence</th></tr>
                 </thead>

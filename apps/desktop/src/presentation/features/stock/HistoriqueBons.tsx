@@ -71,7 +71,7 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
       </div>
 
       <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
             <tr>
               <th className={`${cellule} text-left`}>Date</th>

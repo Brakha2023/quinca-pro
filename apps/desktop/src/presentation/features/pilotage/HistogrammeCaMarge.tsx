@@ -155,7 +155,7 @@ export default function HistogrammeCaMarge({ serie }: { serie: SerieCaMarge }) {
 
       <details className="mt-2 text-xs text-neutral-500">
         <summary className="cursor-pointer select-none hover:text-neutral-700">Voir les données</summary>
-        <table className="mt-2 w-full" data-testid="donnees-histogramme">
+        <table className="mt-2 tableau" data-testid="donnees-histogramme">
           <thead className="text-neutral-400">
             <tr><th className="py-1 text-left font-medium">Période</th><th className="py-1 text-right font-medium">CA HT</th><th className="py-1 text-right font-medium">Coût</th><th className="py-1 text-right font-medium">Marge</th><th className="py-1 text-right font-medium">Ventes</th></tr>
           </thead>

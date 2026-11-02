@@ -41,7 +41,7 @@ export default function ReglementsPanel({ filialeId, filiale }: Props) {
         ))}
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° pièce</th><th className="px-3 py-2 text-left">Fournisseur</th><th className="px-3 py-2 text-left">Mode</th><th className="px-3 py-2 text-left">Référence</th><th className="px-3 py-2 text-left">Commande</th><th className="px-3 py-2 text-left">Caisse</th><th className="px-3 py-2 text-left">Par</th><th className="px-3 py-2 text-right">Montant</th></tr>
           </thead>

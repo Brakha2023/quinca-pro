@@ -54,7 +54,7 @@ export default function AuditPage() {
         <span className="ml-auto text-sm text-neutral-600">{lignes.length} événement(s)</span>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-3 text-left">Date</th><th className="px-3 py-3 text-left">Utilisateur</th><th className="px-3 py-3 text-left">Action</th><th className="px-3 py-3 text-left">Table</th><th className="px-3 py-3 text-left">Enregistrement</th><th className="px-3 py-3 text-left">Changements</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
             {lignes.map((l) => {
@@ -91,8 +91,8 @@ export default function AuditPage() {
       {detail && (
         <Modal titre={`${LIBELLES_ACTION[detail.action ?? '']?.label ?? detail.action} · ${detail.table_cible}`} sousTitre={detail.enregistrement_id ?? ''} largeur="max-w-3xl" onClose={() => setDetail(null)}>
           {detail.action === 'UPDATE' ? (
-            <table className="w-full text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Champ</th><th className="px-3 py-2 text-left">Avant</th><th className="px-3 py-2 text-left">Après</th></tr></thead>
-              <tbody className="divide-y divide-neutral-100">{differenceAudit(detail.anciennes_valeurs, detail.nouvelles_valeurs).map(([k, a, b]) => <tr key={k}><td className="px-3 py-2 font-mono">{k}</td><td className="px-3 py-2 text-red-700 font-mono break-all">{String(a ?? '∅')}</td><td className="px-3 py-2 text-green-700 font-mono break-all">{String(b ?? '∅')}</td></tr>)}</tbody></table>
+            <table className="tableau text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Champ</th><th className="px-3 py-2 text-left">Avant</th><th className="px-3 py-2 text-left">Après</th></tr></thead>
+              <tbody className="divide-y divide-neutral-100">{differenceAudit(detail.anciennes_valeurs, detail.nouvelles_valeurs).map(([k, a, b]) => <tr key={k}><td className="px-3 py-2 font-mono">{k}</td><td className="px-3 py-2 text-red-700 font-mono break-all whitespace-normal max-w-xs">{String(a ?? '∅')}</td><td className="px-3 py-2 text-green-700 font-mono break-all whitespace-normal max-w-xs">{String(b ?? '∅')}</td></tr>)}</tbody></table>
           ) : (
             <pre className="text-xs bg-neutral-50 rounded-lg p-4 overflow-x-auto">{JSON.stringify(valeursAudit(detail.nouvelles_valeurs ?? detail.anciennes_valeurs), null, 2)}</pre>
           )}

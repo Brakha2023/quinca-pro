@@ -75,41 +75,44 @@ export default function TransfertFilialePanel({ filialeId, filiale, filiales }: 
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
         <p className="px-4 py-3 text-sm font-semibold text-neutral-700 border-b border-neutral-200 bg-neutral-50">Transferts envoyés et reçus</p>
-        <table className="w-full">
-          <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
-            <th className="px-3 py-2 text-left">Envoi</th><th className="px-3 py-2 text-left">Pièce</th><th className="px-3 py-2 text-left">Sens</th><th className="px-3 py-2 text-left">Filiale</th><th className="px-3 py-2 text-left">Caisse source</th><th className="px-3 py-2 text-left">Motif</th><th className="px-3 py-2 text-right">Montant</th><th className="px-3 py-2 text-center">Statut</th><th className="px-3 py-2 text-center">Réception</th><th className="px-3 py-2 text-center">Bordereau</th>
-          </tr></thead>
-          <tbody className="divide-y divide-neutral-100">
-            {transferts.map((t) => {
-              const role = roleFiliale({ filiale_source_id: t.filiale_source_id ?? '', filiale_destination_id: t.filiale_destination_id ?? '' }, filialeId);
-              const enTransit = t.statut === 'EN_TRANSIT';
-              return (
-                <tr key={t.id} className="hover:bg-neutral-50" data-testid={`transfert-${t.numero}`}>
-                  <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(t.date_envoi)}</td>
-                  <td className="px-3 py-2 text-sm font-mono text-neutral-600">{t.numero}</td>
-                  <td className="px-3 py-2 text-sm">{role === 'EXPEDITEUR' ? 'Envoi' : 'Réception'}</td>
-                  <td className="px-3 py-2 text-sm">{role === 'EXPEDITEUR' ? t.filiale_destination_nom : t.filiale_source_nom}</td>
-                  <td className="px-3 py-2 text-sm text-neutral-600">{t.caisse_source_nom ?? '—'}</td>
-                  <td className="px-3 py-2 text-sm text-neutral-600 max-w-xs truncate" title={t.motif ?? ''}>{t.motif ?? '—'}</td>
-                  <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(t.montant ?? 0)}</td>
-                  <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STYLE_STATUT[t.statut ?? ''] ?? ''}`}>{LIBELLES_STATUT_TRANSFERT[(t.statut ?? 'EN_TRANSIT') as keyof typeof LIBELLES_STATUT_TRANSFERT]}</span></td>
-                  <td className="px-3 py-2 text-center text-sm">
-                    {enTransit && role === 'DESTINATAIRE' && <button type="button" onClick={() => setReception(t)} disabled={caisses.length === 0} className="px-3 py-1 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white text-xs font-medium" data-testid="encaisser-transfert">Encaisser</button>}
-                    {enTransit && role === 'EXPEDITEUR' && <button type="button" onClick={() => annuler(t)} className="px-3 py-1 rounded-lg text-red-600 hover:bg-red-50 text-xs font-medium">Annuler</button>}
-                    {!enTransit && <span className="text-neutral-500">{formaterDateHeure(t.date_reception)}</span>}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {/* La pièce se réimprime à tout moment : un bordereau se perd en
-                        route, et un transfert annulé se classe lui aussi. */}
-                    <button type="button" onClick={() => setApercu(t)} title="Imprimer le bordereau" className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100" data-testid={`imprimer-bordereau-${t.numero}`}>
-                      <PrinterIcon className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          {/* Le titre reste en place : seul le tableau glisse. */}
+          <table className="tableau">
+            <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
+              <th className="px-3 py-2 text-left">Envoi</th><th className="px-3 py-2 text-left">Pièce</th><th className="px-3 py-2 text-left">Sens</th><th className="px-3 py-2 text-left">Filiale</th><th className="px-3 py-2 text-left">Caisse source</th><th className="px-3 py-2 text-left">Motif</th><th className="px-3 py-2 text-right">Montant</th><th className="px-3 py-2 text-center">Statut</th><th className="px-3 py-2 text-center">Réception</th><th className="px-3 py-2 text-center">Bordereau</th>
+            </tr></thead>
+            <tbody className="divide-y divide-neutral-100">
+              {transferts.map((t) => {
+                const role = roleFiliale({ filiale_source_id: t.filiale_source_id ?? '', filiale_destination_id: t.filiale_destination_id ?? '' }, filialeId);
+                const enTransit = t.statut === 'EN_TRANSIT';
+                return (
+                  <tr key={t.id} className="hover:bg-neutral-50" data-testid={`transfert-${t.numero}`}>
+                    <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(t.date_envoi)}</td>
+                    <td className="px-3 py-2 text-sm font-mono text-neutral-600">{t.numero}</td>
+                    <td className="px-3 py-2 text-sm">{role === 'EXPEDITEUR' ? 'Envoi' : 'Réception'}</td>
+                    <td className="px-3 py-2 text-sm">{role === 'EXPEDITEUR' ? t.filiale_destination_nom : t.filiale_source_nom}</td>
+                    <td className="px-3 py-2 text-sm text-neutral-600">{t.caisse_source_nom ?? '—'}</td>
+                    <td className="px-3 py-2 text-sm text-neutral-600 max-w-xs truncate" title={t.motif ?? ''}>{t.motif ?? '—'}</td>
+                    <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(t.montant ?? 0)}</td>
+                    <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STYLE_STATUT[t.statut ?? ''] ?? ''}`}>{LIBELLES_STATUT_TRANSFERT[(t.statut ?? 'EN_TRANSIT') as keyof typeof LIBELLES_STATUT_TRANSFERT]}</span></td>
+                    <td className="px-3 py-2 text-center text-sm">
+                      {enTransit && role === 'DESTINATAIRE' && <button type="button" onClick={() => setReception(t)} disabled={caisses.length === 0} className="px-3 py-1 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white text-xs font-medium" data-testid="encaisser-transfert">Encaisser</button>}
+                      {enTransit && role === 'EXPEDITEUR' && <button type="button" onClick={() => annuler(t)} className="px-3 py-1 rounded-lg text-red-600 hover:bg-red-50 text-xs font-medium">Annuler</button>}
+                      {!enTransit && <span className="text-neutral-500">{formaterDateHeure(t.date_reception)}</span>}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {/* La pièce se réimprime à tout moment : un bordereau se perd en
+                          route, et un transfert annulé se classe lui aussi. */}
+                      <button type="button" onClick={() => setApercu(t)} title="Imprimer le bordereau" className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100" data-testid={`imprimer-bordereau-${t.numero}`}>
+                        <PrinterIcon className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         {transferts.length === 0 && <div className="text-center py-8 text-neutral-400 text-sm">Aucun transfert entre filiales.</div>}
       </div>
 

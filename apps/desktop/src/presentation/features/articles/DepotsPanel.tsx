@@ -107,7 +107,7 @@ export default function DepotsPanel({ filialeId }: Props) {
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-neutral-600 uppercase">Code</th>

@@ -98,7 +98,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
               <tr>
                 <th className="px-3 py-3 text-left">N° compte</th><th className="px-3 py-3 text-left">Raison sociale</th><th className="px-3 py-3 text-left">Famille</th><th className="px-3 py-3 text-left">Type article</th><th className="px-3 py-3 text-left">Téléphone</th>

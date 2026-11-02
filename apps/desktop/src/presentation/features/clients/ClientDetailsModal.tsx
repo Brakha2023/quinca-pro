@@ -70,7 +70,7 @@ export default function ClientDetailsModal({ filialeId, clientId, onClose }: { f
             {factures.length === 0 ? (
               <p className="text-sm text-neutral-400">Aucune facture.</p>
             ) : (
-              <table className="w-full text-sm" data-testid="factures-client">
+              <table className="tableau text-sm" data-testid="factures-client">
                 <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
                   <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° vente</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Reste à payer</th><th className="px-3 py-2 text-left">État</th></tr>
                 </thead>
@@ -94,7 +94,7 @@ export default function ClientDetailsModal({ filialeId, clientId, onClose }: { f
             {reglements.length === 0 ? (
               <p className="text-sm text-neutral-400">Aucun règlement.</p>
             ) : (
-              <table className="w-full text-sm">
+              <table className="tableau text-sm">
                 <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
                   <tr><th className="px-3 py-2 text-left">Numéro</th><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Mode</th><th className="px-3 py-2 text-left">Caisse</th><th className="px-3 py-2 text-left">Référence</th><th className="px-3 py-2 text-left">Par</th><th className="px-3 py-2 text-right">Montant</th></tr>
                 </thead>

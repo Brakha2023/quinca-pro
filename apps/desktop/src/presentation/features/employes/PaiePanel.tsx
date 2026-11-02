@@ -114,7 +114,7 @@ export default function PaiePanel({ filialeId }: Props) {
         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Paies payées</p><p className="text-xl font-bold mt-1">{totaux.payees} / {paies.length}</p></div>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-3 text-left">Employé</th><th className="px-3 py-3 text-left">Contrat</th><th className="px-3 py-3 text-right">Base</th><th className="px-3 py-3 text-right">Prés.</th><th className="px-3 py-3 text-right">Abs.</th><th className="px-3 py-3 text-right">Ret. absences</th><th className="px-3 py-3 text-right">Brut</th><th className="px-3 py-3 text-right">Primes</th><th className="px-3 py-3 text-right">Retenues</th><th className="px-3 py-3 text-right">Avances</th><th className="px-3 py-3 text-right">Net à payer</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center">Actions</th></tr>
           </thead>

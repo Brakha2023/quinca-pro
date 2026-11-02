@@ -132,6 +132,12 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Corrigé
 
+- **Les tableaux ne coupent plus les mots en quatre.** Sur une fenêtre étroite, une désignation
+  d'article, une raison sociale ou un numéro de bon se brisaient sur trois lignes et la liste
+  devenait illisible. Chaque tableau garde désormais sa **largeur naturelle** et c'est son cadre
+  qui défile horizontalement : une ligne reste une ligne. Les colonnes de texte libre (adresse,
+  motif, articles d'un bon) gardent leur largeur bornée et leurs points de suspension, avec le
+  texte entier en infobulle.
 - **Un achat réceptionné dans *Fournisseurs* marque enfin sa provenance** sur les mouvements de
   stock qu'il crée, comme le fait une entrée saisie dans *Stock → Entrée*. Jusqu'ici le journal ne
   savait pas de qui venait cette marchandise : le filtre par fournisseur de l'onglet *Mouvements*

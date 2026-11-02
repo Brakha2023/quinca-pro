@@ -77,7 +77,7 @@ export default function LivraisonsPage() {
         <select value={statut} onChange={(e) => setStatut(e.target.value as StatutLivraison | '')} className={controleInlineClass}><option value="">Tous les statuts</option>{STATUTS_LIVRAISON.map((s) => <option key={s} value={s}>{LIBELLES[s]}</option>)}</select>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
             <th className="px-3 py-3 text-left">Numéro</th><th className="px-3 py-3 text-left">Prévue</th><th className="px-3 py-3 text-left">Client</th><th className="px-3 py-3 text-left">Adresse</th><th className="px-3 py-3 text-left">Chauffeur / véhicule</th><th className="px-3 py-3 text-left">Ticket</th><th className="px-3 py-3 text-right">Montant</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center print:hidden">Actions</th>
           </tr></thead>

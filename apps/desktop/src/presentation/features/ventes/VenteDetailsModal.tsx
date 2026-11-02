@@ -76,7 +76,7 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
           <span>Paiement : <strong>{LIBELLES_MODE_PAIEMENT[(vente.mode_paiement ?? 'ESPECES') as ModePaiement]}</strong></span>
           {vente.notes && <span className="text-neutral-500">· {vente.notes}</span>}
         </div>
-        <table className="w-full text-sm">
+        <table className="tableau text-sm">
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Qté</th><th className="px-3 py-2 text-right">P.U. TTC</th><th className="px-3 py-2 text-right">Remise</th><th className="px-3 py-2 text-right">Total TTC</th></tr>
           </thead>

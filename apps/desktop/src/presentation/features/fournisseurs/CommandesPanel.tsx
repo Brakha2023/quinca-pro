@@ -107,7 +107,7 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
         </div>
         <ArticlePicker filialeId={filialeId} onSelect={(a) => { if (!lignes.some((l) => l.article.id === a.id)) setLignes([...lignes, { article: a, quantite: 1, prix_unitaire_ht: a.prix_achat, remise_percent: 0 }]); }} placeholder="Ajouter un article au bon (code ou désignation)…" />
         <div className="border border-neutral-200 rounded-lg overflow-hidden" data-testid="bon-lignes">
-          <table className="w-full">
+          <table className="tableau">
             <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Code / Réf.</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right w-28">Qté</th><th className="px-3 py-2 text-right w-36">Prix U. HT</th><th className="px-3 py-2 text-right w-24">Remise %</th><th className="px-3 py-2 text-right">Total HT</th><th className="w-10" /></tr></thead>
             <tbody className="divide-y divide-neutral-100">
               {lignes.map((l, i) => (
@@ -182,7 +182,7 @@ function ReceptionModal({ filialeId, commande, lignes, onClose }: { filialeId: s
           <FormField label="Dépôt de réception" obligatoire><select value={depotEffectif} onChange={(e) => setDepotId(e.target.value)} className={inputClass}>{depots.map((d) => <option key={d.id} value={d.id}>{d.nom}</option>)}</select></FormField>
           <FormField label="N° BL / facture fournisseur"><input value={reference} onChange={(e) => setReference(e.target.value)} className={`${inputClass} font-mono`} placeholder={commande.numero ?? ''} /></FormField>
         </div>
-        <table className="w-full border border-neutral-200 rounded-lg overflow-hidden">
+        <table className="tableau border border-neutral-200 rounded-lg overflow-hidden">
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Commandé</th><th className="px-3 py-2 text-right">Déjà reçu</th><th className="px-3 py-2 text-right w-32">Reçu maintenant</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
             {restantes.map((l) => (
@@ -218,7 +218,7 @@ function DetailCommandeModal({ commande, lignes, onClose, onImprimer, onFacturer
           {commande.date_livraison_prevue && <span>Livraison prévue : <strong>{formaterDate(commande.date_livraison_prevue)}</strong></span>}
           {commande.date_reception && <span>Dernière réception : <strong>{formaterDateHeure(commande.date_reception)}</strong></span>}
         </div>
-        <table className="w-full border border-neutral-200 rounded-lg overflow-hidden">
+        <table className="tableau border border-neutral-200 rounded-lg overflow-hidden">
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Commandé</th><th className="px-3 py-2 text-right">Reçu</th><th className="px-3 py-2 text-right">Prix U. HT</th><th className="px-3 py-2 text-right">Total HT</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
             {lignes.map((l) => <tr key={l.id}><td className="px-3 py-2 text-sm"><span className="font-mono text-primary-700 mr-2">{l.code_article}</span>{l.designation}</td><td className="px-3 py-2 text-sm text-right font-mono">{l.quantite}</td><td className={`px-3 py-2 text-sm text-right font-mono ${l.quantite_recue < l.quantite ? 'text-orange-700' : 'text-green-700'}`}>{l.quantite_recue}</td><td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(l.prix_unitaire_ht)}</td><td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(l.total_ht)}</td></tr>)}
@@ -273,7 +273,7 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
         <button type="button" onClick={() => setModal({ type: 'nouveau' })} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle commande</button>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N°</th><th className="px-3 py-2 text-left">Fournisseur</th><th className="px-3 py-2 text-left">Type</th><th className="px-3 py-2 text-right">Lignes</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Reçu</th><th className="px-3 py-2 text-right">Reste à payer</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-center">Actions</th></tr>
           </thead>

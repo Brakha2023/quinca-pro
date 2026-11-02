@@ -31,21 +31,24 @@ function Tableau({ titre, lignes, vide, tone }: { titre: string; lignes: LigneAl
       {lignes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-neutral-400">{vide}</p>
       ) : (
-        <table className="w-full">
-          <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
-            <tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Stock</th><th className="px-3 py-2 text-right">Min</th><th className="px-3 py-2 text-right">À commander</th></tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {lignes.map((l) => (
-              <tr key={l.article_id}>
-                <td className="px-3 py-2 text-sm"><span className="font-mono text-primary-700 mr-2">{l.code}</span>{l.designation}</td>
-                <td className="px-3 py-2 text-sm text-right font-mono font-semibold">{l.quantite}</td>
-                <td className="px-3 py-2 text-sm text-right font-mono text-neutral-500">{l.stock_min}</td>
-                <td className="px-3 py-2 text-sm text-right font-mono">{quantiteACommander(l)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          {/* Le titre reste en place : seul le tableau glisse. */}
+          <table className="tableau">
+            <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
+              <tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Stock</th><th className="px-3 py-2 text-right">Min</th><th className="px-3 py-2 text-right">À commander</th></tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {lignes.map((l) => (
+                <tr key={l.article_id}>
+                  <td className="px-3 py-2 text-sm"><span className="font-mono text-primary-700 mr-2">{l.code}</span>{l.designation}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono font-semibold">{l.quantite}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono text-neutral-500">{l.stock_min}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono">{quantiteACommander(l)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -70,26 +73,29 @@ function TableauRotation({ titre, lignes, vide, tone, colonne, testid }: { titre
       {lignes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-neutral-400">{vide}</p>
       ) : (
-        <table className="w-full">
-          <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
-            <tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Stock</th><th className="px-3 py-2 text-right">Valeur</th><th className="px-3 py-2 text-right">{colonne}</th></tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {lignes.slice(0, 15).map((l) => (
-              <tr key={l.article_id} data-testid={`${testid}-${l.code}`}>
-                <td className="px-3 py-2 text-sm"><span className="font-mono text-primary-700 mr-2">{l.code}</span>{l.designation}</td>
-                <td className="px-3 py-2 text-sm text-right font-mono">{l.quantite}</td>
-                <td className="px-3 py-2 text-sm text-right font-mono font-semibold whitespace-nowrap">{formaterFcfa(l.valeur)}</td>
-                <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600 whitespace-nowrap">{colonne === 'Sorti' ? l.quantite_sortie : jourDe(l)}</td>
-              </tr>
-            ))}
-          </tbody>
-          {lignes.length > 15 && (
-            <tfoot className="bg-neutral-50 text-xs text-neutral-500">
-              <tr><td colSpan={4} className="px-3 py-2">Les 15 premiers · la liste entière est sur la feuille imprimée et dans l'export.</td></tr>
-            </tfoot>
-          )}
-        </table>
+        <div className="overflow-x-auto">
+          {/* Le titre reste en place : seul le tableau glisse. */}
+          <table className="tableau">
+            <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
+              <tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Stock</th><th className="px-3 py-2 text-right">Valeur</th><th className="px-3 py-2 text-right">{colonne}</th></tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {lignes.slice(0, 15).map((l) => (
+                <tr key={l.article_id} data-testid={`${testid}-${l.code}`}>
+                  <td className="px-3 py-2 text-sm"><span className="font-mono text-primary-700 mr-2">{l.code}</span>{l.designation}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono">{l.quantite}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono font-semibold whitespace-nowrap">{formaterFcfa(l.valeur)}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600 whitespace-nowrap">{colonne === 'Sorti' ? l.quantite_sortie : jourDe(l)}</td>
+                </tr>
+              ))}
+            </tbody>
+            {lignes.length > 15 && (
+              <tfoot className="bg-neutral-50 text-xs text-neutral-500">
+                <tr><td colSpan={4} className="px-3 py-2">Les 15 premiers · la liste entière est sur la feuille imprimée et dans l'export.</td></tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
       )}
     </div>
   );

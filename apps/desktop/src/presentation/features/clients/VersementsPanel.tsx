@@ -72,7 +72,7 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Disponibilité (avances restantes)</p><p className="text-xl font-bold font-mono text-blue-700 mt-1">{totalDispo != null ? formaterFcfa(totalDispo) : '—'}</p></div>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° règlement</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right">Apport</th><th className="px-3 py-2 text-right">Mt. utilisé</th><th className="px-3 py-2 text-right">Disponibilité</th><th className="px-3 py-2 text-left">Type</th><th className="px-3 py-2 text-left">N° chèque / réf.</th><th className="px-3 py-2 text-left">Client</th><th className="px-3 py-2 text-left">N° vente</th><th className="px-3 py-2 text-left">Utilisateur</th><th className="w-10" /></tr>
           </thead>

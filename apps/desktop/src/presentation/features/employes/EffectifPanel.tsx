@@ -89,7 +89,7 @@ export default function EffectifPanel({ filialeId, filiale }: Props) {
         <button type="button" onClick={() => setModal({ type: 'imprimer' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer l'effectif</button>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-3 w-12" /><th className="px-3 py-3 text-left">Matricule</th><th className="px-3 py-3 text-left">Nom et prénom</th><th className="px-3 py-3 text-left">Sexe</th><th className="px-3 py-3 text-left">Téléphone</th><th className="px-3 py-3 text-left">Fonction</th><th className="px-3 py-3 text-left">Contrat</th><th className="px-3 py-3 text-left">Début</th><th className="px-3 py-3 text-right">Salaire de base</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center">Actions</th></tr>
           </thead>

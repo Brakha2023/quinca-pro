@@ -175,7 +175,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
           Liste des caisses <span className="font-normal text-neutral-500">· {perimetreCaisses(filtresEtat)}</span>
         </p>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
               <tr>
                 <th className="px-3 py-2 text-left">Code</th>
@@ -255,7 +255,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
             <th className="px-3 py-3 text-left">Date</th><th className="px-3 py-3 text-left">Caisse</th><th className="px-3 py-3 text-left">Catégorie</th><th className="px-3 py-3 text-left">Description</th><th className="px-3 py-3 text-left">Pièce</th><th className="px-3 py-3 text-right">Recette</th><th className="px-3 py-3 text-right">Dépense</th><th className="px-3 py-3 text-right">Solde</th>
           </tr></thead>

@@ -26,7 +26,7 @@ export default function CompteFournisseurPanel({ filialeId, filiale }: Props) {
   const totalCredit = releve.reduce((s, l) => s + l.credit, 0);
 
   const tableau = (
-    <table className="w-full">
+    <table className="tableau">
       <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
         <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Pièce</th><th className="px-3 py-2 text-left">Libellé</th><th className="px-3 py-2 text-right">Débit</th><th className="px-3 py-2 text-right">Crédit</th><th className="px-3 py-2 text-right">Solde</th></tr>
       </thead>

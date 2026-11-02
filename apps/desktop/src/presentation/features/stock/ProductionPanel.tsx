@@ -131,7 +131,7 @@ function SaisieProduction({ filialeId }: { filialeId: string }) {
         <h3 className="text-sm font-semibold text-neutral-800">Matières premières utilisées</h3>
         <ArticlePicker filialeId={filialeId} onSelect={ajouterMatiere} placeholder="Ajouter une matière première (code ou désignation)…" />
         <div className="border border-neutral-200 rounded-lg overflow-hidden">
-          <table className="w-full">
+          <table className="tableau">
             <thead className={enteteTable}>
               <tr>
                 <th className={`${cellule} text-left`}>Code / Désignation</th>
@@ -167,7 +167,7 @@ function SaisieProduction({ filialeId }: { filialeId: string }) {
         <h3 className="text-sm font-semibold text-neutral-800">Articles produits</h3>
         <ArticlePicker filialeId={filialeId} onSelect={ajouterProduit} placeholder="Ajouter un article produit…" />
         <div className="border border-neutral-200 rounded-lg overflow-hidden">
-          <table className="w-full">
+          <table className="tableau">
             <thead className={enteteTable}>
               <tr>
                 <th className={`${cellule} text-left`}>Désignation</th>
@@ -230,7 +230,7 @@ export function DetailProduction({ production, onClose }: { production: Producti
       <div className="space-y-5">
         <section>
           <h4 className="text-sm font-semibold text-neutral-800 mb-2">Matières premières · {formaterFcfa(production.cout_matieres)}</h4>
-          <table className="w-full border border-neutral-200 rounded-lg overflow-hidden">
+          <table className="tableau border border-neutral-200 rounded-lg overflow-hidden">
             <thead className={enteteTable}><tr><th className={`${cellule} text-left`}>Article</th><th className={`${cellule} text-right`}>Qté</th><th className={`${cellule} text-right`}>Coût moyen</th><th className={`${cellule} text-right`}>Total</th></tr></thead>
             <tbody className="divide-y divide-neutral-100">
               {matieres.map((l) => (
@@ -241,7 +241,7 @@ export function DetailProduction({ production, onClose }: { production: Producti
         </section>
         <section>
           <h4 className="text-sm font-semibold text-neutral-800 mb-2">Articles produits</h4>
-          <table className="w-full border border-neutral-200 rounded-lg overflow-hidden">
+          <table className="tableau border border-neutral-200 rounded-lg overflow-hidden">
             <thead className={enteteTable}><tr><th className={`${cellule} text-left`}>Article</th><th className={`${cellule} text-right`}>Prévue</th><th className={`${cellule} text-right`}>Produite</th><th className={`${cellule} text-right`}>Écart</th><th className={`${cellule} text-right`}>Pertes</th><th className={`${cellule} text-right`}>Coût de revient</th></tr></thead>
             <tbody className="divide-y divide-neutral-100">
               {produits.map((l) => {
@@ -269,7 +269,7 @@ function HistoriqueProductions({ filialeId }: { filialeId: string }) {
     <div className="space-y-4">
       <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N°, équipe, article produit…" className={`${inputClass} max-w-md`} />
       <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className={enteteTable}>
             <tr>
               <th className={`${cellule} text-left`}>Date</th>

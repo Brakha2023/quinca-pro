@@ -178,7 +178,7 @@ export default function TransfertFilialeStockPanel({ filialeId, filiale, filiale
             Historique des transferts inter-filiales <span className="font-normal text-neutral-500">· {perimetre}</span>
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="tableau">
               <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
                 <tr>
                   <th className="px-3 py-2 text-left">Envoi</th>
@@ -366,7 +366,7 @@ function ModaleReception({ transfert, depots, onClose, onReceptionner }: {
       <div className="space-y-4">
         <SelectDepot label="Dépôt qui reçoit la marchandise" depots={depots} value={depotId} onChange={setDepotId} />
         <div className="border border-neutral-200 rounded-lg overflow-hidden">
-          <table className="w-full">
+          <table className="tableau">
             <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Quantité</th><th className="px-3 py-2 text-right">Coût unitaire</th></tr></thead>
             <tbody className="divide-y divide-neutral-100">
               {lignes.map((l) => (

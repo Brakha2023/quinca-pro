@@ -162,6 +162,20 @@
    seconde facture se collerait à la première. */
 .liasse > .document + .document { break-before: page; page-break-before: always; }
 
+/* ---------- Tableaux de données, à l'écran ----------
+   Un tableau de gestion se lit en lignes. Plutôt que de couper les mots en
+   quatre dès que la fenêtre rétrécit — « CIM-50 Ciment 50kg » sur trois
+   lignes —, il garde sa largeur naturelle et c'est son cadre qui défile.
+
+   Le cadre n'est pas le même d'un écran à l'autre (carte, modale, bloc
+   bordé) : la règle `:has` le fait défiler sans aller l'habiller un par un,
+   et un cadre qui défile découpe toujours ses coins arrondis comme avant.
+
+   `white-space` est hérité, non imposé aux cellules : une colonne de texte
+   libre reprend la main avec `whitespace-normal`, sans bataille de priorité. */
+.tableau { width: max-content; min-width: 100%; white-space: nowrap; }
+:has(> .tableau) { overflow-x: auto; }
+
 /* Aperçu avant impression : plein écran à l'écran, seul le document à l'impression. */
 #zone-impression.apercu-impression { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60; background: rgba(23, 23, 23, .75); overflow: auto; padding: 0 0 24px; }
 .apercu-barre { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: #171717; color: #fff; font: 500 14px system-ui, sans-serif; }

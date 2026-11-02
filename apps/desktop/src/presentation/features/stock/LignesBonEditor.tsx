@@ -62,7 +62,7 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
     <div className="space-y-3">
       <ArticlePicker filialeId={filialeId} onSelect={ajouter} placeholder="Ajouter un article (code ou désignation)…" />
       <div className="border border-neutral-200 rounded-lg overflow-hidden">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
             <tr>
               <th className="px-3 py-2 text-left">Article</th>

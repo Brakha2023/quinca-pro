@@ -68,7 +68,7 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
             <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Conditions</p><p className="text-sm font-medium mt-1">{client.periode_reglement ? LIBELLES_PERIODE_REGLEMENT_CLIENT[client.periode_reglement] : '—'}</p><p className="text-xs text-neutral-500">Remise {client.remise_percent} %</p></div>
           </div>
           <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-            <table className="w-full">
+            <table className="tableau">
               <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
                 <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° pièce</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right">Facture</th><th className="px-3 py-2 text-right">Règlement</th><th className="px-3 py-2 text-right">Disponibilité</th><th className="px-3 py-2 text-right">Solde</th></tr>
               </thead>

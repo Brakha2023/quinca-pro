@@ -128,7 +128,7 @@ export default function ConsolidationPage() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="tableau">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-600">
               <tr>
                 <th className="px-4 py-3 text-left">Filiale</th>

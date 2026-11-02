@@ -104,7 +104,7 @@ export default function DashboardPage() {
         {ventes.length === 0 ? (
           <p className="px-6 py-8 text-sm text-neutral-400">Aucune vente aujourd'hui.</p>
         ) : (
-          <table className="w-full">
+          <table className="tableau">
             <tbody className="divide-y divide-neutral-100">
               {ventes.map((v) => (
                 <tr key={v.id} className={v.statut === 'ANNULEE' ? 'opacity-50' : ''}>

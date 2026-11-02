@@ -130,7 +130,7 @@ export default function VenteEditionModal({ vente, filialeId, onClose }: Props) 
       }
     >
       <div className="space-y-4">
-        <table className="w-full text-sm">
+        <table className="tableau text-sm">
           <thead className="bg-neutral-50 text-xs uppercase text-neutral-600">
             <tr>
               <th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">P.U. TTC</th>

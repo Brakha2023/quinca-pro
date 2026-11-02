@@ -60,7 +60,7 @@ export default function PaiementPanel({ filialeId, filiale }: Props) {
         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Reste à payer</p><p className="text-xl font-bold font-mono text-red-600 mt-1">{formaterFcfa(total - payees.reduce((s, p) => s + p.net_a_payer, 0))}</p></div>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full">
+        <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-3 text-left">Matricule</th><th className="px-3 py-3 text-left">Employé</th><th className="px-3 py-3 text-left">Fonction</th><th className="px-3 py-3 text-right">Net à payer</th><th className="px-3 py-3 text-left">Statut</th><th className="px-3 py-3 text-left">Paiement</th><th className="px-3 py-3 text-center">Bulletin</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
             {paies.map((p) => (
