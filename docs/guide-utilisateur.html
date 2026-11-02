@@ -612,11 +612,11 @@ s'imprime et s'exporte.</p>
   <caption>Les neuf sous-écrans de Stock</caption>
   <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
   <tr><td class="chemin">Alertes</td><td>Ce qui est en rupture ou sous le minimum, ce qu'il faut commander, et le stock qui dort. C'est l'écran d'accueil du menu Stock.</td></tr>
-  <tr><td class="chemin">Suivi de stock</td><td>L'état des quantités, dépôt par dépôt, avec la valeur au coût moyen.</td></tr>
+  <tr><td class="chemin">Suivi de stock</td><td>L'état des quantités, dépôt par dépôt, valorisé au coût d'achat <em>et</em> au prix de vente.</td></tr>
   <tr><td class="chemin">Entrée</td><td>Faire entrer de la marchandise : achat fournisseur, retour client.</td></tr>
   <tr><td class="chemin">Sortie / Casse</td><td>Déstockage, perte, casse. La sortie retient le coût du jour.</td></tr>
   <tr><td class="chemin">Transfert entre dépôts</td><td>Déplacer de la marchandise d'un dépôt à l'autre, dans la même filiale.</td></tr>
-  <tr><td class="chemin">Transfert entre filiales</td><td>Envoyer de la marchandise à une autre filiale (voir 7.5).</td></tr>
+  <tr><td class="chemin">Transfert entre filiales</td><td>Envoyer de la marchandise à une autre filiale (voir 7.6).</td></tr>
   <tr><td class="chemin">Inventaire</td><td>Saisir le comptage réel et constater l'écart.</td></tr>
   <tr><td class="chemin">Production</td><td>Fabriquer un article à partir d'autres (assemblage, découpe).</td></tr>
   <tr><td class="chemin">Mouvements</td><td>Le journal de tout ce qui est entré et sorti, filtrable.</td></tr>
@@ -677,7 +677,30 @@ seuls — on y cherche son bon d'entrée sans traverser la journée de la caisse
   fournisseur y est effacée.</p>
 </div>
 
-<h3>7.3 — Les alertes de stock et la liste de commande</h3>
+<h3>7.3 — Ce que vaut le stock, à l'achat et à la vente</h3>
+<p><span class="chemin-ui">Stock → Suivi de stock</span> chiffre le même stock de deux façons, et
+les deux ne disent pas la même chose :</p>
+<table>
+  <tr><th>Valorisation</th><th>Ce qu'elle mesure</th></tr>
+  <tr><td><strong>Au coût</strong></td><td>Les quantités au <strong>coût moyen</strong> du dépôt : l'argent sorti de la caisse pour acheter ce qui est en rayon. C'est la valeur comptable du stock.</td></tr>
+  <tr><td><strong>À la vente</strong></td><td>Les mêmes quantités au <strong>prix du catalogue</strong> : ce que tout cela rapporterait si tout partait au prix fort.</td></tr>
+  <tr><td><strong>Marge</strong></td><td>L'écart entre les deux, et son taux. Ce n'est <strong>pas un bénéfice</strong> : rien n'est encore vendu, et une remise au comptoir l'entame.</td></tr>
+</table>
+<p>Le bandeau au-dessus de la liste donne les trois chiffres pour le périmètre affiché — dépôt,
+recherche, alertes seulement —, et le tableau les détaille ligne par ligne : coût moyen, valeur
+d'achat, prix de vente, valeur de vente.</p>
+<p><em>Imprimer</em> sort l'<strong>état du stock</strong> sur une feuille <strong>couchée</strong>
+(paysage), les deux valorisations côte à côte, avec en cartouche la valeur d'achat, la valeur de
+vente, la marge potentielle et ce qui demande une décision (ruptures, stocks faibles, surstock,
+quantités négatives).</p>
+<div class="note">
+  <span class="titre">Un article sans prix de vente</span>
+  <p>Sa valeur de vente est nulle, et la marge s'en trouve réduite d'autant. C'est voulu :
+  l'application ne devine pas un prix. Renseignez-le dans <span class="chemin-ui">Catalogue</span>
+  pour que le chiffre soit juste.</p>
+</div>
+
+<h3>7.4 — Les alertes de stock et la liste de commande</h3>
 <p><span class="chemin-ui">Stock → Alertes</span> se filtre par nature (ruptures, stocks faibles,
 ou les deux), par dépôt, par famille et par recherche. <em>Imprimer / PDF</em> sort la
 <strong>liste de commande</strong> : pour chaque article, la quantité à commander, son coût estimé,
@@ -688,7 +711,7 @@ le total à engager, et un visa du gérant.</p>
   <li>Le document signale aussi les articles <strong>sans seuil</strong> : ceux-là ne déclencheront jamais d'alerte tant qu'on ne les renseigne pas.</li>
 </ul>
 
-<h3>7.4 — Le stock qui dort, et celui qui tourne</h3>
+<h3>7.5 — Le stock qui dort, et celui qui tourne</h3>
 <p>Même écran, sous les alertes : <span class="chemin-ui">Stock → Alertes</span>, bloc
 <strong>Rotation du stock</strong>. Les alertes disent ce qui manque ; celui-ci dit l'inverse —
 <strong>l'argent qui dort sur les rayons</strong>. C'est la question qu'on se pose avant de
@@ -712,7 +735,7 @@ classeur, eux, portent tout.</p>
   n'en a donc pas eu depuis au moins un an : c'est le dormant le plus sûr.</p>
 </div>
 
-<h3>7.5 — Transférer de la marchandise vers une autre filiale</h3>
+<h3>7.6 — Transférer de la marchandise vers une autre filiale</h3>
 <div class="pasapas">
   <div class="etiquette">Pas à pas — côté expéditeur</div>
   <ol>
@@ -733,7 +756,7 @@ classeur, eux, portent tout.</p>
 dépôt de départ. Le lien entre les deux catalogues se fait par le <strong>code article</strong> :
 veillez à ce qu'il soit le même d'une filiale à l'autre.</p>
 
-<h3>7.6 — Inventaire</h3>
+<h3>7.7 — Inventaire</h3>
 <p>On saisit le comptage réel ; l'application affiche l'écart avec le théorique et enregistre la
 régularisation. L'inventaire se retrouve ensuite dans <span class="chemin-ui">Historiques →
 Inventaires</span>.</p>

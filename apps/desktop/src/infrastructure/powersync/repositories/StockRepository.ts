@@ -27,6 +27,8 @@ export interface StockVueRow extends StockRow {
   article_designation: string | null;
   article_unite: string | null;
   article_prix_achat: number | null;
+  /** Prix de vente du catalogue : la ligne se valorise aussi à ce qu'elle rapporterait. */
+  article_prix_vente: number | null;
   article_stock_min: number | null;
   article_stock_max: number | null;
   famille_nom: string | null;
@@ -57,7 +59,8 @@ export function stocksQuery(filialeId: string | null, filtres: FiltresStock = {}
 
   return {
     sql: `SELECT s.*, a.code AS article_code, a.designation AS article_designation, a.unite AS article_unite,
-                 a.prix_achat AS article_prix_achat, a.stock_min AS article_stock_min, a.stock_max AS article_stock_max,
+                 a.prix_achat AS article_prix_achat, a.prix_vente AS article_prix_vente,
+                 a.stock_min AS article_stock_min, a.stock_max AS article_stock_max,
                  f.nom AS famille_nom, d.code AS depot_code, d.nom AS depot_nom
           FROM stocks s
           JOIN articles a ON a.id = s.article_id

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
-import { LIBELLES_ETAT_STOCK, statutStock, type StatutStock } from '../../../core/stock';
+import { LIBELLES_ETAT_STOCK, recapEtatStock, statutStock, valeurAchat, valeurVente, type StatutStock } from '../../../core/stock';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
 import { formaterFcfa, formaterDate } from '../../hooks/useFormatage';
 import { useDepots } from '../articles/hooks';
@@ -25,7 +25,7 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
   const [apercu, setApercu] = useState(false);
   const { stocks, isLoading } = useStocks(filialeId, { depotId: depotId || null, recherche, alertesSeulement });
 
-  const valeur = stocks.reduce((s, l) => s + (l.quantite ?? 0) * (l.cout_moyen ?? 0), 0);
+  const recap = recapEtatStock(stocks);
 
   return (
     <div className="space-y-4">
@@ -41,7 +41,12 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
         <label className="flex items-center gap-2 text-sm text-neutral-600">
           <input type="checkbox" checked={alertesSeulement} onChange={(e) => setAlertesSeulement(e.target.checked)} className="rounded" /> Alertes seulement
         </label>
-        <span className="ml-auto text-sm text-neutral-600">Valeur affichée : <strong className="font-mono">{formaterFcfa(valeur)}</strong></span>
+        {/* Les deux valeurs du même stock : ce qu'il a coûté, ce qu'il rapporterait. */}
+        <span className="ml-auto text-sm text-neutral-600 whitespace-nowrap" data-testid="valeurs-stock">
+          Au coût <strong className="font-mono">{formaterFcfa(recap.valeur)}</strong>
+          {' · '}à la vente <strong className="font-mono">{formaterFcfa(recap.valeur_vente)}</strong>
+          {' · '}marge <strong className="font-mono">{formaterFcfa(recap.marge)}</strong> ({recap.marge_percent} %)
+        </span>
         <button onClick={() => setApercu(true)} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-etat-stock"><PrinterIcon className="w-4 h-4" /> Imprimer</button>
       </div>
 
@@ -57,7 +62,9 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
                 <th className="px-3 py-2 text-right">Réservée</th>
                 <th className="px-3 py-2 text-right">Disponible</th>
                 <th className="px-3 py-2 text-right">Coût moyen</th>
-                <th className="px-3 py-2 text-right">Valeur</th>
+                <th className="px-3 py-2 text-right">Valeur achat</th>
+                <th className="px-3 py-2 text-right">Prix vente</th>
+                <th className="px-3 py-2 text-right">Valeur vente</th>
                 <th className="px-3 py-2 text-center">Statut</th>
                 <th className="px-3 py-2 text-left">Dernier mvt</th>
               </tr>
@@ -73,8 +80,10 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
                     <td className="px-3 py-2 text-sm text-right font-mono font-semibold">{s.quantite}</td>
                     <td className="px-3 py-2 text-sm text-right font-mono text-neutral-500">{s.quantite_reservee}</td>
                     <td className="px-3 py-2 text-sm text-right font-mono">{s.quantite_disponible}</td>
-                    <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600">{formaterFcfa(s.cout_moyen)}</td>
-                    <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa((s.quantite ?? 0) * (s.cout_moyen ?? 0))}</td>
+                    <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600 whitespace-nowrap">{formaterFcfa(s.cout_moyen)}</td>
+                    <td className="px-3 py-2 text-sm text-right font-mono whitespace-nowrap">{formaterFcfa(valeurAchat(s))}</td>
+                    <td className="px-3 py-2 text-sm text-right font-mono text-neutral-600 whitespace-nowrap">{formaterFcfa(s.article_prix_vente)}</td>
+                    <td className="px-3 py-2 text-sm text-right font-mono whitespace-nowrap">{formaterFcfa(valeurVente(s))}</td>
                     <td className="px-3 py-2 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUT_STYLE[etat]}`}>{LIBELLES_ETAT_STOCK[etat]}</span></td>
                     <td className="px-3 py-2 text-sm text-neutral-500">{formaterDate(s.date_dernier_mouvement)}</td>
                   </tr>

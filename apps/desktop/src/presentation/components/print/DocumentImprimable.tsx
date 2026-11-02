@@ -8,6 +8,8 @@ interface Props {
   filiale: { nom: string; adresse?: string | null; telephone?: string | null };
   /** Nature de la pièce : voir `CorpsDocument`. */
   nature?: string;
+  /** Feuille couchée : pour les listes larges (voir `CorpsDocument`). */
+  paysage?: boolean;
   onClose: () => void;
   children: ReactNode;
 }
@@ -18,7 +20,7 @@ interface Props {
  * (voir `@media print`), sans la barre d'outils. La feuille elle-même est
  * `CorpsDocument`, qui lui donne l'identité de la maison.
  */
-export default function DocumentImprimable({ titre, filiale, nature, onClose, children }: Props) {
+export default function DocumentImprimable({ titre, filiale, nature, paysage, onClose, children }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
@@ -34,7 +36,7 @@ export default function DocumentImprimable({ titre, filiale, nature, onClose, ch
           <button type="button" onClick={onClose} className="apercu-bouton" aria-label="Fermer l'aperçu"><XMarkIcon className="w-4 h-4" /> Fermer</button>
         </div>
       </div>
-      <CorpsDocument titre={titre} filiale={filiale} nature={nature}>{children}</CorpsDocument>
+      <CorpsDocument titre={titre} filiale={filiale} nature={nature} paysage={paysage}>{children}</CorpsDocument>
     </div>,
     document.body,
   );

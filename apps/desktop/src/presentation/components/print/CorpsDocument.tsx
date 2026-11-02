@@ -12,6 +12,8 @@ interface Props {
    * pièce prend l'en-tête complet sans filigrane.
    */
   nature?: string;
+  /** Feuille couchée : pour les listes larges, qui ne tiennent pas en portrait. */
+  paysage?: boolean;
   children: ReactNode;
 }
 
@@ -29,13 +31,13 @@ interface Props {
  * même avec ce que porte la filiale : un document incomplet vaut mieux qu'un
  * document impossible.
  */
-export default function CorpsDocument({ titre, filiale, nature, children }: Props) {
+export default function CorpsDocument({ titre, filiale, nature, paysage, children }: Props) {
   const { filialeId } = useFilialeCourante();
   const entreprise = useEntrepriseDocument(filialeId);
   const entete = enteteDocument(entreprise, filiale, nature ? entreprise?.documents[nature] : undefined);
 
   return (
-    <div className="document">
+    <div className={`document${paysage ? ' document-paysage' : ''}`}>
       {entete.filigrane && <img src={entete.filigrane} alt="" aria-hidden className="document-filigrane" />}
       <header className="document-entete">
         {entete.logo

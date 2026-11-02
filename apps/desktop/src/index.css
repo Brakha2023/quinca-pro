@@ -101,6 +101,11 @@
    pages suivantes ne portent aucune identification. */
 .document .document-liste tfoot { display: table-footer-group; }
 .document .document-liste .document-liste-pied { border: 0; border-top: 1px solid #000; padding-top: 3px; font-size: 9px; text-align: center; }
+/* Feuille couchée : une liste trop large en portrait s'imprime en paysage.
+   La règle `@page` étant globale, on passe par une page nommée — le navigateur
+   bascule l'orientation pour les seules feuilles qui la demandent. */
+.document.document-paysage { max-width: 277mm; page: paysage; }
+@page paysage { size: A4 landscape; margin: 4mm; }
 /* Intertitre, quand une feuille porte deux listes (stock dormant, stock actif). */
 .document .document-section { font-size: 12px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #000; margin: 10px 0 4px; padding-bottom: 2px; }
 /* Ce que la liste compte au juste, en bas de feuille et en petits caractères. */
@@ -164,6 +169,8 @@
 .apercu-bouton { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; background: #404040; color: #fff; font-size: 13px; }
 .apercu-bouton-primaire { background: #2563eb; }
 .apercu-impression .document { margin-top: 20px; box-shadow: 0 4px 24px rgba(0,0,0,.4); width: 190mm; min-height: 270mm; }
+/* Feuille couchée : l'aperçu montre la page telle qu'elle sortira. */
+.apercu-impression .document-paysage { width: 277mm; min-height: 190mm; }
 @media print {
   #zone-impression.apercu-impression { position: static; display: block; background: none; padding: 0; overflow: visible; }
   .apercu-barre { display: none; }

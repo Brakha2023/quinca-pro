@@ -113,10 +113,20 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier((await etat.locator('[data-testid=ligne-etat-stock]').count()) === 4, 'état du stock : les 4 lignes de la liste');
   verifier(papierStock.includes('État du stock') && papierStock.includes('Filiale Abidjan'), 'état du stock : titre et en-tête de la maison');
   verifier(papierStock.includes('tous dépôts'), 'état du stock : périmètre de la liste annoncé');
-  verifier(/\d+ ligne\(s\) ·/.test(papierStock) && papierStock.includes('Ruptures'), 'état du stock : valorisation et alertes récapitulées');
+  verifier(/\d+ ligne\(s\)/.test(papierStock) && papierStock.includes('Ruptures'), 'état du stock : lignes comptées et alertes récapitulées');
   verifier(papierStock.includes('CIM-50') && papierStock.includes('Ciment 50kg') && papierStock.includes('Principal') && papierStock.includes('Annexe'),
     'état du stock : chaque article avec son dépôt');
   verifier(papierStock.includes('918 500 F'), 'état du stock : valeur du stock au coût moyen');
+  // Le même stock vaut autre chose au prix du catalogue : c'est ce qu'il rapporterait.
+  const bande = (await page.getByTestId('valeurs-stock').textContent()).replace(/\s+/g, ' ');
+  verifier(bande.includes('Au coût 918 500 F') && /à la vente \d/.test(bande) && /marge .* \(\d+ %\)/.test(bande),
+    `suivi : les deux valeurs du stock et la marge potentielle (${bande})`);
+  verifier(papierStock.includes("Valeur d'achat") && papierStock.includes('Valeur de vente') && papierStock.includes('Marge potentielle'),
+    'état du stock : les deux valorisations et la marge sur la feuille');
+  const colonnes = await etat.locator('table.document-liste thead th').allTextContents();
+  verifier(colonnes.includes('Valeur achat') && colonnes.includes('Prix vente') && colonnes.includes('Valeur vente'),
+    `état du stock : une colonne par valorisation (${colonnes.join(', ')})`);
+  verifier((await etat.locator('.document.document-paysage').count()) === 1, 'état du stock : feuille couchée, la liste est large');
   verifier(!papierStock.includes('Point de Vente') && !papierStock.includes('Consolidation') && !papierStock.includes('Alertes seulement'),
     'état du stock : ni menu, ni filtres, ni bandeau de l’application');
   await etat.getByRole('button', { name: "Fermer l'aperçu" }).click();

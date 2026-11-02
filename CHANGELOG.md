@@ -34,6 +34,14 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Ajouté
 
+- **Le stock se valorise à l'achat et à la vente** (Stock → Suivi de stock). Le bandeau donne les
+  trois chiffres du périmètre affiché — *au coût*, l'argent immobilisé aux coûts moyens des
+  dépôts ; *à la vente*, ce que le même stock rapporterait au prix du catalogue ; et la *marge
+  potentielle* avec son taux, qui n'est pas un bénéfice puisque rien n'est vendu. Le tableau les
+  détaille ligne par ligne (coût moyen, valeur d'achat, prix de vente, valeur de vente), et l'état
+  du stock s'imprime désormais sur une **feuille couchée**, les deux valorisations côte à côte.
+  Un article sans prix de vente compte pour zéro à la vente : l'application ne devine pas un prix.
+  Aucune migration.
 - **Le stock qui dort se voit** (Stock → Alertes, bloc *Rotation du stock*). Deux listes en face
   l'une de l'autre : **stock dormant**, les articles en stock sans aucune sortie depuis 30, 60, 90
   ou 180 jours au choix, rangés du plus cher au moins cher — c'est la somme immobilisée qui décide,
