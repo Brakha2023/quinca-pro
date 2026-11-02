@@ -443,6 +443,20 @@ export const TABLES = {
     filiale_id: 'text',
     created_at: 'text',
   },
+  /**
+   * Catégories de recette ou de dépense ajoutées par la filiale. Les
+   * catégories intégrées restent dans `core/tresorerie` : des mouvements les
+   * portent déjà, et elles ne doivent pas pouvoir disparaître.
+   */
+  categories_tresorerie: {
+    filiale_id: 'text',
+    /** Ce qui est écrit dans `mouvements_tresorerie.categorie`. Figé à la création. */
+    code: 'text',
+    libelle: 'text',
+    type: 'text',
+    est_active: 'integer',
+    ...COMMUNES_HORODATAGE,
+  },
   mouvements_tresorerie: {
     type: 'text',
     categorie: 'text',
@@ -613,6 +627,7 @@ export type LivraisonRow = Row<'livraisons'>;
 export type CommandeFournisseurRow = Row<'commandes_fournisseurs'>;
 export type ReglementFournisseurRow = Row<'reglements_fournisseurs'>;
 export type MouvementTresorerieRow = Row<'mouvements_tresorerie'>;
+export type CategorieTresorerieRow = Row<'categories_tresorerie'>;
 export type ProductionRow = Row<'productions'>;
 export type LigneProductionRow = Row<'lignes_production'>;
 export type LigneCommandeFournisseurRow = Row<'lignes_commande_fournisseur'>;

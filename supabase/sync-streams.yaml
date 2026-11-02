@@ -65,6 +65,10 @@ streams:
       - SELECT * FROM filiales WHERE est_active = true
       - SELECT * FROM depots WHERE filiale_id IN mes_filiales
       - SELECT * FROM caisses WHERE filiale_id IN mes_filiales
+      # Catégories de trésorerie ajoutées par la filiale : courtes, et lues par
+      # tout poste qui imprime un journal de caisse — sans elles il afficherait
+      # un code nu à la place d'un libellé.
+      - SELECT * FROM categories_tresorerie WHERE filiale_id IN mes_filiales
       - SELECT * FROM familles_articles WHERE filiale_id IN mes_filiales
       - SELECT * FROM articles WHERE filiale_id IN mes_filiales
       - SELECT * FROM stocks WHERE filiale_id IN mes_filiales

@@ -11,10 +11,10 @@ import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import AucuneCaisse from './AucuneCaisse';
-import MouvementsRecents from './MouvementsRecents';
+import OperationsSection from './OperationsSection';
 import RecuOperation, { type DonneesRecu } from './RecuOperation';
 import SelectCaisse from './SelectCaisse';
-import { useCaissesToutes } from './hooks';
+import { useCaissesToutes, useCategoriesTresorerie } from './hooks';
 
 interface Props {
   filialeId: string;
@@ -24,10 +24,11 @@ interface Props {
 /** Retrait d'espèces : sortie de caisse remise à un bénéficiaire, avec reçu signé. */
 export default function RetraitPanel({ filialeId, filiale }: Props) {
   const caisses = useCaissesToutes(filialeId).filter((c) => c.est_active);
+  const { libelles } = useCategoriesTresorerie(filialeId);
   return (
     <div className="space-y-5">
       {caisses.length === 0 ? <AucuneCaisse /> : <Formulaire key={caisses[0]!.id} filialeId={filialeId} filiale={filiale} caisses={caisses} />}
-      <MouvementsRecents filialeId={filialeId} categories={[CATEGORIE_RETRAIT]} titre="Derniers retraits" />
+      <OperationsSection filialeId={filialeId} filiale={filiale} codes={[CATEGORIE_RETRAIT]} libelles={libelles} titre="Retraits d'espèces" baseExport="retraits" prefixeTest="retraits" />
     </div>
   );
 }

@@ -9,23 +9,28 @@ import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import AucuneCaisse from './AucuneCaisse';
-import MouvementsRecents from './MouvementsRecents';
+import OperationsSection from './OperationsSection';
 import SelectCaisse from './SelectCaisse';
-import { useCaissesToutes } from './hooks';
+import { useCaissesToutes, useCategoriesTresorerie } from './hooks';
 
 interface Props {
   filialeId: string;
+  filiale: { nom: string; adresse?: string | null; telephone?: string | null };
 }
 
 /** Transfert d'espèces entre deux caisses de la filiale : une sortie et une entrée, même référence. */
-export default function TransfertCaissePanel({ filialeId }: Props) {
+export default function TransfertCaissePanel({ filialeId, filiale }: Props) {
   const caisses = useCaissesToutes(filialeId).filter((c) => c.est_active);
+  const { libelles } = useCategoriesTresorerie(filialeId);
   return (
     <div className="space-y-5">
       {caisses.length < 2
         ? <AucuneCaisse message="Un transfert inter-caisse demande au moins deux caisses actives dans la filiale." />
-        : <Formulaire key={caisses[0]!.id} filialeId={filialeId} caisses={caisses} />}
-      <MouvementsRecents filialeId={filialeId} categories={['TRANSFERT_CAISSE']} titre="Derniers transferts entre caisses" />
+        : <Formulaire key={caisses[0]!.id} filialeId={filialeId} filiale={filiale} caisses={caisses} />}
+      {/* Chaque transfert fait deux lignes (la sortie et l'entrée) : le total de
+          la liste est donc le double de ce qui a circulé, et c'est voulu — ce
+          sont bien deux mouvements de caisse à rapprocher. */}
+      <OperationsSection filialeId={filialeId} filiale={filiale} codes={['TRANSFERT_CAISSE']} libelles={libelles} titre="Transferts entre caisses" baseExport="transferts-caisse" prefixeTest="transferts-caisse" />
     </div>
   );
 }

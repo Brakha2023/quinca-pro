@@ -31,9 +31,36 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   nulle ; les ventes déjà enregistrées ne sont pas retouchées.
 - **Les proformas gardent leur taux** — un devis annonce une condition commerciale — et la
   conversion en francs se fait à la reprise au point de vente.
+- **Le versement de trésorerie ne touche plus aucun compte client.** Le guichet encaisse de
+  l'argent au nom de celui qui l'apporte, et rien d'autre : le champ *Client en compte* disparaît
+  de *Trésorerie → Versement*, qui renvoie désormais vers *Clients → Compte client*. Régler une
+  créance demande de voir les factures du client et d'imputer le règlement sur son solde ; deux
+  chemins pour une même somme laissaient un client crédité deux fois, et l'écart ne se découvrait
+  qu'à la relance. Les versements déjà imputés à un compte restent tels quels — ce sont des
+  règlements, ils continuent de figurer au relevé du client. La liste du bas, elle, montre
+  toujours les deux : ce qui est entré au guichet est entré au guichet.
 
 ### Ajouté
 
+- **La maison ajoute ses propres catégories de dépense et de recette** (Trésorerie → Dépense ou
+  Entrée en caisse, le **+** à côté de la liste). Gardiennage, patente, dédouanement, honoraires :
+  ce que l'application ne pouvait pas prévoir finissait dans « Autre dépense », et l'état des
+  dépenses par catégorie ne disait plus rien. La catégorie se crée **la pièce en main**, au
+  guichet, et elle est aussitôt choisie dans le formulaire en cours. La même fenêtre la renomme ou
+  la retire de la liste de saisie ; retirée, elle continue de nommer les dépenses déjà
+  enregistrées. Le code du journal est fixé à la création (*Frais de dédouanement* →
+  `FRAIS_DE_DEDOUANEMENT`) et ne change plus, même après un renommage : c'est lui qui rattache
+  l'historique sur tous les postes. Les catégories intégrées ne se modifient pas, et celles que
+  l'application produit elle-même (vente, règlement, transfert) ne peuvent pas être reprises.
+  Il faut la permission *Saisir une recette ou une dépense*.
+- **Les dépenses — et les autres opérations de caisse — se filtrent et s'impriment.** Sous chaque
+  formulaire de la trésorerie (versement, retrait, entrée en caisse, dépense, transfert inter
+  caisse), les quinze dernières lignes laissent place à une vraie liste : période (*Aujourd'hui*,
+  *Ce mois*), caisse, catégorie, recherche sur la désignation, la pièce, le bénéficiaire ou
+  l'opérateur. Le compteur donne le nombre d'opérations retenues et leur total. *Imprimer / PDF*
+  sort la feuille A4 de ce qui est affiché — périmètre en tête, **ventilation par catégorie** avec
+  la part de chacune, liste pièce par pièce, total, et deux cases à signer — et *Exporter Excel*
+  rend un classeur de deux feuilles. Aucune migration.
 - **Une fiche client ou fournisseur jamais utilisée se supprime** (la corbeille, dans les deux
   répertoires) : doublon, raison sociale mal orthographiée, client de passage saisi pour rien.
   Dès qu'une vente, un règlement, un devis, une livraison, une commande ou une entrée en stock la
@@ -161,6 +188,15 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Base de données
 
+- Appliquer `supabase/migrations/20261102100000_categories_tresorerie.sql` (table
+  `categories_tresorerie`, les catégories de recette ou de dépense ajoutées par une filiale ;
+  les catégories intégrées restent dans le code de l'application, pour qu'elles ne puissent pas
+  disparaître sous les mouvements qui les portent). Écriture réservée à la permission
+  *Saisir une recette ou une dépense*.
+- **Redéployer les règles de synchronisation** (PowerSync → Sync Streams → Deploy) après cette
+  migration : c'est une table nouvelle, et sans redéploiement elle ne descendra pas sur les postes
+  — les catégories ajoutées s'afficheraient alors sous leur code (`FRAIS_DE_DEDOUANEMENT`) dans le
+  journal de caisse des autres machines.
 - Appliquer `supabase/migrations/20261102000000_entree_remise_globale_livraison.sql` (deux colonnes
   sur `mouvements_stock` : `remise_montant`, la part de la remise du bon portée par la ligne, et
   `date_livraison`, l'arrivée réelle de la marchandise). Les règles de synchronisation n'ont pas à

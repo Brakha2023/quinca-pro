@@ -1,5 +1,4 @@
 import { Navigate, NavLink, useParams } from 'react-router-dom';
-import { CATEGORIES_DEPENSE, CATEGORIES_RECETTE } from '../../../core/tresorerie';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import CaissesPanel from '../../features/tresorerie/CaissesPanel';
 import OperationPanel, { type ConfigOperation } from '../../features/tresorerie/OperationPanel';
@@ -11,23 +10,23 @@ import { SECTIONS_TRESORERIE, SECTION_TRESORERIE_DEFAUT, cheminTresorerie, estSe
 
 const ENTREE_EN_CAISSE: ConfigOperation = {
   type: 'RECETTE',
-  categories: CATEGORIES_RECETTE,
   titreRecu: 'Reçu d’entrée en caisse',
   libelleTiers: 'Déposant',
   signatureTiers: 'Signature du déposant',
   libelleBouton: 'Enregistrer l’entrée',
-  titreHistorique: 'Dernières entrées en caisse',
+  titreHistorique: 'Entrées en caisse',
+  baseExport: 'entrees-en-caisse',
   prefixeTest: 'entree',
 };
 
 const DEPENSE: ConfigOperation = {
   type: 'DEPENSE',
-  categories: CATEGORIES_DEPENSE,
   titreRecu: 'Pièce de dépense',
   libelleTiers: 'Bénéficiaire',
   signatureTiers: 'Signature du bénéficiaire',
   libelleBouton: 'Enregistrer la dépense',
-  titreHistorique: 'Dernières dépenses',
+  titreHistorique: 'Dépenses',
+  baseExport: 'depenses',
   prefixeTest: 'depense',
 };
 
@@ -65,7 +64,7 @@ export default function TresoreriePage() {
             {section === 'versement' && <VersementPanel filialeId={filialeId} filiale={infosFiliale} />}
             {section === 'retrait' && <RetraitPanel filialeId={filialeId} filiale={infosFiliale} />}
             {section === 'entree' && <OperationPanel filialeId={filialeId} filiale={infosFiliale} config={ENTREE_EN_CAISSE} />}
-            {section === 'transfert-caisse' && <TransfertCaissePanel filialeId={filialeId} />}
+            {section === 'transfert-caisse' && <TransfertCaissePanel filialeId={filialeId} filiale={infosFiliale} />}
             {section === 'transfert-filiale' && <TransfertFilialePanel filialeId={filialeId} filiale={infosFiliale} filiales={filiales.map((f) => ({ id: f.id, nom: f.nom }))} />}
             {section === 'depense' && <OperationPanel filialeId={filialeId} filiale={infosFiliale} config={DEPENSE} />}
           </div>

@@ -1,5 +1,6 @@
 // Scénario Trésorerie : versement, retrait, entrée, transferts (caisse et filiale), dépense,
-// puis journal de caisse (solde d'ouverture, clôture) et sous-menu.
+// catégories ajoutées par la maison, listes filtrées et imprimables, puis journal
+// de caisse (solde d'ouverture, clôture) et sous-menu.
 const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./browser.cjs');
 
 /** Texte d'une zone, espaces normalisés : `formaterFcfa` sépare les milliers par une espace insécable. */
@@ -54,6 +55,13 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
     const trf2Annule = await db.get('SELECT statut, motif FROM transferts_filiales WHERE id = ?', [trf2.id]);
     const soldeApresAnnulation = (await db.get("SELECT solde_actuel FROM caisses WHERE id = 'c1'")).solde_actuel;
 
+    // Catégorie ajoutée par la maison : le code est dérivé du libellé, et un
+    // second ajout du même nom est refusé (la contrainte serveur est unique).
+    const codeCategorie = await repo.creerCategorie(F, { libelle: 'Frais de dédouanement', type: 'DEPENSE' });
+    let refusCategorie = false;
+    try { await repo.creerCategorie(F, { libelle: 'frais de DEDOUANEMENT', type: 'DEPENSE' }); }
+    catch (e) { refusCategorie = /existe déjà/.test(e.message); }
+
     // Journal de caisse de c1 sur la journée : l'ouverture se déduit du solde actuel.
     const mouvements = await db.getAll("SELECT id, type, montant, categorie, description, reference, date_operation FROM mouvements_tresorerie WHERE caisse_id = 'c1'");
     const soldeC1 = (await db.get("SELECT solde_actuel FROM caisses WHERE id = 'c1'")).solde_actuel;
@@ -63,6 +71,7 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
     return {
       versement, retrait, apresLocal, trf, soldeApresEnvoi, refusEncaissement, trfRecu, soldeBouake, refusDouble,
       trf2Annule, soldeAvantAnnulation, soldeApresAnnulation, ouverture, journal, soldeC1,
+      codeCategorie, refusCategorie,
     };
   }, { F: filialeId, U: userId });
 
@@ -80,6 +89,7 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   // Dépenses : 100 000 retrait + 15 000 transport + 200 000 coffre + 60 000 et 25 000 inter-filiale.
   verifier(r.journal.totalRecettes === 450500 && r.journal.totalDepenses === 400000, 'journal : totaux recettes / dépenses de la caisse principale');
   verifier(r.journal.lignes.every((l, i, a) => i === 0 || a[i - 1].date <= l.date), 'journal : mouvements du plus ancien au plus récent');
+  verifier(r.codeCategorie === 'FRAIS_DE_DEDOUANEMENT' && r.refusCategorie, 'catégorie ajoutée : code dérivé du libellé, et pas deux fois le même');
 
   console.log('Interface');
   await page.goto(`${BASE_URL}/#/tresorerie`);
@@ -176,6 +186,11 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   verifier((await page.locator('#zone-impression .code-barres rect').count()) > 20, 'reçu : code-barres de la pièce');
   await page.keyboard.press('Escape');
 
+  // Le guichet n'impute plus rien à un compte client : régler une créance
+  // demande de voir les factures, et cela se fait dans le module Clients.
+  verifier((await page.locator('[data-testid=versement-client]').count()) === 0, 'versement : aucune imputation au compte client depuis la trésorerie');
+  verifier((await texteDe(page, '#versement-form')).includes('Clients → Compte client'), 'versement : l’écran renvoie là où le compte client se tient');
+
   // Retrait au-delà du solde : la confirmation de l'app (jamais confirm() natif) doit s'ouvrir.
   await sousMenu.getByRole('link', { name: 'Retrait', exact: true }).click();
   await page.locator('[data-testid=retrait-beneficiaire]').fill('Cissé Ibrahim');
@@ -223,8 +238,71 @@ const texteDe = async (page, selecteur) => (await page.textContent(selecteur)).r
   await page.locator('#zone-impression .document-titre', { hasText: 'Pièce de dépense' }).waitFor();
   verifier((await texteDe(page, '#zone-impression')).includes('Loyer'), 'dépense enregistrée, pièce justificative imprimable');
   await page.keyboard.press('Escape');
-  await page.locator('[data-testid=mouvement-recent]', { hasText: 'Bailleur' }).first().waitFor();
-  verifier(true, 'la dépense apparaît dans l’historique de la section');
+  await page.locator('[data-testid=ligne-operation]', { hasText: 'Bailleur' }).first().waitFor();
+  verifier(true, 'la dépense apparaît dans la liste de la section');
+
+  // La catégorie qui manque se nomme au guichet, la pièce en main.
+  console.log('Catégories ajoutées par la maison');
+  await page.getByTestId('depense-categories').click();
+  const modaleCategories = page.getByRole('dialog', { name: 'Catégories de dépense' });
+  const ligneDedouanement = modaleCategories.getByTestId('categorie-FRAIS_DE_DEDOUANEMENT');
+  await ligneDedouanement.waitFor();
+  verifier((await ligneDedouanement.locator('input').inputValue()) === 'Frais de dédouanement', 'modale : les catégories de la maison, renommables, celle créée hors ligne comprise');
+  await page.getByTestId('categorie-libelle').fill('Gardiennage');
+  await modaleCategories.locator('text=GARDIENNAGE').first().waitFor();
+  verifier(true, 'modale : le code du journal est annoncé avant l’ajout');
+  await page.getByTestId('ajouter-categorie').click();
+  await page.locator('[aria-live]', { hasText: 'ajoutée' }).waitFor();
+  await page.keyboard.press('Escape');
+  verifier((await page.locator('[data-testid=depense-categorie]').inputValue()) === 'GARDIENNAGE', 'la catégorie créée est aussitôt choisie dans le formulaire');
+
+  await page.locator('[data-testid=depense-tiers]').fill('Vigile de nuit');
+  await page.locator('[data-testid=depense-montant]').fill('45000');
+  await page.getByRole('button', { name: 'Enregistrer la dépense' }).click();
+  await page.locator('#zone-impression .document-titre', { hasText: 'Pièce de dépense' }).waitFor();
+  verifier((await texteDe(page, '#zone-impression')).includes('Gardiennage'), 'la pièce porte le libellé de la catégorie ajoutée, pas son code');
+  await page.keyboard.press('Escape');
+  await page.locator('[data-testid=ligne-operation]', { hasText: 'Vigile de nuit' }).first().waitFor();
+
+  // La liste de la section : période, caisse, catégorie, recherche — et ce qui
+  // s'affiche est ce qui s'imprime.
+  console.log('Dépenses filtrées et imprimées');
+  const compteurDepenses = async () => (await page.getByTestId('depense-compteur').textContent()).replace(/\s+/g, ' ');
+  verifier((await compteurDepenses()).includes('3 opération(s)') && (await compteurDepenses()).includes('140 000 F'),
+    `liste des dépenses : 15 000 transport + 80 000 loyer + 45 000 gardiennage (${await compteurDepenses()})`);
+
+  await page.getByTestId('depense-filtre-categorie').selectOption('LOYER');
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid=ligne-operation]').length === 1);
+  verifier((await compteurDepenses()).includes('1 opération(s)') && (await compteurDepenses()).includes('80 000 F'), 'filtre par catégorie : le total suit les lignes retenues');
+  await page.getByTestId('depense-filtre-categorie').selectOption('');
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid=ligne-operation]').length === 3);
+
+  await page.getByTestId('depense-recherche').fill('vigile');
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid=ligne-operation]').length === 1);
+  verifier((await compteurDepenses()).includes('45 000 F'), 'recherche : la liste et le total suivent');
+  await page.getByTestId('depense-recherche').fill('');
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid=ligne-operation]').length === 3);
+
+  await page.getByTestId('imprimer-depense').click();
+  const etatDepenses = page.locator('#zone-impression');
+  await etatDepenses.locator('[data-testid=ligne-operation-imprimee]').first().waitFor();
+  const papierDepenses = await texteDe(page, '#zone-impression');
+  verifier((await etatDepenses.locator('[data-testid=ligne-operation-imprimee]').count()) === 3, 'document des dépenses : une ligne par opération retenue');
+  verifier((await texteDe(page, '[data-testid=total-operations-imprime]')) === '140 000 F', 'document des dépenses : total de la période');
+  verifier(papierDepenses.includes('toutes les caisses') && papierDepenses.includes('Filiale Abidjan'), 'document des dépenses : périmètre retenu et en-tête de la maison');
+  verifier((await etatDepenses.locator('[data-testid=ventilation-categorie]').count()) === 3, 'document des dépenses : ventilation par catégorie');
+  verifier(papierDepenses.includes('Gardiennage') && papierDepenses.includes('57 %'), 'document des dépenses : la part de chaque catégorie (loyer 80 000 / 140 000 = 57 %)');
+  await etatDepenses.getByRole('button', { name: "Fermer l'aperçu" }).click();
+
+  const telechargementDepenses = page.waitForEvent('download');
+  await page.getByTestId('exporter-depense').click();
+  const fichierDepenses = await telechargementDepenses;
+  const classeurDepenses = require('xlsx').readFile(await fichierDepenses.path());
+  const feuilleDepenses = require('xlsx').utils.sheet_to_json(classeurDepenses.Sheets['Opérations']);
+  const ventilation = require('xlsx').utils.sheet_to_json(classeurDepenses.Sheets['Par catégorie']);
+  verifier(/^depenses-\d{4}-\d{2}-\d{2}\.xlsx$/.test(fichierDepenses.suggestedFilename()), `export Excel des dépenses : fichier ${fichierDepenses.suggestedFilename()}`);
+  verifier(feuilleDepenses.length === 3 && feuilleDepenses.every((l) => l.Sens === 'Sortie'), 'export Excel des dépenses : les trois sorties de la période');
+  verifier(ventilation.length === 3 && ventilation.reduce((t, l) => t + l.Montant, 0) === 140000, 'export Excel des dépenses : seconde feuille, ventilation par catégorie');
 
   if (erreurs.length) throw new Error(`Erreurs console :\n${erreurs.join('\n')}`);
   console.log('\nTrésorerie : OK');

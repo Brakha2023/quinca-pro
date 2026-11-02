@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownTrayIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import {
-  ETATS_CAISSE, LIBELLES_CATEGORIE, construireJournalCaisse, filtrerCaisses, perimetreCaisses, recapEtatCaisses,
+  ETATS_CAISSE, construireJournalCaisse, filtrerCaisses, perimetreCaisses, recapEtatCaisses,
   type Caisse, type EtatCaisseRetenu, type LigneEtatCaisse,
 } from '../../../core/tresorerie';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
@@ -15,7 +15,7 @@ import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import EtatCaissesDocument from './EtatCaissesDocument';
 import { CaisseFormModal } from './modales';
-import { useEtatCaisses, useMouvementsTresorerie, useSoldeOuverture } from './hooks';
+import { useCategoriesTresorerie, useEtatCaisses, useMouvementsTresorerie, useSoldeOuverture } from './hooks';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const premierDuMois = () => `${new Date().toISOString().slice(0, 7)}-01`;
@@ -49,6 +49,9 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
   const [caisseId, setCaisseId] = useState('');
   const [modal, setModal] = useState<{ type: 'caisse'; caisse?: Caisse } | { type: 'journal' } | { type: 'etat' } | null>(null);
 
+  // Le journal doit nommer une catégorie ajoutée par la maison, pas afficher
+  // son code nu : les libellés viennent donc de la filiale, pas du seul code.
+  const { libelles } = useCategoriesTresorerie(filialeId);
   const { caisses, lignes: toutes } = useEtatCaisses(filialeId, dateDebut, dateFin);
   const lignes = useMemo(() => filtrerCaisses(toutes, { recherche, etat }), [toutes, recherche, etat]);
   // Le récapitulatif porte sur les lignes **retenues** : c'est ce total qui
@@ -117,7 +120,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
           return {
             Date: formaterDateHeure(l.date),
             Caisse: m?.caisse_nom ?? nomCaisse(m?.caisse_id ?? null),
-            Catégorie: LIBELLES_CATEGORIE[l.categorie] ?? l.categorie,
+            Catégorie: libelles[l.categorie] ?? l.categorie,
             Description: l.description,
             Pièce: l.piece,
             Recette: l.recette,
@@ -267,7 +270,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
                 <tr key={l.id} className="hover:bg-neutral-50" data-testid="ligne-journal">
                   <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(l.date)}</td>
                   <td className="px-3 py-2 text-sm">{mouvement?.caisse_nom ?? nomCaisse(mouvement?.caisse_id ?? null)}</td>
-                  <td className="px-3 py-2 text-sm"><span className="px-2 py-0.5 rounded-full text-xs bg-neutral-100">{LIBELLES_CATEGORIE[l.categorie] ?? l.categorie}</span></td>
+                  <td className="px-3 py-2 text-sm"><span className="px-2 py-0.5 rounded-full text-xs bg-neutral-100">{libelles[l.categorie] ?? l.categorie}</span></td>
                   <td className="px-3 py-2 text-sm text-neutral-600 max-w-xs truncate" title={l.description}>{l.description || '—'}</td>
                   <td className="px-3 py-2 text-sm font-mono text-neutral-600">{l.piece || '—'}</td>
                   <td className="px-3 py-2 text-sm text-right font-mono text-green-700">{l.recette ? formaterFcfa(l.recette) : ''}</td>
@@ -309,7 +312,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
                   <tr key={l.id}>
                     <td>{formaterDateHeure(l.date)}</td>
                     <td>{mouvement?.caisse_nom ?? nomCaisse(mouvement?.caisse_id ?? null)}</td>
-                    <td>{LIBELLES_CATEGORIE[l.categorie] ?? l.categorie}</td>
+                    <td>{libelles[l.categorie] ?? l.categorie}</td>
                     <td>{l.description}</td>
                     <td className="document-code">{l.piece}</td>
                     <td className="num">{l.recette ? formaterFcfa(l.recette) : ''}</td>

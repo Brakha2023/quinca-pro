@@ -2,12 +2,15 @@ import type { Transaction } from '@powersync/web';
 import type { CaisseRow, TransfertFilialeRow } from '@quinca/shared-types';
 import { numeroPiece } from '../../desktop/identitePoste';
 import {
-  CATEGORIE_RETRAIT, CATEGORIE_TRANSFERT_FILIALE, CATEGORIE_VERSEMENT,
-  type CaisseForm, type OperationForm, type RetraitForm, type TransfertCaisseForm, type TransfertFilialeForm, type VersementForm,
+  CATEGORIE_RETRAIT, CATEGORIE_TRANSFERT_FILIALE, CATEGORIE_VERSEMENT, normaliserCodeCategorie,
+  type CaisseForm, type CategorieForm, type OperationForm, type RetraitForm, type TransfertCaisseForm, type TransfertFilialeForm, type VersementForm,
 } from '../../../core/tresorerie';
 import { BaseRepository } from './BaseRepository';
 
 export const CAISSES_QUERY = 'SELECT * FROM caisses WHERE filiale_id = ? ORDER BY est_active DESC, nom';
+
+/** Catégories ajoutées par la filiale, désactivées comprises : l'écran de gestion les montre toutes. */
+export const CATEGORIES_TRESORERIE_QUERY = 'SELECT * FROM categories_tresorerie WHERE filiale_id = ? ORDER BY type, libelle';
 
 export interface FiltresTresorerie {
   caisseId?: string | null;
@@ -98,6 +101,46 @@ export class TresorerieRepository extends BaseRepository {
     return rows.length > 0;
   }
 
+  /**
+   * Une catégorie de plus pour cette filiale.
+   *
+   * Le code est dérivé du libellé **ici**, une fois pour toutes : il part dans
+   * `mouvements_tresorerie.categorie` et ne bougera plus. L'unicité est
+   * revérifiée dans la transaction — le poste a pu créer la même hors ligne
+   * pendant qu'un autre la créait aussi, et c'est un message clair qu'il faut
+   * alors, pas un refus du serveur trois minutes plus tard.
+   */
+  creerCategorie(filialeId: string, form: CategorieForm): Promise<string> {
+    const code = normaliserCodeCategorie(form.libelle);
+    if (!code) throw new Error('Donnez un nom qui contient au moins une lettre ou un chiffre.');
+    return this.db.writeTransaction(async (tx) => {
+      const prises = await tx.getAll<{ libelle: string | null }>(
+        'SELECT libelle FROM categories_tresorerie WHERE filiale_id = ? AND code = ? LIMIT 1',
+        [filialeId, code],
+      );
+      if (prises.length > 0) throw new Error(`« ${prises[0]?.libelle ?? code} » existe déjà sous ce nom.`);
+      const now = this.maintenant();
+      await tx.execute(
+        'INSERT INTO categories_tresorerie (id, filiale_id, code, libelle, type, est_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+        [this.nouvelId(), filialeId, code, form.libelle, form.type, now, now],
+      );
+      return code;
+    });
+  }
+
+  /** Le libellé change, le code jamais : les mouvements déjà enregistrés le portent. */
+  async renommerCategorie(id: string, libelle: string): Promise<void> {
+    await this.patch(this.db, 'categories_tresorerie', id, { libelle });
+  }
+
+  /**
+   * Retirer une catégorie de la liste de saisie, ou l'y remettre. Jamais de
+   * suppression : son code nomme encore les mouvements du passé.
+   */
+  async activerCategorie(id: string, active: boolean): Promise<void> {
+    await this.patch(this.db, 'categories_tresorerie', id, { est_active: active ? 1 : 0 });
+  }
+
   /** Recette ou dépense manuelle : mouvement + solde de caisse. */
   enregistrerOperation(ctx: ContexteTresorerie, op: OperationForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {
@@ -120,9 +163,13 @@ export class TresorerieRepository extends BaseRepository {
   }
 
   /**
-   * Versement encaissé au guichet d'un remettant qui n'a pas de compte
-   * client. Un versement de client en compte passe, lui, par
-   * `ClientsRepository.enregistrerReglement` pour mettre le compte à jour.
+   * Versement encaissé au guichet : de l'argent qui entre en caisse, au nom de
+   * celui qui l'apporte.
+   *
+   * Il ne touche **aucun compte de tiers**, volontairement. Régler une créance
+   * demande de voir les factures du client et de lettrer le règlement : cela se
+   * fait dans *Clients → Compte client*, pas au guichet de la trésorerie, où
+   * deux saisies pour une même somme passeraient inaperçues.
    */
   enregistrerVersement(ctx: ContexteTresorerie, v: VersementForm): Promise<string> {
     return this.db.writeTransaction(async (tx) => {

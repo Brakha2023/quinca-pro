@@ -192,7 +192,7 @@
   <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Alertes, stock dormant, entrées, sorties, transferts, inventaire, production, et l'historique de chacun.</span></div></li>
   <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire, proforma, compte client, versements, relances.</span></div></li>
   <li><div><span class="titre-chap">Fournisseurs</span><br /><span class="desc">Commandes, réceptions, factures d'achat, règlements.</span></div></li>
-  <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses, transferts entre filiales et leur bordereau.</span></div></li>
+  <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses et leurs catégories, transferts entre filiales et leur bordereau.</span></div></li>
   <li><div><span class="titre-chap">Livraisons et personnel</span><br /><span class="desc">Bons de livraison, effectif, pointage, paie.</span></div></li>
   <li><div><span class="titre-chap">Tableau de bord</span><br /><span class="desc">Les huit chiffres, les quatre graphiques, la consolidation.</span></div></li>
   <li><div><span class="titre-chap">Historiques et audit</span><br /><span class="desc">Retrouver une pièce, la rééditer, savoir qui a fait quoi.</span></div></li>
@@ -859,7 +859,7 @@ servi ne s'efface pas, et un compte qui porte de l'argent non plus (voir 8.1).</
 <table>
   <tr><th>Sous-écran</th><th>À quoi il sert</th></tr>
   <tr><td class="chemin">Liste des caisses</td><td>L'état des caisses : solde d'ouverture, entrées, sorties, solde de clôture, solde du jour.</td></tr>
-  <tr><td class="chemin">Versement</td><td>Un client dépose de l'argent sur son compte.</td></tr>
+  <tr><td class="chemin">Versement</td><td>Quelqu'un apporte de l'argent au guichet : la caisse l'encaisse, avec un reçu.</td></tr>
   <tr><td class="chemin">Retrait</td><td>Sortie d'espèces de la caisse.</td></tr>
   <tr><td class="chemin">Entrée en caisse</td><td>Une recette qui n'est pas une vente.</td></tr>
   <tr><td class="chemin">Transfert inter caisse</td><td>Déplacer des fonds d'une caisse à l'autre, dans la filiale.</td></tr>
@@ -877,18 +877,79 @@ retenu ; le journal d'une caisse s'exporte aussi en classeur.</p>
   diffèrent. Les deux colonnes sont affichées exprès, pour que l'écart se lise.</p>
 </div>
 
-<h3>10.2 — Chaque mouvement sort son reçu</h3>
+<h3>10.2 — Les catégories de dépense et de recette</h3>
+<p>Chaque dépense et chaque entrée en caisse porte une <strong>catégorie</strong> : c'est elle qui
+permet, en fin de mois, de dire ce qu'a coûté le transport ou le loyer. L'application en livre une
+poignée (transport, fournitures, loyer, salaires, électricité / eau, entretien, repas, autre
+dépense ; apport, remboursement, autre recette), et <strong>la maison ajoute les siennes</strong> —
+gardiennage, patente, dédouanement, honoraires.</p>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Dans <span class="chemin">Trésorerie → Dépense</span> (ou <span class="chemin">Entrée en
+      caisse</span>), cliquez le <strong>+</strong> à côté de la liste des catégories.</li>
+    <li>Écrivez le nom de la catégorie, par exemple <em>Frais de dédouanement</em>, et
+      <em>Ajouter</em>.</li>
+    <li>Elle est aussitôt choisie dans le formulaire : continuez votre saisie.</li>
+  </ol>
+</div>
+<p>La même fenêtre sert à <strong>renommer</strong> une catégorie de la maison (une faute de frappe,
+un nom plus clair) et à la <strong>retirer</strong> de la liste quand elle ne sert plus.</p>
+<div class="note">
+  <span class="titre">Retirer n'efface pas le passé</span>
+  <p>Une catégorie retirée disparaît de la liste de saisie, mais les dépenses déjà enregistrées
+  gardent son nom dans le journal et sur les états. Rien ne se perd, et un état de l'an dernier se
+  relit tel qu'il a été imprimé.</p>
+  <p>Le <strong>code du journal</strong>, lui, est fixé à la création (<em>Frais de dédouanement</em>
+  → <span class="chemin">FRAIS_DE_DEDOUANEMENT</span>) et ne change plus, même si vous renommez la
+  catégorie : c'est ce code qui rattache les mouvements déjà enregistrés sur tous les postes.</p>
+  <p>Les catégories <strong>intégrées</strong> ne se modifient pas, et les catégories que
+  l'application produit elle-même — vente, règlement client, transfert — ne peuvent pas être
+  reprises : elles naissent d'une pièce, jamais d'un choix au guichet.</p>
+</div>
+
+<h3>10.3 — Relire et imprimer les dépenses (et le reste)</h3>
+<p>Sous chaque formulaire — versement, retrait, entrée en caisse, dépense, transfert inter caisse —
+la liste des opérations de la section se filtre et s'imprime :</p>
+<table>
+  <tr><th>Filtre</th><th>Ce qu'il fait</th></tr>
+  <tr><td class="chemin">Du … au …</td><td>La période. <em>Aujourd'hui</em> et <em>Ce mois</em> sont à côté.</td></tr>
+  <tr><td class="chemin">Caisse</td><td>Une caisse, ou toutes.</td></tr>
+  <tr><td class="chemin">Catégorie</td><td>Une seule catégorie de la section — le loyer, le transport…</td></tr>
+  <tr><td class="chemin">Rechercher</td><td>La désignation, le numéro de pièce, la caisse, le bénéficiaire, l'opérateur.</td></tr>
+</table>
+<p>Le compteur donne le nombre d'opérations retenues et leur total. <em>Imprimer / PDF</em> sort la
+feuille A4 de ce qui est affiché : le périmètre en tête, la <strong>ventilation par catégorie</strong>
+avec la part de chacune, la liste pièce par pièce, le total, et deux cases à signer — le caissier,
+le gérant. <em>Exporter Excel</em> donne le même contenu en deux feuilles.</p>
+<div class="note">
+  <span class="titre">Ce qui s'affiche est ce qui s'imprime</span>
+  <p>La feuille ne reprend jamais autre chose que les lignes retenues à l'écran. Pour l'état du mois,
+  cliquez <em>Ce mois</em> avant d'imprimer ; pour justifier un seul poste de dépense, choisissez sa
+  catégorie.</p>
+</div>
+
+<h3>10.4 — Chaque mouvement sort son reçu</h3>
 <p>Versement, retrait, entrée, dépense : chacun imprime un reçu avec le montant en chiffres
 <strong>et en toutes lettres</strong>. Vérifiez que les deux concordent avant de faire signer.</p>
+<div class="note">
+  <span class="titre">Un versement de trésorerie ne touche aucun compte client</span>
+  <p>Le guichet encaisse de l'argent au nom de celui qui l'apporte, et c'est tout. Un
+  <strong>client en compte</strong> qui vient régler sa créance se traite dans
+  <span class="chemin">Clients → Compte client</span>, où l'on voit ses factures et où le règlement
+  s'impute sur son solde — voir le § 8.2.</p>
+  <p>Deux chemins pour une même somme laisseraient un client crédité deux fois, et l'écart ne se
+  découvrirait qu'à la relance.</p>
+</div>
 
-<h3>10.3 — Transfert de fonds entre filiales</h3>
+<h3>10.5 — Transfert de fonds entre filiales</h3>
 <p>L'argent part de la caisse d'origine à l'envoi et entre dans celle de destination à la réception.
 Tant que le transfert est en transit, l'expéditeur peut l'annuler : la somme <strong>recrédite</strong>
 la caisse de départ.</p>
 <p>Entre les deux, les fonds ne sont dans <strong>aucune</strong> caisse. Les deux filiales les voient
 quand même, chacune de son côté, sur leur tableau de bord — voir le chapitre 12.</p>
 
-<h3>10.4 — Le bordereau qui voyage avec l'argent</h3>
+<h3>10.6 — Le bordereau qui voyage avec l'argent</h3>
 <p>Chaque ligne du tableau des transferts porte une <strong>icône d'imprimante</strong> : elle sort le
 <strong>bordereau de transfert de fonds</strong>, la pièce qui accompagne les espèces. Un billet ne
 porte pas de code article : entre la caisse de départ et celle d'arrivée, ce bordereau est la seule

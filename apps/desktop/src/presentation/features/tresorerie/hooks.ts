@@ -1,17 +1,32 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
-import type { CaisseRow, MouvementTresorerieRow, TransfertFilialeRow } from '@quinca/shared-types';
+import type { CaisseRow, CategorieTresorerieRow, MouvementTresorerieRow, TransfertFilialeRow } from '@quinca/shared-types';
 import {
-  caisseFromRow, etatCaisses, recapEtatCaisses, soldeOuverture,
-  type EnteteTransfertFonds, type MouvementCaisse, type MouvementJournal,
+  caisseFromRow, categorieTresorerieFromRow, etatCaisses, libellesCategories, recapEtatCaisses, soldeOuverture,
+  type CategorieTresorerie, type EnteteTransfertFonds, type MouvementCaisse, type MouvementJournal,
 } from '../../../core/tresorerie';
 import {
-  CAISSES_QUERY, TRANSFERTS_FILIALES_QUERY, mouvementsDepuisQuery, mouvementsTresorerieQuery, type FiltresTresorerie,
+  CAISSES_QUERY, CATEGORIES_TRESORERIE_QUERY, TRANSFERTS_FILIALES_QUERY, mouvementsDepuisQuery, mouvementsTresorerieQuery,
+  type FiltresTresorerie,
 } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
 
 export function useCaissesToutes(filialeId: string | null) {
   const { data } = useQuery<CaisseRow>(CAISSES_QUERY, [filialeId ?? '']);
   return useMemo(() => data.map(caisseFromRow), [data]);
+}
+
+/**
+ * Catégories de la filiale et table des libellés à afficher.
+ *
+ * Les deux vont ensemble : la liste sert à la saisie (les actives du bon sens),
+ * la table à la relecture (toutes, désactivées comprises — un mouvement de
+ * l'an dernier doit se lire en clair).
+ */
+export function useCategoriesTresorerie(filialeId: string | null) {
+  const { data } = useQuery<CategorieTresorerieRow>(CATEGORIES_TRESORERIE_QUERY, [filialeId ?? '']);
+  const categories = useMemo<CategorieTresorerie[]>(() => data.map(categorieTresorerieFromRow), [data]);
+  const libelles = useMemo(() => libellesCategories(categories), [categories]);
+  return { categories, libelles };
 }
 
 export interface MouvementTresorerieVue extends MouvementTresorerieRow {

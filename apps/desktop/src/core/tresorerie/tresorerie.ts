@@ -23,7 +23,13 @@ export function caisseFromRow(row: CaisseRow): Caisse {
   return { id: row.id, code: row.code ?? '', nom: row.nom ?? '', responsable: row.responsable, solde_actuel: row.solde_actuel ?? 0, filiale_id: row.filiale_id ?? '', est_active: row.est_active !== 0 };
 }
 
-/** Catégories saisissables à la main ; les autres (VENTE, REGLEMENT_*…) sont générées par les modules métier. */
+/**
+ * Catégories **intégrées**, saisissables à la main. La filiale en ajoute
+ * d'autres (voir `categories.ts`) ; celles-ci restent dans le code parce que
+ * des mouvements les portent déjà et qu'elles ne doivent pas pouvoir
+ * disparaître. Les autres codes (VENTE, REGLEMENT_*…) sont générés par les
+ * modules métier à partir d'une pièce.
+ */
 export const CATEGORIES_RECETTE = ['APPORT', 'REMBOURSEMENT', 'AUTRE_RECETTE'] as const;
 export const CATEGORIES_DEPENSE = ['TRANSPORT', 'FOURNITURES', 'LOYER', 'SALAIRE', 'ELECTRICITE_EAU', 'ENTRETIEN', 'REPAS', 'AUTRE_DEPENSE'] as const;
 
@@ -81,19 +87,23 @@ export function mouvementTresorerieFromRow(row: MouvementTresorerieRow): Mouveme
   };
 }
 
-/** Versement encaissé au guichet : un client en compte, ou un remettant libre nommé à la main. */
+/**
+ * Versement encaissé au guichet : de l'argent qui entre en caisse, au nom de
+ * celui qui l'apporte.
+ *
+ * Aucun compte de tiers n'est touché. Un client qui règle sa créance passe par
+ * *Clients → Compte client*, où l'on voit ses factures et où le règlement se
+ * lettre : le faire aussi d'ici laisserait deux saisies pour une même somme,
+ * sans que rien ne les rapproche.
+ */
 export const versementSchema = z.object({
   caisse_id: z.string().min(1, 'Caisse obligatoire'),
-  client_id: z.string().optional().default(''),
-  remettant: z.string().trim().max(80).optional().default(''),
+  remettant: z.string().trim().min(1, 'Nom du remettant obligatoire').max(80),
   montant: z.coerce.number().positive('Montant > 0'),
   type_reglement: z.enum(TYPES_REGLEMENT).default('ESPECES'),
   designation: z.string().trim().max(120).optional().default(''),
   observation: z.string().trim().max(200).optional().default(''),
   reference: z.string().trim().max(60).optional().default(''),
-}).refine((v) => Boolean(v.client_id) || v.remettant.length > 0, {
-  message: 'Choisissez un client ou nommez le remettant',
-  path: ['remettant'],
 });
 export type VersementForm = z.infer<typeof versementSchema>;
 export type VersementFormInput = z.input<typeof versementSchema>;
