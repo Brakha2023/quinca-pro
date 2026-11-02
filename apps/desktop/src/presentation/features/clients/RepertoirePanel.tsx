@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BanknotesIcon, DocumentDuplicateIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, ScaleIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, DocumentDuplicateIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, ScaleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { disponibiliteCredit, statutCredit, type Client } from '../../../core/clients';
 import { ClientsRepository } from '../../../infrastructure/powersync/repositories/ClientsRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
 import { useConfirmation } from '../../confirmation/useConfirmation';
+import { usePermissions } from '../../auth/usePermissions';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
@@ -33,6 +34,9 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
   const [avecCreance, setAvecCreance] = useState(false);
   const [inclureInactifs, setInclureInactifs] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  /** Fiche en cours de vérification au serveur : les boutons attendent la réponse. */
+  const [verification, setVerification] = useState<string | null>(null);
+  const { peut } = usePermissions();
   const groupes = useGroupesClients(filialeId);
   const { clients, isLoading } = useClients(filialeId, { recherche, avecCreance, inclureInactifs, groupe: groupe || null });
   const totaux = clients.reduce(
@@ -52,6 +56,36 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
       notifier('succes', `Client ${client.raison_sociale} ${client.est_actif ? 'mis en sommeil' : 'réactivé'}.`);
     } catch (error) {
       notifier('erreur', error instanceof Error ? error.message : 'Opération impossible.');
+    }
+  };
+
+  /**
+   * Suppression définitive, réservée aux fiches qui n'ont jamais servi.
+   *
+   * On vérifie **avant** de demander confirmation : poser une question pour
+   * ensuite refuser serait une question de trop. La vérification passe par le
+   * serveur (voir `ClientsRepository.motifDeRefus`), d'où l'attente affichée.
+   */
+  const supprimer = async (client: Client) => {
+    setVerification(client.id);
+    try {
+      const motif = await repository.motifDeRefus(client);
+      if (motif) { notifier('erreur', motif); return; }
+
+      const ok = await confirmer({
+        titre: `Supprimer ${client.code}`,
+        message: `La fiche de « ${client.raison_sociale} » disparaîtra du répertoire, sur ce poste comme sur les autres. Ce client n'a jamais servi : rien d'autre ne s'efface avec lui. Cette opération ne se défait pas.`,
+        libelleConfirmer: 'Supprimer',
+        danger: true,
+      });
+      if (!ok) return;
+
+      await repository.supprimer(client);
+      notifier('succes', `Client ${client.code} supprimé.`);
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Suppression impossible.');
+    } finally {
+      setVerification(null);
     }
   };
 
@@ -109,6 +143,10 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
                         <button onClick={() => setModal({ type: 'reglement', client: c })} className={`${action} hover:bg-green-50 text-green-700`} title="Règlement / approvisionnement"><BanknotesIcon className="w-4 h-4" /></button>
                         <button onClick={() => navigate(cheminClients('relance', c.id))} className={`${action} hover:bg-orange-50 text-orange-600 disabled:opacity-30`} title="Relance par e-mail" disabled={!c.email || c.solde_actuel <= 0}><EnvelopeIcon className="w-4 h-4" /></button>
                         <button onClick={() => basculerActif(c)} className={`px-2 py-1 rounded text-xs font-medium ${c.est_actif ? 'text-red-600 hover:bg-red-50' : 'text-green-700 hover:bg-green-50'}`}>{c.est_actif ? 'Sommeil' : 'Réactiver'}</button>
+                        {/* Effacer n'est pas mettre en sommeil : réservé à qui tient le répertoire. */}
+                        {peut('clients.ecrire') && (
+                          <button onClick={() => supprimer(c)} disabled={verification !== null} className={`${action} text-red-500 hover:bg-red-50 disabled:opacity-40`} title="Supprimer définitivement (fiches jamais utilisées)" data-testid={`supprimer-client-${c.code}`}><TrashIcon className="w-4 h-4" /></button>
+                        )}
                       </div>
                     </td>
                   </tr>

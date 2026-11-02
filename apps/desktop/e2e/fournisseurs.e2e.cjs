@@ -204,6 +204,74 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('input[type=checkbox]').first().uncheck();
   verifier(!(await page.locator('textarea').inputValue()).includes('en attente de livraison'), 'relance recomposée quand on décoche la commande');
 
+  console.log('Suppression d’une fiche fournisseur jamais utilisée');
+  // Le poste ne garde que douze mois : c'est le serveur qui tranche. Comptage
+  // PostgREST simulé par interception REST (en-tête `Content-Range`).
+  let usagesServeur = 0;
+  const comptages = [];
+  await page.route('**/rest/v1/{commandes_fournisseurs,reglements_fournisseurs,mouvements_stock}*', (route) => {
+    comptages.push(route.request().url());
+    route.fulfill({ status: 200, headers: { 'content-range': `*/${usagesServeur}`, 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' } });
+  });
+
+  await page.evaluate(async (F) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { FournisseursRepository } = await import('/src/infrastructure/powersync/repositories/FournisseursRepository.ts');
+    const { fournisseurFormSchema } = await import('/src/core/fournisseurs/index.ts');
+    const repo = new FournisseursRepository(db);
+    await repo.create(F, fournisseurFormSchema.parse({ raison_sociale: 'Doublon à effacer' }));
+    await repo.create(F, fournisseurFormSchema.parse({ raison_sociale: 'Compte ouvert', solde_initial: 90000 }));
+  }, filialeId);
+
+  await page.goto(`${BASE_URL}/#/fournisseurs`);
+  await page.locator('tbody tr', { hasText: 'Doublon à effacer' }).waitFor();
+  const corbeille = (nom) => page.locator('tbody tr', { hasText: nom }).getByTitle('Supprimer définitivement (fiches jamais utilisées)').click();
+  const avis = (texte) => page.locator('[aria-live] > div', { hasText: texte });
+  const boutonsRendus = () => page.waitForFunction(() => [...document.querySelectorAll('[data-testid^="supprimer-fournisseur-"]')].every((b) => !b.disabled));
+
+  // SODIPRO a livré et été payé : le poste tranche seul.
+  await corbeille('SODIPRO');
+  const refus = avis('SODIPRO');
+  await refus.waitFor();
+  await boutonsRendus();
+  const texteRefus = (await refus.textContent()).replace(/\s+/g, ' ');
+  verifier(texteRefus.includes('commande(s) ou achat(s)') && texteRefus.includes('entrée(s) en stock à son nom'),
+    `fournisseur utilisé : le refus nomme ses pièces et ses entrées (${texteRefus.slice(0, 90)}…)`);
+  verifier(comptages.length === 0, 'fournisseur utilisé : aucune requête au serveur, la réponse est locale');
+
+  await corbeille('Compte ouvert');
+  const refusCompte = avis('Compte ouvert');
+  await refusCompte.waitFor();
+  await boutonsRendus();
+  verifier((await refusCompte.textContent()).includes('compte mouvementé'), 'compte non soldé : la fiche est retenue');
+
+  await corbeille('Doublon à effacer');
+  const confirmation = page.getByRole('dialog');
+  await confirmation.waitFor();
+  verifier(comptages.length === 3 && comptages.some((u) => /mouvements_stock/.test(u)),
+    `le serveur est interrogé, entrées en stock comprises (${comptages.length} comptages)`);
+  await confirmation.getByRole('button', { name: 'Supprimer' }).click();
+  await avis('supprimé').waitFor();
+  await page.locator('tbody tr', { hasText: 'Doublon à effacer' }).waitFor({ state: 'detached' });
+  verifier(true, 'fournisseur supprimé : la fiche quitte le répertoire');
+
+  // Le serveur a le dernier mot : livré il y a trois ans, le poste n'en a plus
+  // la trace — la fiche ne s'efface pas pour autant.
+  usagesServeur = 4;
+  await page.evaluate(async (F) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { FournisseursRepository } = await import('/src/infrastructure/powersync/repositories/FournisseursRepository.ts');
+    const { fournisseurFormSchema } = await import('/src/core/fournisseurs/index.ts');
+    await new FournisseursRepository(db).create(F, fournisseurFormSchema.parse({ raison_sociale: 'Vieux partenaire' }));
+  }, filialeId);
+  await page.locator('tbody tr', { hasText: 'Vieux partenaire' }).waitFor();
+  await corbeille('Vieux partenaire');
+  const refusServeur = avis('Vieux partenaire');
+  await refusServeur.waitFor();
+  await boutonsRendus();
+  verifier((await refusServeur.textContent()).includes('4 commande(s) ou achat(s)') && (await page.getByRole('dialog').count()) === 0,
+    'le serveur retient une fiche dont le poste n’a plus la trace, sans même demander confirmation');
+
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');

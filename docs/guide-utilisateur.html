@@ -775,7 +775,27 @@ Inventaires</span>.</p>
   <tr><td class="chemin">Relance clients</td><td>Qui doit quoi, depuis combien de temps, et comment le relancer.</td></tr>
 </table>
 
-<h3>8.1 — Encaisser un règlement client</h3>
+<h3>8.1 — Mettre en sommeil ou supprimer une fiche</h3>
+<p>Deux gestes qui n'ont pas le même sens, dans la colonne <em>Actions</em> du répertoire :</p>
+<ul>
+  <li><strong>Sommeil</strong> (clients) ou <strong>Désactiver</strong> (fournisseurs) retire la fiche des écrans de saisie sans rien effacer. C'est le geste courant, celui d'un client qu'on ne voit plus ou d'un fournisseur qu'on ne commande plus. Le compte doit être <strong>soldé</strong>.</li>
+  <li><strong>Supprimer</strong> (la corbeille) efface pour de bon une fiche <em>qui n'a jamais servi</em> : doublon, raison sociale mal orthographiée, client de passage saisi pour rien. Dès qu'une vente, un règlement, un devis, une livraison, une commande ou une entrée en stock la nomme, l'application refuse et dit ce qui la retient.</li>
+</ul>
+<div class="note">
+  <span class="titre">Un compte qui porte de l'argent ne s'efface pas</span>
+  <p>Même sans aucune pièce : un <strong>solde d'ouverture</strong> est une créance ou une dette
+  reprise à la main lors de la mise en route, et l'effacer la ferait disparaître des comptes sans
+  la moindre écriture. Soldez d'abord, ou mettez la fiche en sommeil.</p>
+</div>
+<div class="note">
+  <span class="titre">Supprimer demande la connexion</span>
+  <p>Le poste ne garde que douze mois d'activité : hors ligne, il ne peut pas prouver qu'une fiche
+  n'a <em>jamais</em> servi, seulement qu'elle n'a rien servi récemment. L'application interroge
+  donc le serveur avant d'effacer, et le dit quand le réseau manque. La mise en sommeil, elle,
+  marche sans réseau et reste le bon geste dans le doute.</p>
+</div>
+
+<h3>8.2 — Encaisser un règlement client</h3>
 <div class="pasapas">
   <div class="etiquette">Pas à pas</div>
   <ol>
@@ -785,7 +805,7 @@ Inventaires</span>.</p>
   </ol>
 </div>
 
-<h3>8.2 — Relancer</h3>
+<h3>8.3 — Relancer</h3>
 <p><span class="chemin-ui">Clients → Relance clients</span> classe les impayés par ancienneté.
 <em>Envoyer par e-mail</em> ouvre votre logiciel de messagerie avec l'objet et le corps déjà écrits.
 Si aucun logiciel de messagerie n'est configuré sur le poste, le bouton <em>Copier</em> met le texte
@@ -803,6 +823,10 @@ dans le presse-papiers.</p>
   <tr><td class="chemin">Bons de commande</td><td>Passer une commande, la suivre, la réceptionner.</td></tr>
   <tr><td class="chemin">Relance fournisseur</td><td>Les commandes en retard et le courrier de relance.</td></tr>
 </table>
+
+<p>Le répertoire des fournisseurs porte les mêmes deux gestes que celui des clients —
+<strong>Désactiver</strong> et <strong>Supprimer</strong> — avec la même règle : une fiche qui a
+servi ne s'efface pas, et un compte qui porte de l'argent non plus (voir 8.1).</p>
 
 <h3>9.1 — Du bon de commande à la facture d'achat</h3>
 <div class="pasapas">

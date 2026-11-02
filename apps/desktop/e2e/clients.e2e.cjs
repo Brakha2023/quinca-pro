@@ -181,6 +181,76 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(true, 'remise client (5 %) convertie en francs sur le ticket');
   verifier(true, 'POS : sélection d’un client applique sa remise (5 %) d’office');
 
+  console.log('Suppression d’une fiche client jamais utilisée');
+  // Même règle que pour un article : la base du poste ne garde que douze mois
+  // d'activité, c'est donc le serveur qui tranche. Son comptage est simulé ici
+  // par interception REST — PostgREST le rend dans l'en-tête `Content-Range`.
+  let usagesServeur = 0;
+  const comptages = [];
+  await page.route('**/rest/v1/{ventes,reglements_clients,proformas,livraisons,ventes_brouillons}*', (route) => {
+    comptages.push(route.request().url());
+    route.fulfill({ status: 200, headers: { 'content-range': `*/${usagesServeur}`, 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' } });
+  });
+
+  // Deux fiches neuves : un doublon pur, et une autre dont le compte porte une
+  // avance d'ouverture — l'argent suffit à retenir une fiche sans pièce.
+  await page.evaluate(async (F) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { ClientsRepository } = await import('/src/infrastructure/powersync/repositories/ClientsRepository.ts');
+    const { clientFormSchema } = await import('/src/core/clients/index.ts');
+    const repo = new ClientsRepository(db);
+    await repo.create(F, clientFormSchema.parse({ raison_sociale: 'Doublon à effacer' }));
+    await repo.create(F, clientFormSchema.parse({ raison_sociale: 'Compte ouvert', solde_initial: 75000 }));
+  }, filialeId);
+
+  // Le scénario s'était terminé au comptoir : on revient au répertoire.
+  await page.goto(`${BASE_URL}/#/clients`);
+  await page.locator('tbody tr', { hasText: 'Doublon à effacer' }).waitFor();
+  const corbeille = (nom) => page.locator('tbody tr', { hasText: nom }).getByTitle('Supprimer définitivement (fiches jamais utilisées)').click();
+  const avis = (texte) => page.locator('[aria-live] > div', { hasText: texte });
+  const boutonsRendus = () => page.waitForFunction(() => [...document.querySelectorAll('[data-testid^="supprimer-client-"]')].every((b) => !b.disabled));
+
+  // SARL KONÉ a vendu et réglé : le poste tranche seul, sans déranger le serveur.
+  await corbeille('SARL KONÉ');
+  const refus = avis('SARL KONÉ');
+  await refus.waitFor();
+  await boutonsRendus();
+  const texteRefus = (await refus.textContent()).replace(/\s+/g, ' ');
+  verifier(texteRefus.includes('vente(s)') && texteRefus.includes('Désactivez-le'),
+    `client utilisé : le refus dit ce qui le retient et quoi faire (${texteRefus.slice(0, 80)}…)`);
+  verifier(comptages.length === 0, 'client utilisé : aucune requête au serveur, la réponse est locale');
+
+  // Un compte à 75 000 F d'avance : aucune pièce, mais de l'argent.
+  await corbeille('Compte ouvert');
+  const refusCompte = avis('Compte ouvert');
+  await refusCompte.waitFor();
+  await boutonsRendus();
+  verifier((await refusCompte.textContent()).includes('compte mouvementé') && comptages.length === 0,
+    'compte non soldé : la fiche est retenue sans même interroger le serveur');
+
+  // Le doublon, lui, n'a jamais servi : le serveur le confirme.
+  await corbeille('Doublon à effacer');
+  const confirmation = page.getByRole('dialog');
+  await confirmation.waitFor();
+  verifier((await confirmation.textContent()).includes('ne se défait pas'), 'fiche neuve : confirmation demandée, une fois la vérification faite');
+  verifier(comptages.length === 5 && comptages.some((u) => /reglements_clients/.test(u)) && comptages.some((u) => /ventes_brouillons/.test(u)),
+    `le serveur est interrogé sur toute l’activité du client (${comptages.length} comptages)`);
+  await confirmation.getByRole('button', { name: 'Supprimer' }).click();
+  await avis('supprimé').waitFor();
+  await page.locator('tbody tr', { hasText: 'Doublon à effacer' }).waitFor({ state: 'detached' });
+  verifier(true, 'client supprimé : la fiche quitte le répertoire');
+
+  console.log('Hors ligne : on ne supprime pas, on le dit');
+  const avantCoupure = comptages.length;
+  await page.context().setOffline(true);
+  await corbeille('Client Test UI');
+  const horsLigne = avis('Client Test UI');
+  await horsLigne.waitFor();
+  await boutonsRendus();
+  verifier(comptages.length === avantCoupure, 'hors ligne : aucune requête tentée');
+  verifier(/désactivez la fiche|Désactivez-le/.test(await horsLigne.textContent()), 'hors ligne : le message renvoie à la mise en sommeil, qui marche sans réseau');
+  await page.context().setOffline(false);
+
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');

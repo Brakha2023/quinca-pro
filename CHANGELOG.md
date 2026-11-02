@@ -34,6 +34,15 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Ajouté
 
+- **Une fiche client ou fournisseur jamais utilisée se supprime** (la corbeille, dans les deux
+  répertoires) : doublon, raison sociale mal orthographiée, client de passage saisi pour rien.
+  Dès qu'une vente, un règlement, un devis, une livraison, une commande ou une entrée en stock la
+  nomme, l'application refuse et dit ce qui la retient — *Sommeil* et *Désactiver* restent là pour
+  ce cas. Un **compte qui porte de l'argent** est retenu lui aussi, même sans aucune pièce : un
+  solde d'ouverture est une créance ou une dette, l'effacer la ferait disparaître sans écriture.
+  Comme pour un article, la vérification passe par le serveur — le poste ne garde que douze mois
+  d'activité et ne peut pas prouver seul qu'une fiche n'a jamais servi ; hors ligne, l'application
+  le dit au lieu d'effacer. Aucune migration.
 - **Le stock se valorise à l'achat et à la vente** (Stock → Suivi de stock). Le bandeau donne les
   trois chiffres du périmètre affiché — *au coût*, l'argent immobilisé aux coûts moyens des
   dépôts ; *à la vente*, ce que le même stock rapporterait au prix du catalogue ; et la *marge
@@ -120,6 +129,14 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   La vérification passe par le serveur : le poste ne garde que douze mois d'activité, il ne peut
   pas prouver seul qu'un article n'a jamais servi. Hors ligne, l'application le dit au lieu
   d'effacer. Aucune migration.
+
+### Corrigé
+
+- **Un achat réceptionné dans *Fournisseurs* marque enfin sa provenance** sur les mouvements de
+  stock qu'il crée, comme le fait une entrée saisie dans *Stock → Entrée*. Jusqu'ici le journal ne
+  savait pas de qui venait cette marchandise : le filtre par fournisseur de l'onglet *Mouvements*
+  l'ignorait, et une fiche fournisseur paraissait effaçable alors qu'elle avait livré. Les
+  mouvements déjà enregistrés ne sont pas retouchés.
 
 ### Modifié — menu Stock
 

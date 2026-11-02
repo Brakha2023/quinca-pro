@@ -1,8 +1,12 @@
 import type { Transaction } from '@powersync/web';
 import type { CaisseRow, ClientRow } from '@quinca/shared-types';
-import { calculerSolde, TYPES_EN_CAISSE, type ClientForm, type ReglementForm } from '../../../core/clients';
+import {
+  calculerSolde, motifNonSupprimableClient, TYPES_EN_CAISSE, usagesClient,
+  type Client, type ClientForm, type ReglementForm, type UsagesClient,
+} from '../../../core/clients';
 import { genererCodeTiers } from '../../../core/commun/numerotation';
 import { numeroPiece } from '../../desktop/identitePoste';
+import { usagesClientServeur } from '../../supabase/usagesTiers';
 import { BaseRepository } from './BaseRepository';
 
 export interface FiltresClients {
@@ -79,6 +83,20 @@ export interface ContexteReglement {
   utilisateurId: string | null;
 }
 
+/**
+ * Tout ce qui nomme le client, compté d'un coup dans la base du poste. Les
+ * brouillons portent le client en colonne, comme les autres pièces.
+ */
+export const USAGES_CLIENT_QUERY = `
+  SELECT (SELECT COUNT(*) FROM ventes             WHERE client_id = ?) AS ventes,
+         (SELECT COUNT(*) FROM reglements_clients WHERE client_id = ?) AS reglements,
+         (SELECT COUNT(*) FROM proformas          WHERE client_id = ?) AS devis,
+         (SELECT COUNT(*) FROM livraisons         WHERE client_id = ?) AS livraisons,
+         (SELECT COUNT(*) FROM ventes_brouillons  WHERE client_id = ?) AS brouillons`;
+
+/** Ce qu'il faut connaître d'un client pour décider de son effacement. */
+export type ClientASupprimer = Pick<Client, 'id' | 'code' | 'raison_sociale' | 'solde_initial' | 'cumul_factures' | 'cumul_reglements'>;
+
 export class ClientsRepository extends BaseRepository {
   async create(filialeId: string, form: ClientForm): Promise<string> {
     const id = this.nouvelId();
@@ -130,8 +148,49 @@ export class ClientsRepository extends BaseRepository {
     };
   }
 
+  /**
+   * Un client qui a servi ne se supprime pas : il se désactive. Il quitte les
+   * écrans de saisie, son compte et son histoire restent lisibles.
+   */
   async setActif(id: string, actif: boolean): Promise<void> {
     await this.patch(this.db, 'clients', id, { est_actif: actif ? 1 : 0 });
+  }
+
+  /** Ce qui rattache le client à l'activité, vu depuis la base du poste. */
+  async usages(id: string): Promise<UsagesClient> {
+    const row = await this.db.get<Partial<UsagesClient>>(USAGES_CLIENT_QUERY, Array<string>(5).fill(id));
+    return usagesClient(row);
+  }
+
+  /**
+   * Pourquoi ce client ne peut pas être supprimé — ou `null` s'il peut l'être.
+   *
+   * Deux regards, dans cet ordre, comme pour un article : le poste répond sans
+   * réseau et sans attendre, mais il ne garde que douze mois d'activité ; son
+   * silence ne prouve rien. Le serveur, lui, a tout l'historique, et c'est lui
+   * qui refuserait l'effacement. Hors ligne, on ne supprime pas : on le dit, et
+   * « Désactiver » reste là.
+   */
+  async motifDeRefus(client: ClientASupprimer): Promise<string | null> {
+    const surLePoste = motifNonSupprimableClient(client, await this.usages(client.id));
+    if (surLePoste) return surLePoste;
+
+    const auServeur = await usagesClientServeur(client.id);
+    if (!auServeur) {
+      return `Sans réseau, le poste ne peut pas garantir que « ${client.code} » n'a jamais servi : il n'en garde que douze mois. Reconnectez-vous pour le supprimer, ou désactivez la fiche dès maintenant.`;
+    }
+    return motifNonSupprimableClient(client, auServeur);
+  }
+
+  /**
+   * Efface définitivement une fiche client jamais utilisée (doublon, faute de
+   * frappe, client de passage saisi pour rien). La garde est refaite ici :
+   * aucun appelant ne doit pouvoir effacer un compte qui a une histoire.
+   */
+  async supprimer(client: ClientASupprimer): Promise<void> {
+    const motif = motifNonSupprimableClient(client, await this.usages(client.id));
+    if (motif) throw new Error(motif);
+    await this.db.execute('DELETE FROM clients WHERE id = ?', [client.id]);
   }
 
   async codeExiste(filialeId: string, code: string, excludeId?: string): Promise<boolean> {

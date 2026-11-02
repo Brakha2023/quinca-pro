@@ -5,10 +5,13 @@ import { genererCodeTiers } from '../../../core/commun/numerotation';
 import { numeroPiece } from '../../desktop/identitePoste';
 import { arrondirMontant } from '../../../core/commun/prix';
 import {
-  calculerDette, ligneCommandeFromRow, statutApresReception, totalLigneCommande, totauxAchat, totauxCommande, valoriserReception,
-  type Achat, type BonCommande, type FournisseurForm, type Reception, type ReglementFournisseurForm,
+  calculerDette, ligneCommandeFromRow, motifNonSupprimableFournisseur, statutApresReception, totalLigneCommande,
+  totauxAchat, totauxCommande, usagesFournisseur, valoriserReception,
+  type Achat, type BonCommande, type Fournisseur, type FournisseurForm, type Reception,
+  type ReglementFournisseurForm, type UsagesFournisseur,
 } from '../../../core/fournisseurs';
 import { fusionnerLignes } from '../../../core/stock';
+import { usagesFournisseurServeur } from '../../supabase/usagesTiers';
 import { BaseRepository } from './BaseRepository';
 import { mouvementerDetteFournisseur } from './compteFournisseur';
 import { StockRepository } from './StockRepository';
@@ -103,6 +106,15 @@ export function reglementsFournisseursQuery(filialeId: string | null, filtres: F
   };
 }
 
+/** Tout ce qui nomme le fournisseur, compté d'un coup dans la base du poste. */
+export const USAGES_FOURNISSEUR_QUERY = `
+  SELECT (SELECT COUNT(*) FROM commandes_fournisseurs  WHERE fournisseur_id = ?) AS commandes,
+         (SELECT COUNT(*) FROM reglements_fournisseurs WHERE fournisseur_id = ?) AS reglements,
+         (SELECT COUNT(*) FROM mouvements_stock        WHERE fournisseur_id = ?) AS entrees`;
+
+/** Ce qu'il faut connaître d'un fournisseur pour décider de son effacement. */
+export type FournisseurASupprimer = Pick<Fournisseur, 'id' | 'code' | 'raison_sociale' | 'solde_initial' | 'cumul_factures' | 'cumul_reglements'>;
+
 export interface ContexteFournisseur {
   filialeId: string;
   utilisateurId: string | null;
@@ -145,8 +157,42 @@ export class FournisseursRepository extends BaseRepository {
     };
   }
 
+  /**
+   * Un fournisseur qui a servi ne se supprime pas : il se désactive. Il quitte
+   * les écrans de saisie, son compte et son histoire restent lisibles.
+   */
   async setActif(id: string, actif: boolean): Promise<void> {
     await this.patch(this.db, 'fournisseurs', id, { est_actif: actif ? 1 : 0 });
+  }
+
+  /** Ce qui rattache le fournisseur à l'activité, vu depuis la base du poste. */
+  async usages(id: string): Promise<UsagesFournisseur> {
+    const row = await this.db.get<Partial<UsagesFournisseur>>(USAGES_FOURNISSEUR_QUERY, Array<string>(3).fill(id));
+    return usagesFournisseur(row);
+  }
+
+  /**
+   * Pourquoi ce fournisseur ne peut pas être supprimé — ou `null` s'il peut
+   * l'être. Le poste répond tout de suite mais ne garde que douze mois : c'est
+   * le serveur qui tranche, et hors ligne on ne supprime pas (voir
+   * `ClientsRepository.motifDeRefus`, même règle).
+   */
+  async motifDeRefus(fournisseur: FournisseurASupprimer): Promise<string | null> {
+    const surLePoste = motifNonSupprimableFournisseur(fournisseur, await this.usages(fournisseur.id));
+    if (surLePoste) return surLePoste;
+
+    const auServeur = await usagesFournisseurServeur(fournisseur.id);
+    if (!auServeur) {
+      return `Sans réseau, le poste ne peut pas garantir que « ${fournisseur.code} » n'a jamais servi : il n'en garde que douze mois. Reconnectez-vous pour le supprimer, ou désactivez la fiche dès maintenant.`;
+    }
+    return motifNonSupprimableFournisseur(fournisseur, auServeur);
+  }
+
+  /** Efface définitivement une fiche fournisseur jamais utilisée. */
+  async supprimer(fournisseur: FournisseurASupprimer): Promise<void> {
+    const motif = motifNonSupprimableFournisseur(fournisseur, await this.usages(fournisseur.id));
+    if (motif) throw new Error(motif);
+    await this.db.execute('DELETE FROM fournisseurs WHERE id = ?', [fournisseur.id]);
   }
 
   async codeExiste(filialeId: string, code: string, excludeId?: string): Promise<boolean> {
@@ -172,7 +218,10 @@ export class FournisseursRepository extends BaseRepository {
       );
       const stock = new StockRepository(this.db);
       for (const ligne of fusionnerLignes(achat.lignes)) {
-        await stock.appliquerDansTransaction(tx, ctx, achat.depot_id, 'ENTREE_ACHAT', { article_id: ligne.article_id, quantite: ligne.quantite, cout_unitaire: ligne.cout_unitaire }, numero, `Achat ${numero}`);
+        // La provenance suit la marchandise : sans elle, le journal du stock ne
+        // sait plus de qui vient ce qui est entré, et une fiche fournisseur
+        // paraîtrait effaçable alors qu'elle a livré.
+        await stock.appliquerDansTransaction(tx, ctx, achat.depot_id, 'ENTREE_ACHAT', { article_id: ligne.article_id, quantite: ligne.quantite, cout_unitaire: ligne.cout_unitaire }, numero, `Achat ${numero}`, { fournisseurId: achat.fournisseur_id });
         const a = await tx.get<ArticleRow>('SELECT code, designation, unite FROM articles WHERE id = ?', [ligne.article_id]);
         await this.insererLigneCommande(tx, id, ctx.filialeId, a, ligne.article_id, ligne.quantite, ligne.quantite, ligne.cout_unitaire, now);
       }
@@ -219,7 +268,7 @@ export class FournisseursRepository extends BaseRepository {
       const reference = reception.reference || c.numero || '';
       const stock = new StockRepository(this.db);
       for (const d of v.lignes) {
-        await stock.appliquerDansTransaction(tx, ctx, reception.depot_id, 'ENTREE_ACHAT', { article_id: d.ligne.article_id, quantite: d.quantite_recue, cout_unitaire: d.cout_unitaire }, reference, `Réception ${c.numero}`);
+        await stock.appliquerDansTransaction(tx, ctx, reception.depot_id, 'ENTREE_ACHAT', { article_id: d.ligne.article_id, quantite: d.quantite_recue, cout_unitaire: d.cout_unitaire }, reference, `Réception ${c.numero}`, { fournisseurId: c.fournisseur_id });
         // Pas de colonne updated_at sur les lignes : mise à jour directe.
         await tx.execute('UPDATE lignes_commande_fournisseur SET quantite_recue = ? WHERE id = ?', [d.ligne.quantite_recue + d.quantite_recue, d.ligne.id]);
       }

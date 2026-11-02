@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BanknotesIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, ScaleIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, ScaleIcon, TruckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { Fournisseur } from '../../../core/fournisseurs';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
+import { usePermissions } from '../../auth/usePermissions';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
@@ -33,6 +34,9 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
   const [avecDette, setAvecDette] = useState(false);
   const [inclureInactifs, setInclureInactifs] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  /** Fiche en cours de vérification au serveur : les boutons attendent la réponse. */
+  const [verification, setVerification] = useState<string | null>(null);
+  const { peut } = usePermissions();
   const { fournisseurs, isLoading } = useFournisseurs(filialeId, { recherche, avecDette, inclureInactifs });
   const totaux = fournisseurs.reduce(
     (t, f) => ({ initial: t.initial + f.solde_initial, factures: t.factures + f.cumul_factures, reglements: t.reglements + f.cumul_reglements, solde: t.solde + f.solde_actuel, dettes: t.dettes + Math.max(f.solde_actuel, 0) }),
@@ -44,6 +48,34 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
     if (!(await confirmer({ message: `${f.est_actif ? 'Désactiver' : 'Réactiver'} ${f.raison_sociale} ?`, libelleConfirmer: f.est_actif ? 'Désactiver' : 'Réactiver', danger: f.est_actif }))) return;
     try { await repository.setActif(f.id, !f.est_actif); notifier('succes', `${f.raison_sociale} ${f.est_actif ? 'désactivé' : 'réactivé'}.`); }
     catch (error) { notifier('erreur', error instanceof Error ? error.message : 'Opération impossible.'); }
+  };
+
+  /**
+   * Suppression définitive, réservée aux fiches qui n'ont jamais servi.
+   * Vérifiée au serveur avant toute question (voir
+   * `FournisseursRepository.motifDeRefus`), d'où l'attente affichée.
+   */
+  const supprimer = async (f: Fournisseur) => {
+    setVerification(f.id);
+    try {
+      const motif = await repository.motifDeRefus(f);
+      if (motif) { notifier('erreur', motif); return; }
+
+      const ok = await confirmer({
+        titre: `Supprimer ${f.code}`,
+        message: `La fiche de « ${f.raison_sociale} » disparaîtra du répertoire, sur ce poste comme sur les autres. Ce fournisseur n'a jamais servi : rien d'autre ne s'efface avec lui. Cette opération ne se défait pas.`,
+        libelleConfirmer: 'Supprimer',
+        danger: true,
+      });
+      if (!ok) return;
+
+      await repository.supprimer(f);
+      notifier('succes', `Fournisseur ${f.code} supprimé.`);
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Suppression impossible.');
+    } finally {
+      setVerification(null);
+    }
   };
 
   const action = 'p-1.5 rounded';
@@ -95,6 +127,10 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
                       <button onClick={() => setModal({ type: 'reglement', f })} className={`${action} hover:bg-green-50 text-green-700`} title="Règlement"><BanknotesIcon className="w-4 h-4" /></button>
                       <button onClick={() => navigate(cheminFournisseurs('relance', f.id))} className={`${action} hover:bg-orange-50 text-orange-600`} title="Relance par e-mail" disabled={!f.email}><EnvelopeIcon className="w-4 h-4" /></button>
                       <button onClick={() => basculerActif(f)} className={`px-2 py-1 rounded text-xs font-medium ${f.est_actif ? 'text-red-600 hover:bg-red-50' : 'text-green-700 hover:bg-green-50'}`}>{f.est_actif ? 'Désactiver' : 'Réactiver'}</button>
+                      {/* Effacer n'est pas désactiver : réservé à qui tient le répertoire. */}
+                      {peut('fournisseurs.ecrire') && (
+                        <button onClick={() => supprimer(f)} disabled={verification !== null} className={`${action} text-red-500 hover:bg-red-50 disabled:opacity-40`} title="Supprimer définitivement (fiches jamais utilisées)" data-testid={`supprimer-fournisseur-${f.code}`}><TrashIcon className="w-4 h-4" /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
