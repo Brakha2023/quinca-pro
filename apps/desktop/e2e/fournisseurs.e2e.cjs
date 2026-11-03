@@ -113,7 +113,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
 
   await page.getByRole('button', { name: 'Balance générale' }).click();
   await page.locator('#zone-impression .document-titre', { hasText: 'Balance générale' }).waitFor();
-  verifier((await page.locator('#zone-impression tbody tr').count()) === 1, 'balance générale fournisseurs : aperçu imprimable');
+  verifier((await page.locator('#zone-impression tbody tr:not(:last-child)').count()) === 1, 'balance générale fournisseurs : aperçu imprimable');
+  verifier((await page.textContent('#zone-impression .document-liste-pied')).includes('Balance générale fournisseurs'),
+    'balance générale : pied répété à chaque page');
   await page.keyboard.press('Escape');
 
   await sousMenu.getByRole('link', { name: 'Nouveau fournisseur' }).click();

@@ -129,8 +129,10 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
           <p>{clientId ? clients.find((c) => c.id === clientId)?.raison_sociale : 'Tous clients'} · du {dateDebut || '…'} au {dateFin || '…'} · édité le {new Date().toLocaleDateString('fr-FR')}</p>
           <table className="document-liste">
             <thead><tr><th>Date</th><th>N° règlement</th><th>Désignation</th><th>Apport</th>{clientId && <th>Utilisé</th>}{clientId && <th>Disponibilité</th>}<th>Type</th><th>Client</th><th>N° vente</th></tr></thead>
-            <tbody>{versements.map((v) => { const l = lettre(v); return <tr key={v.id}><td>{formaterDate(v.date_reglement)}</td><td>{v.numero}</td><td>{nature(v)}</td><td className="num">{formaterFcfa(v.montant)}</td>{clientId && <td className="num">{l ? formaterFcfa(l.utilise) : ''}</td>}{clientId && <td className="num">{l ? formaterFcfa(l.disponibilite) : ''}</td>}<td>{LIBELLES_TYPE_REGLEMENT[(v.type_reglement ?? 'ESPECES') as TypeReglement]}</td><td>{v.client_nom}</td><td>{v.vente_numero ?? ''}</td></tr>; })}</tbody>
-            <tfoot><tr><th colSpan={3}>Total</th><th className="num">{formaterFcfa(total)}</th>{clientId && <th className="num">{formaterFcfa(totalUtilise ?? 0)}</th>}{clientId && <th className="num">{formaterFcfa(totalDispo ?? 0)}</th>}<th colSpan={3} /></tr></tfoot>
+            <tbody>{versements.map((v) => { const l = lettre(v); return <tr key={v.id}><td>{formaterDate(v.date_reglement)}</td><td>{v.numero}</td><td>{nature(v)}</td><td className="num">{formaterFcfa(v.montant)}</td>{clientId && <td className="num">{l ? formaterFcfa(l.utilise) : ''}</td>}{clientId && <td className="num">{l ? formaterFcfa(l.disponibilite) : ''}</td>}<td>{LIBELLES_TYPE_REGLEMENT[(v.type_reglement ?? 'ESPECES') as TypeReglement]}</td><td>{v.client_nom}</td><td>{v.vente_numero ?? ''}</td></tr>; })}
+              <tr><th colSpan={3}>Total</th><th className="num">{formaterFcfa(total)}</th>{clientId && <th className="num">{formaterFcfa(totalUtilise ?? 0)}</th>}{clientId && <th className="num">{formaterFcfa(totalDispo ?? 0)}</th>}<th colSpan={3} /></tr>
+            </tbody>
+            <tfoot><tr><td colSpan={clientId ? 9 : 7} className="document-liste-pied">Historique des versements clients · {filiale.nom} · {clientId ? clients.find((c) => c.id === clientId)?.raison_sociale : 'tous clients'} · du {dateDebut || '…'} au {dateFin || '…'} · total {formaterFcfa(total)} · édité le {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
         </DocumentImprimable>
       )}

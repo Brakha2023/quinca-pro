@@ -185,8 +185,11 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
               {clients.map((c) => (
                 <tr key={c.id}><td>{c.numero_compte ?? c.code}</td><td>{c.raison_sociale}</td><td>{c.mobile ?? c.telephone ?? ''}</td><td className="num">{formaterFcfa(c.solde_initial)}</td><td className="num">{formaterFcfa(c.cumul_factures)}</td><td className="num">{formaterFcfa(c.cumul_reglements)}</td><td className="num"><strong>{formaterFcfa(c.solde_actuel)}</strong></td><td className="num">{formaterFcfa(disponibiliteCredit(c))}</td><td className="num">{formaterFcfa(c.plafond_credit)}</td></tr>
               ))}
+              <tr><th colSpan={3}>Totaux</th><th className="num">{formaterFcfa(totaux.initial)}</th><th className="num">{formaterFcfa(totaux.factures)}</th><th className="num">{formaterFcfa(totaux.reglements)}</th><th className="num">{formaterFcfa(totaux.solde)}</th><th className="num">{formaterFcfa(totaux.disponibilite)}</th><th className="num">{formaterFcfa(totaux.plafond)}</th></tr>
             </tbody>
-            <tfoot><tr><th colSpan={3}>Totaux</th><th className="num">{formaterFcfa(totaux.initial)}</th><th className="num">{formaterFcfa(totaux.factures)}</th><th className="num">{formaterFcfa(totaux.reglements)}</th><th className="num">{formaterFcfa(totaux.solde)}</th><th className="num">{formaterFcfa(totaux.disponibilite)}</th><th className="num">{formaterFcfa(totaux.plafond)}</th></tr></tfoot>
+            {/* Répété au bas de chaque page : une page détachée du reste doit
+                dire d'où elle sort. */}
+            <tfoot><tr><td colSpan={9} className="document-liste-pied">Situation des comptes clients · {filiale.nom}{groupe ? ` · groupe ${groupe}` : ''} · {clients.length} client(s) · solde {formaterFcfa(totaux.solde)} · arrêtée au {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
         </DocumentImprimable>
       )}

@@ -198,6 +198,11 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   or un cadre qui défile ne défile plus sur du papier, il coupe. L'écran s'imprime maintenant
   couché, sans la barre latérale ni les boutons, et réduit de ce qu'il faut : **ce qui tient à
   l'écran tient sur la feuille**.
+- **Une page détachée d'une liste dit d'où elle sort.** Les neuf listes reprises ci-dessous
+  portaient leur total au pied du tableau, et rien d'autre : la page 2 d'une liste de trois pages
+  ne disait ni ce qu'elle listait, ni pour quelle filiale, ni à quelle date. Le total redescend
+  avec les lignes qu'il additionne, et le pied — répété au bas de chaque page par l'imprimante —
+  porte désormais l'identification de la feuille, comme sur les autres listes de la maison.
 - **Les listes imprimées ne coupent plus une ligne en deux.** La situation des comptes clients, la
   balance générale fournisseurs, les historiques de versements et de règlements, les relevés de
   compte client et fournisseur, la liste du personnel, la feuille de présence et la fiche

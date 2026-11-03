@@ -112,7 +112,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
 
   await page.getByRole('button', { name: 'Imprimer le tableau' }).click();
   await page.locator('#zone-impression .document-titre', { hasText: 'Situation des comptes clients' }).waitFor();
-  verifier((await page.locator('#zone-impression tbody tr').count()) === 2, 'tableau des comptes clients : aperçu imprimable');
+  verifier((await page.locator('#zone-impression tbody tr:not(:last-child)').count()) === 2, 'tableau des comptes clients : aperçu imprimable');
+  verifier((await page.textContent('#zone-impression .document-liste-pied')).includes('Situation des comptes clients'),
+    'feuille des comptes clients : pied répété à chaque page');
   await page.keyboard.press('Escape');
 
   await sousMenu.getByRole('link', { name: 'Historique des versements' }).click();

@@ -86,8 +86,10 @@ export default function CompteFournisseurPanel({ filialeId, filiale }: Props) {
           </div>
           <table className="document-liste">
             <thead><tr><th>Date</th><th>Pièce</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Solde</th></tr></thead>
-            <tbody>{releve.map((l, i) => <tr key={i}><td>{formaterDate(l.date)}</td><td>{l.piece}</td><td>{l.libelle}</td><td className="num">{l.debit ? formaterFcfa(l.debit) : ''}</td><td className="num">{l.credit ? formaterFcfa(l.credit) : ''}</td><td className="num">{formaterFcfa(l.solde)}</td></tr>)}</tbody>
-            <tfoot><tr><th colSpan={3}>Totaux</th><th className="num">{formaterFcfa(totalDebit)}</th><th className="num">{formaterFcfa(totalCredit)}</th><th className="num">{formaterFcfa(fournisseur.solde_actuel)}</th></tr></tfoot>
+            <tbody>{releve.map((l, i) => <tr key={i}><td>{formaterDate(l.date)}</td><td>{l.piece}</td><td>{l.libelle}</td><td className="num">{l.debit ? formaterFcfa(l.debit) : ''}</td><td className="num">{l.credit ? formaterFcfa(l.credit) : ''}</td><td className="num">{formaterFcfa(l.solde)}</td></tr>)}
+              <tr><th colSpan={3}>Totaux</th><th className="num">{formaterFcfa(totalDebit)}</th><th className="num">{formaterFcfa(totalCredit)}</th><th className="num">{formaterFcfa(fournisseur.solde_actuel)}</th></tr>
+            </tbody>
+            <tfoot><tr><td colSpan={6} className="document-liste-pied">Relevé de compte · {fournisseur.raison_sociale} · {filiale.nom} · solde {formaterFcfa(fournisseur.solde_actuel)} · édité le {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
         </DocumentImprimable>
       )}

@@ -167,8 +167,11 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
               {fournisseurs.map((f) => (
                 <tr key={f.id}><td>{f.numero_compte ?? f.code}</td><td>{f.raison_sociale}</td><td className="num">{formaterFcfa(f.solde_initial)}</td><td className="num">{formaterFcfa(f.cumul_factures)}</td><td className="num">{formaterFcfa(f.cumul_reglements)}</td><td className="num"><strong>{formaterFcfa(f.solde_actuel)}</strong></td></tr>
               ))}
+              <tr><th colSpan={2}>Total</th><th className="num">{formaterFcfa(totaux.initial)}</th><th className="num">{formaterFcfa(totaux.factures)}</th><th className="num">{formaterFcfa(totaux.reglements)}</th><th className="num">{formaterFcfa(totaux.solde)}</th></tr>
             </tbody>
-            <tfoot><tr><th colSpan={2}>Total</th><th className="num">{formaterFcfa(totaux.initial)}</th><th className="num">{formaterFcfa(totaux.factures)}</th><th className="num">{formaterFcfa(totaux.reglements)}</th><th className="num">{formaterFcfa(totaux.solde)}</th></tr></tfoot>
+            {/* Répété au bas de chaque page : une page détachée du reste doit
+                dire d'où elle sort. */}
+            <tfoot><tr><td colSpan={6} className="document-liste-pied">Balance générale fournisseurs · {filiale.nom} · {fournisseurs.length} fournisseur(s) · solde {formaterFcfa(totaux.solde)} · arrêtée au {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
         </DocumentImprimable>
       )}

@@ -129,6 +129,9 @@ export default function EffectifPanel({ filialeId, filiale }: Props) {
           <table className="document-liste">
             <thead><tr><th>Matricule</th><th>Nom et prénom</th><th>Sexe</th><th>Téléphone</th><th>Fonction</th><th>Contrat</th><th>Début</th><th>Statut</th></tr></thead>
             <tbody>{employes.map((e) => <tr key={e.id}><td>{e.matricule}</td><td>{nomComplet(e)}</td><td>{e.sexe ?? ''}</td><td>{e.telephone ?? ''}</td><td>{e.fonction ?? ''}</td><td>{LIBELLES_TYPE_CONTRAT[e.type_contrat]}</td><td>{e.date_debut ? formaterDate(e.date_debut) : ''}</td><td>{e.est_actif ? 'Actif' : 'Inactif'}</td></tr>)}</tbody>
+            {/* Répété au bas de chaque page : une page détachée du reste doit
+                dire d'où elle sort. */}
+            <tfoot><tr><td colSpan={8} className="document-liste-pied">Liste du personnel · {filiale.nom} · {employes.length} employé(s) · éditée le {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
         </DocumentImprimable>
       )}

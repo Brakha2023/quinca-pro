@@ -84,8 +84,10 @@ export default function PaiementPanel({ filialeId, filiale }: Props) {
           <p>Paiement des salaires de {libellePeriode(periode)} · {paies.length} employé(s){document.avecSalaire ? ` · total ${formaterFcfa(total)}` : ''}</p>
           <table className="document-liste">
             <thead><tr><th>N°</th><th>Matricule</th><th>Nom et prénom</th><th>Fonction</th>{document.avecSalaire && <th>Net payé</th>}<th style={{ width: '38mm' }}>Émargement</th></tr></thead>
-            <tbody>{paies.map((p, i) => <tr key={p.id} style={{ height: 34 }}><td className="num">{i + 1}</td><td>{p.matricule}</td><td>{nomComplet(p)}</td><td>{p.fonction ?? ''}</td>{document.avecSalaire && <td className="num">{formaterFcfa(p.net_a_payer)}</td>}<td /></tr>)}</tbody>
-            {document.avecSalaire && <tfoot><tr><th colSpan={4}>Total</th><th className="num">{formaterFcfa(total)}</th><th /></tr></tfoot>}
+            <tbody>{paies.map((p, i) => <tr key={p.id} style={{ height: 34 }}><td className="num">{i + 1}</td><td>{p.matricule}</td><td>{nomComplet(p)}</td><td>{p.fonction ?? ''}</td>{document.avecSalaire && <td className="num">{formaterFcfa(p.net_a_payer)}</td>}<td /></tr>)}
+              {document.avecSalaire && <tr><th colSpan={4}>Total</th><th className="num">{formaterFcfa(total)}</th><th /></tr>}
+            </tbody>
+            <tfoot><tr><td colSpan={document.avecSalaire ? 6 : 5} className="document-liste-pied">Fiche d'émargement · {libellePeriode(periode)} · {filiale.nom} · {paies.length} employé(s){document.avecSalaire ? ` · total ${formaterFcfa(total)}` : ''} · éditée le {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
           <div className="document-cartouches"><div className="document-bloc" style={{ width: '60mm', height: '25mm' }}>Le caissier</div><div className="document-bloc" style={{ width: '60mm', height: '25mm' }}>Le gérant</div></div>
         </DocumentImprimable>

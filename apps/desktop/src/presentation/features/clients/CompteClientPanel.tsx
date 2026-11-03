@@ -92,8 +92,11 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
           </div>
           <table className="document-liste">
             <thead><tr><th>Date</th><th>N° pièce</th><th>Désignation</th><th>Facture</th><th>Règlement</th><th>Disponibilité</th><th>Solde</th></tr></thead>
-            <tbody>{lignesTable(true)}</tbody>
-            <tfoot><tr><th colSpan={3}>Total</th><th className="num">{formaterFcfa(totalFacture)}</th><th className="num">{formaterFcfa(totalReglement)}</th><th className="num">{formaterFcfa(Math.max(-client.solde_actuel, 0))}</th><th className="num">{formaterFcfa(client.solde_actuel)}</th></tr></tfoot>
+            <tbody>
+              {lignesTable(true)}
+              <tr><th colSpan={3}>Total</th><th className="num">{formaterFcfa(totalFacture)}</th><th className="num">{formaterFcfa(totalReglement)}</th><th className="num">{formaterFcfa(Math.max(-client.solde_actuel, 0))}</th><th className="num">{formaterFcfa(client.solde_actuel)}</th></tr>
+            </tbody>
+            <tfoot><tr><td colSpan={7} className="document-liste-pied">Relevé de compte · {client.raison_sociale} · {filiale.nom} · solde {formaterFcfa(client.solde_actuel)} · édité le {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
         </DocumentImprimable>
       )}

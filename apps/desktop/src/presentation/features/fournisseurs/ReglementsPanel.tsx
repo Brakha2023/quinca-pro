@@ -69,8 +69,10 @@ export default function ReglementsPanel({ filialeId, filiale }: Props) {
           <p>{fournisseurId ? fournisseurs.find((f) => f.id === fournisseurId)?.raison_sociale : 'Tous fournisseurs'}{dateDebut || dateFin ? ` · du ${dateDebut || '…'} au ${dateFin || '…'}` : ''} · édité le {new Date().toLocaleDateString('fr-FR')}</p>
           <table className="document-liste">
             <thead><tr><th>Date</th><th>N° pièce</th><th>Fournisseur</th><th>Mode</th><th>Référence</th><th>Montant</th></tr></thead>
-            <tbody>{reglements.map((r) => <tr key={r.id}><td>{formaterDateHeure(r.date_reglement)}</td><td>{r.numero}</td><td>{r.fournisseur_nom}</td><td>{LIBELLES_TYPE_REGLEMENT[(r.type_reglement ?? 'ESPECES') as TypeReglement]}</td><td>{r.reference ?? ''}</td><td className="num">{formaterFcfa(r.montant)}</td></tr>)}</tbody>
-            <tfoot><tr><th colSpan={5}>Total</th><th className="num">{formaterFcfa(total)}</th></tr></tfoot>
+            <tbody>{reglements.map((r) => <tr key={r.id}><td>{formaterDateHeure(r.date_reglement)}</td><td>{r.numero}</td><td>{r.fournisseur_nom}</td><td>{LIBELLES_TYPE_REGLEMENT[(r.type_reglement ?? 'ESPECES') as TypeReglement]}</td><td>{r.reference ?? ''}</td><td className="num">{formaterFcfa(r.montant)}</td></tr>)}
+              <tr><th colSpan={5}>Total</th><th className="num">{formaterFcfa(total)}</th></tr>
+            </tbody>
+            <tfoot><tr><td colSpan={6} className="document-liste-pied">Historique des règlements fournisseurs · {filiale.nom} · {fournisseurId ? fournisseurs.find((f) => f.id === fournisseurId)?.raison_sociale : 'tous fournisseurs'}{dateDebut || dateFin ? ` · du ${dateDebut || '…'} au ${dateFin || '…'}` : ''} · total {formaterFcfa(total)} · édité le {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>
           </table>
         </DocumentImprimable>
       )}
