@@ -192,6 +192,12 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   deux polices sont désormais dans l'installeur (188 Ko, latin seulement), et l'application
   n'appelle plus aucun serveur extérieur pour s'afficher. Les pièces imprimées, elles, n'étaient
   pas concernées : elles s'écrivent en Arial, qui est sur la machine.
+- **Ctrl+P ne tronque plus l'écran courant.** Chaque écran a son bouton *Imprimer / PDF*, qui reste
+  le bon chemin ; mais pour qui tape Ctrl+P, la liste sortait amputée de ses dernières colonnes,
+  sans rien qui le signale — un tableau garde sa largeur naturelle et c'est son cadre qui défile,
+  or un cadre qui défile ne défile plus sur du papier, il coupe. L'écran s'imprime maintenant
+  couché, sans la barre latérale ni les boutons, et réduit de ce qu'il faut : **ce qui tient à
+  l'écran tient sur la feuille**.
 - **Les listes imprimées ne coupent plus une ligne en deux.** La situation des comptes clients, la
   balance générale fournisseurs, les historiques de versements et de règlements, les relevés de
   compte client et fournisseur, la liste du personnel, la feuille de présence et la fiche

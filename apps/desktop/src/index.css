@@ -287,6 +287,46 @@
 /* Le pied porte le total : il se rattache à l'entête, pas aux lignes. */
 .tableau > tfoot > tr > th, .tableau > tfoot > tr > td { border-top: 2px solid #a9c6ea; }
 
+/* ---------- Ctrl+P sur un écran ordinaire ----------
+
+   Chaque écran a son bouton *Imprimer / PDF*, qui sort une pièce dessinée pour
+   le papier, avec les bonnes colonnes et un pied qui l'identifie : c'est le
+   bon chemin, et rien ici ne cherche à le remplacer. Mais Ctrl+P existe, des
+   gens s'en servent, et ce qu'il rendait n'était pas seulement laid : il était
+   **faux**. Un tableau de gestion garde sa largeur naturelle et c'est son
+   cadre qui défile ; à l'impression, un cadre qui défile ne défile plus, il
+   coupe — la liste sortait amputée de ses dernières colonnes, sans rien qui le
+   signale.
+
+   La règle retenue tient en une phrase : **ce qui tient à l'écran tient sur la
+   feuille**. L'application se retire — barre latérale, barre du haut,
+   bandeaux, boutons —, les cadres rendent ce qu'ils retenaient, la feuille se
+   couche, et l'ensemble est réduit d'un tiers. Une A4 couchée offre alors
+   1 047 px de papier pour 1 586 px de mise en page, soit plus que la fenêtre
+   la plus large sur laquelle on travaille.
+
+   Réduire plutôt que remettre en page, c'est un choix. Forcer le tableau à la
+   largeur de la feuille a été essayé : l'algorithme écrase alors les colonnes
+   de texte et rend « ÉTABLIS/SEMENT/S KOUASSI », quand il ne coupe pas un
+   montant en deux (« 1 00 / 0 F ») — pire que la colonne manquante qu'on
+   voulait éviter. Réduit, le tableau sort exactement tel qu'on le lisait.
+
+   Rien de tout cela n'entre en jeu quand une pièce est à l'écran : la zone
+   d'impression efface alors `#root` entièrement (voir plus haut), et la pièce
+   garde sa propre page. */
+@page ecran-couche { size: A4 landscape; margin: 10mm; }
+@media print {
+  #root { page: ecran-couche; zoom: .66; }
+  aside, header, [data-testid^='bandeau-'] { display: none !important; }
+  main { overflow: visible !important; padding: 0 !important; }
+  .h-screen { height: auto !important; }
+  .overflow-hidden, .overflow-y-auto, .overflow-x-auto { overflow: visible !important; }
+  :has(> .tableau) { overflow: visible !important; }
+  /* Un bouton sur une feuille de papier ne sert à personne. */
+  button { display: none !important; }
+  .shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl { box-shadow: none !important; }
+}
+
 /* Aperçu avant impression : plein écran à l'écran, seul le document à l'impression. */
 #zone-impression.apercu-impression { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60; background: rgba(23, 23, 23, .75); overflow: auto; padding: 0 0 24px; }
 .apercu-barre { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: #171717; color: #fff; font: 500 14px system-ui, sans-serif; }
