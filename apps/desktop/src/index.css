@@ -195,6 +195,43 @@
 .tableau { width: max-content; min-width: 100%; white-space: nowrap; }
 :has(> .tableau) { overflow-x: auto; }
 
+/* ---------- Couleurs d'un tableau de données ----------
+   Un tableau de gestion est large, et le regard y revient cent fois par jour :
+   il lui faut un haut et une ligne courante. Quatre niveaux, et pas un de
+   plus — l'entête, une ligne sur deux à peine teintée pour tenir la ligne
+   jusqu'au bout, le survol, et la ligne qui tient le clavier.
+
+   **L'entête** n'est pas une ligne de données : fond bleuté de la famille du
+   primaire, texte sombre, et un trait épais qui ferme le bandeau — au-dessus
+   du gris pâle que portaient les entêtes, qui se confondait avec une ligne de
+   total. Les règles visent les `th` et non le `thead` : le fond d'une cellule
+   passe devant celui de la ligne, et les classes déjà écrites à l'écran n'ont
+   pas à être retirées une par une.
+
+   **Les lignes** se teintent par superposition, en `background-image` et non en
+   `background-color` : une ligne d'alerte garde son rouge, une ligne de total
+   son gris, et la teinte du survol se pose par-dessus. Un fond franc, lui,
+   aurait effacé l'alerte au passage de la souris — précisément quand on la
+   regarde.
+
+   **La ligne courante** est celle que la souris survole *ou* celle qui tient le
+   clavier : même question — « où suis-je ? » —, même couleur, en plus marqué,
+   et un filet primaire en tête de ligne. Il est posé sur la première cellule,
+   car une ombre sur un `tr` ne se dessine pas quand les bordures sont
+   fusionnées. */
+.tableau > thead > tr > th {
+  background: #e8f0fb;
+  color: #1e3a5f;
+  font-weight: 600;
+  border-bottom: 2px solid #a9c6ea;
+}
+.tableau > tbody > tr:nth-child(even) { background-image: linear-gradient(rgba(30, 58, 95, .028), rgba(30, 58, 95, .028)); }
+.tableau > tbody > tr:hover { background-image: linear-gradient(rgba(37, 99, 235, .07), rgba(37, 99, 235, .07)); }
+.tableau > tbody > tr:focus-within { background-image: linear-gradient(rgba(37, 99, 235, .13), rgba(37, 99, 235, .13)); }
+.tableau > tbody > tr:focus-within > *:first-child { box-shadow: inset 3px 0 0 #2563eb; }
+/* Le pied porte le total : il se rattache à l'entête, pas aux lignes. */
+.tableau > tfoot > tr > th, .tableau > tfoot > tr > td { border-top: 2px solid #a9c6ea; }
+
 /* Aperçu avant impression : plein écran à l'écran, seul le document à l'impression. */
 #zone-impression.apercu-impression { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 60; background: rgba(23, 23, 23, .75); overflow: auto; padding: 0 0 24px; }
 .apercu-barre { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: #171717; color: #fff; font: 500 14px system-ui, sans-serif; }

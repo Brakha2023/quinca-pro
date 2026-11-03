@@ -211,6 +211,15 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   l'ignorait, et une fiche fournisseur paraissait effaçable alors qu'elle avait livré. Les
   mouvements déjà enregistrés ne sont pas retouchés.
 
+### Modifié — tableaux à l'écran
+
+- **Un tableau a maintenant un haut et une ligne courante.** L'entête portait le même gris pâle
+  qu'une ligne de total et s'y confondait ; il prend un fond bleuté de la couleur de la maison et
+  un trait plus épais qui ferme le bandeau. La ligne survolée, ou celle qui tient le clavier,
+  s'éclaire à son tour, avec un filet en tête de ligne pour la seconde. Les lignes qui portent déjà
+  une couleur — une alerte de stock, un total — gardent la leur : la teinte se pose par-dessus au
+  lieu de l'effacer. Les 58 tableaux de l'application suivent, d'un seul réglage.
+
 ### Modifié — menu Stock
 
 - **Le menu Stock s'ouvre sur les alertes.** *Alertes* passe en tête du sous-menu et devient
