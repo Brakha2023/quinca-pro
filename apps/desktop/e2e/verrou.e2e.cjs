@@ -44,6 +44,10 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
 
   await page.reload();
   await page.locator('text=Poste verrouillé').waitFor();
+  // La file d'envoi se compte une fois la base locale rouverte : elle arrive
+  // après le titre et pousse le formulaire vers le bas. Sans cette attente, le
+  // clic qui suit vise un bouton encore en train de descendre.
+  await page.locator(`text=/${enAttenteAvant} opération\\(s\\) en attente/`).waitFor();
   verifier(true, 'le verrou survit à un redémarrage');
 
   console.log('Déverrouillage hors ligne');
