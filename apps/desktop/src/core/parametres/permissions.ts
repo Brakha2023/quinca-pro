@@ -30,7 +30,7 @@ export const CATALOGUE_PERMISSIONS: ModulePermissions[] = [
     id: 'pilotage',
     libelle: 'Pilotage',
     permissions: [
-      { code: 'consolidation.lire', libelle: 'Consulter la consolidation', detail: 'Chiffres de la filiale, et de toutes les filiales pour un compte de direction.' },
+      { code: 'consolidation.lire', libelle: 'Consulter la consolidation et les rapports', detail: 'Chiffres de gestion — marges et prix d\'achat compris — de la filiale, et de toutes les filiales pour un compte de direction.' },
     ],
   },
   {

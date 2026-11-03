@@ -53,7 +53,10 @@ export default function OperationsDocument({ titre, lignes, filiale, filtres, on
       </div>
 
       {recap.ventilation.length > 1 && (
-        <div className="document-section">
+        <>
+          {/* `document-section` est un intertitre, pas un cadre : il met en
+              capitales tout ce qu'il contient. Le tableau vient après lui. */}
+          <p className="document-section">Ventilation par catégorie</p>
           <table className="document-liste">
             <thead>
               <tr>
@@ -80,7 +83,7 @@ export default function OperationsDocument({ titre, lignes, filiale, filtres, on
               </tr>
             </tbody>
           </table>
-        </div>
+        </>
       )}
 
       <table className="document-liste">

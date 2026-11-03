@@ -195,6 +195,7 @@
   <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses et leurs catégories, transferts entre filiales et leur bordereau.</span></div></li>
   <li><div><span class="titre-chap">Livraisons et personnel</span><br /><span class="desc">Bons de livraison, effectif, pointage, paie.</span></div></li>
   <li><div><span class="titre-chap">Tableau de bord</span><br /><span class="desc">Les huit chiffres, les quatre graphiques, la consolidation.</span></div></li>
+  <li><div><span class="titre-chap">Rapport des marges</span><br /><span class="desc">Ce que chaque catégorie d'articles rapporte, ce qui se vend à perte, la feuille à signer.</span></div></li>
   <li><div><span class="titre-chap">Historiques et audit</span><br /><span class="desc">Retrouver une pièce, la rééditer, savoir qui a fait quoi.</span></div></li>
   <li><div><span class="titre-chap">Imprimer et exporter</span><br /><span class="desc">Ticket 80 mm, documents A4, PDF, classeurs Excel.</span></div></li>
   <li><div><span class="titre-chap">Que faire si…</span><br /><span class="desc">Les situations courantes et leur réponse.</span></div></li>
@@ -318,7 +319,7 @@ un caissier n'a ni Employés ni Paramètres, et c'est normal.</p>
 <table>
   <caption>Les six familles du menu et ce qu'elles contiennent</caption>
   <tr><th>Famille</th><th>Entrées</th></tr>
-  <tr><td class="chemin">Pilotage</td><td>Consolidation (le tableau de bord)</td></tr>
+  <tr><td class="chemin">Pilotage</td><td>Consolidation (le tableau de bord) · Rapports (la marge par catégorie)</td></tr>
   <tr><td class="chemin">Exploitation</td><td>Point de Vente · Ventes · Catalogue · Stock</td></tr>
   <tr><td class="chemin">Tiers &amp; Finances</td><td>Clients · Fournisseurs · Trésorerie · Livraisons</td></tr>
   <tr><td class="chemin">Ressources humaines</td><td>Employés</td></tr>
@@ -1061,16 +1062,91 @@ décision aujourd'hui. L'écran entier s'imprime en A4, et la vue groupe s'expor
   ou pour la recopier, servez-vous du tableau plutôt que de viser la barre.</p>
 </div>
 
+<div class="note">
+  <span class="titre">Pour savoir d'où vient la marge</span>
+  <p>La tuile <strong>Marge commerciale</strong> donne un total ; elle ne dit pas quelle famille
+  d'articles l'a faite. C'est le <strong>rapport des marges</strong> qui l'éclate, catégorie par
+  catégorie puis article par article — voir le chapitre 13.</p>
+</div>
+
 <h3>12.4 — Gérant ou direction</h3>
 <p>Un <strong>gérant</strong> voit sa filiale. Un compte de <strong>direction</strong> choisit une
 filiale, ou <strong>Groupe (consolidé)</strong> : les chiffres s'additionnent, les taux se
 recalculent sur les totaux — ils ne sont jamais une moyenne de moyennes —, et une ligne par filiale
 permet de comparer.</p>
 
-<!-- ============ 13. HISTORIQUES & AUDIT ============ -->
-<h2><span class="num">13.</span>Historiques et audit</h2>
+<!-- ============ 13. RAPPORT DES MARGES ============ -->
+<h2><span class="num">13.</span>Rapport des marges</h2>
+<p class="chapeau">Le tableau de bord dit combien la maison a gagné ; le rapport dit <strong>où</strong>.
+<span class="chemin-ui">Pilotage → Rapports</span>.</p>
 
-<h3>13.1 — Historiques</h3>
+<p>Une marge de 213 000 F sur le mois ne dit pas s'il faut recommander du ciment ou de la peinture.
+Le rapport éclate ce total par <strong>catégorie d'articles</strong>, puis article par article. On y
+voit ce qu'un total cache : la famille qui fait tout le chiffre d'affaires sans faire la marge, et
+celle qui vend peu en rapportant beaucoup.</p>
+
+<h3>13.1 — Les quatre chiffres</h3>
+<table>
+  <tr><th>Indicateur</th><th>Ce qu'il dit</th></tr>
+  <tr><td class="chemin">Chiffre d'affaires HT</td><td>Ce qui a été vendu sur la période, <strong>remises déduites</strong>, hors taxes. Les ventes annulées n'y sont pas.</td></tr>
+  <tr><td class="chemin">Coût d'achat</td><td>Ce que la marchandise vendue a coûté, au coût moyen que le dépôt portait <strong>au moment de la sortie</strong>.</td></tr>
+  <tr><td class="chemin">Marge commerciale</td><td>Le premier moins le second. Ni les charges ni les frais d'approche n'y entrent : ce n'est pas un résultat, c'est ce que la marchandise rapporte.</td></tr>
+  <tr><td class="chemin">Taux de marge</td><td>La marge rapportée au <strong>chiffre d'affaires</strong>, jamais au prix d'achat — rapporté au coût, le même article afficherait un taux plus flatteur et incomparable d'une famille à l'autre.</td></tr>
+</table>
+
+<div class="note">
+  <span class="titre">La remise du comptoir est répartie</span>
+  <p>Une remise se négocie en francs sur la vente entière. Le rapport la <strong>redescend sur les
+  lignes</strong>, au prorata de chacune : les 5 000 F consentis sur un ticket de ciment sortent de
+  la marge du ciment. Sans cela, le rapport annoncerait un gain que personne n'a fait. C'est
+  pourquoi son chiffre d'affaires est exactement celui du tableau de bord.</p>
+</div>
+
+<h3>13.2 — Le graphique et les deux tableaux</h3>
+<p><strong>Où se fait la marge</strong> met les catégories en regard, une barre chacune : en bleu ce
+que la marchandise a coûté, en orange ce qu'elle a rapporté. Les deux réunies font le chiffre
+d'affaires, et la part orange se lit comme la marge d'un coup d'œil. Posez le pointeur sur une barre
+pour le détail.</p>
+<p>Dessous, <strong>Marge par catégorie</strong> donne les mêmes chiffres en colonnes — articles,
+quantité, CA HT, coût, marge, taux, part de la marge — avec le total en pied. <strong>Cliquez une
+ligne</strong> pour ne garder que cette catégorie ; cliquez-la de nouveau pour revenir à tout.
+Enfin, <strong>Détail par article</strong> montre quel article porte sa famille.</p>
+
+<div class="note">
+  <span class="titre">Ce qui s'est vendu à perte</span>
+  <p>Un article dont le coût dépasse le prix encaissé est signalé en tête, nommé et chiffré, et sa
+  ligne est en rouge. Trois causes, dans cet ordre : un <strong>prix de catalogue</strong> jamais
+  remonté alors que le fournisseur a augmenté, une <strong>remise</strong> de trop accordée au
+  comptoir, ou une <strong>erreur de saisie</strong> au prix d'achat. Sa barre reste à l'échelle :
+  en bleu la part du coût que la vente a couverte, en orange pâle celle qu'elle n'a pas couverte.</p>
+</div>
+
+<h3>13.3 — Filtrer, classer, imprimer</h3>
+<table>
+  <tr><th>Filtre</th><th>Ce qu'il fait</th></tr>
+  <tr><td class="chemin">Du … au …</td><td>N'importe quelle période. Trois raccourcis : <em>Ce mois</em>, <em>Mois dernier</em>, <em>Cette année</em>.</td></tr>
+  <tr><td class="chemin">Catégorie</td><td>Une seule famille d'articles. <em>Sans catégorie</em> rassemble les articles qu'on n'a jamais rangés.</td></tr>
+  <tr><td class="chemin">Classer par</td><td>Marge, chiffre d'affaires, taux de marge ou quantité vendue. Le classement change la lecture : par chiffre d'affaires c'est le ciment qui domine, par taux c'est la peinture.</td></tr>
+  <tr><td class="chemin">Rechercher</td><td>Code, désignation ou nom de catégorie.</td></tr>
+</table>
+<p><strong>Ce qui s'affiche est ce qui s'imprime.</strong> <em>Imprimer / PDF</em> sort une feuille
+A4 couchée : le périmètre en tête, les totaux, le tableau des catégories, le détail par article et
+deux cases à signer — le gérant, la direction. <em>Exporter Excel</em> rend un classeur de deux
+feuilles, <span class="chemin">Catégories</span> et <span class="chemin">Articles</span>.</p>
+
+<div class="note">
+  <span class="titre">Qui peut l'ouvrir</span>
+  <p>Le rapport donne les <strong>prix d'achat</strong> : il demande la permission <em>Consulter la
+  consolidation et les rapports</em>. Le directeur et le gérant l'ont ; un caissier ne voit ni
+  l'entrée de menu ni la page. Un compte de <strong>direction</strong> qui n'a choisi aucune filiale
+  lit le <strong>groupe entier</strong> — c'est la seule façon de comparer ce que chaque famille
+  rapporte d'un bout à l'autre de la maison.</p>
+</div>
+
+<!-- ============ 14. HISTORIQUES & AUDIT ============ -->
+<h2><span class="num">14.</span>Historiques et audit</h2>
+
+<h3>14.1 — Historiques</h3>
 <p>Toutes les pièces déjà passées, réunies sous un même menu. Chaque section donne la même chose :
 une liste filtrée par période, par dépôt et par recherche, le total en bas,
 <em>Imprimer / PDF</em>, <em>Exporter Excel</em>, et la pièce d'origine qui se rouvre d'un clic
@@ -1092,15 +1168,15 @@ pour être rééditée.</p>
   La saisie reste dans son écran d'origine.</p>
 </div>
 
-<h3>13.2 — Audit</h3>
+<h3>14.2 — Audit</h3>
 <p><span class="chemin-ui">Audit</span> retrace qui a fait quoi, et quand. C'est le
 <strong>seul écran de l'application qui exige le réseau</strong> : le journal reste sur le serveur
 et ne descend pas sur les postes. Sans connexion, l'écran le dit clairement.</p>
 
-<!-- ============ 14. IMPRIMER & EXPORTER ============ -->
-<h2><span class="num">14.</span>Imprimer et exporter</h2>
+<!-- ============ 15. IMPRIMER & EXPORTER ============ -->
+<h2><span class="num">15.</span>Imprimer et exporter</h2>
 
-<h3>14.1 — Obtenir un PDF sans rien installer</h3>
+<h3>15.1 — Obtenir un PDF sans rien installer</h3>
 <div class="pasapas">
   <div class="etiquette">Pas à pas</div>
   <ol>
@@ -1111,7 +1187,7 @@ et ne descend pas sur les postes. Sans connexion, l'écran le dit clairement.</p
   </ol>
 </div>
 
-<h3>14.2 — Les documents produits</h3>
+<h3>15.2 — Les documents produits</h3>
 <table>
   <tr><th>Écran</th><th>Document</th></tr>
   <tr><td class="chemin">Point de Vente</td><td>Ticket 80 mm · Facture A4</td></tr>
@@ -1126,16 +1202,16 @@ et ne descend pas sur les postes. Sans connexion, l'écran le dit clairement.</p
   <tr><td class="chemin">Consolidation</td><td>Tableau de bord A4</td></tr>
 </table>
 
-<h3>14.3 — Les codes-barres</h3>
+<h3>15.3 — Les codes-barres</h3>
 <p>Factures, reçus de caisse et fiches article portent un code-barres. Le code lu par la douchette
 est exactement celui imprimé en clair en dessous : en cas de doute, comparez.</p>
 
-<h3>14.4 — Exporter en Excel</h3>
+<h3>15.4 — Exporter en Excel</h3>
 <p><em>Exporter Excel</em> produit un classeur du périmètre affiché, colonnes, remises et totaux
 compris. Windows demande où enregistrer le fichier — ce n'est pas un téléchargement silencieux.</p>
 
-<!-- ============ 15. QUE FAIRE SI ============ -->
-<h2><span class="num">15.</span>Que faire si…</h2>
+<!-- ============ 16. QUE FAIRE SI ============ -->
+<h2><span class="num">16.</span>Que faire si…</h2>
 
 <table>
   <caption>Les situations courantes et la bonne réponse</caption>
@@ -1190,10 +1266,10 @@ compris. Windows demande où enregistrer le fichier — ce n'est pas un téléch
   </tr>
 </table>
 
-<!-- ============ 16. ANNEXES ============ -->
-<h2><span class="num">16.</span>Annexes</h2>
+<!-- ============ 17. ANNEXES ============ -->
+<h2><span class="num">17.</span>Annexes</h2>
 
-<h3>16.1 — Les cinq rôles livrés</h3>
+<h3>17.1 — Les cinq rôles livrés</h3>
 <table>
   <tr><th>Rôle</th><th>Portée</th><th>Ce qu'il ouvre</th></tr>
   <tr><td class="chemin">Superadministrateur</td><td>Toutes filiales</td><td>Tout, y compris la définition des rôles. Compte d'administration, pas de travail quotidien.</td></tr>
@@ -1203,10 +1279,10 @@ compris. Windows demande où enregistrer le fichier — ce n'est pas un téléch
   <tr><td class="chemin">Magasinier</td><td>Sa filiale</td><td>Articles et stock de bout en bout, transferts, production, livraisons, consultation fournisseurs.</td></tr>
 </table>
 
-<h3 class="suite">16.2 — Les permissions, module par module</h3>
+<h3 class="suite">17.2 — Les permissions, module par module</h3>
 <table>
   <tr><th>Module</th><th>Permissions</th></tr>
-  <tr><td class="chemin">Pilotage</td><td>Consulter la consolidation</td></tr>
+  <tr><td class="chemin">Pilotage</td><td>Consulter la consolidation et les rapports</td></tr>
   <tr><td class="chemin">Ventes et caisse</td><td>Encaisser au point de vente · Consulter les ventes · Valider une vente en attente · Annuler une vente validée · Accorder une remise · Vendre malgré un stock insuffisant</td></tr>
   <tr><td class="chemin">Catalogue</td><td>Consulter le catalogue · Créer et modifier les articles · Modifier les prix de vente</td></tr>
   <tr><td class="chemin">Stock</td><td>Consulter les stocks · Enregistrer une entrée · Enregistrer une sortie · Saisir un inventaire · Transférer entre dépôts · Transférer entre filiales · Enregistrer une production · Gérer les dépôts</td></tr>
@@ -1219,7 +1295,7 @@ compris. Windows demande où enregistrer le fichier — ce n'est pas un téléch
   <tr><td class="chemin">Paramètres</td><td>Ouvrir les paramètres · Affecter les rôles et activer les comptes · Définir les rôles et leurs permissions</td></tr>
 </table>
 
-<h3>16.3 — Raccourcis clavier</h3>
+<h3>17.3 — Raccourcis clavier</h3>
 <table>
   <tr><th>Touche</th><th>Écran</th><th>Effet</th></tr>
   <tr><td><span class="touche">F2</span></td><td>Point de vente</td><td>Aller dans la recherche d'article</td></tr>
@@ -1228,7 +1304,7 @@ compris. Windows demande où enregistrer le fichier — ce n'est pas un téléch
   <tr><td><span class="touche">Entrée</span></td><td>Recherche d'article</td><td>Ajouter le code exact, ou le résultat unique</td></tr>
 </table>
 
-<h3>16.4 — Où sont les données</h3>
+<h3>17.4 — Où sont les données</h3>
 <p>Sur chaque poste, la base locale se trouve dans
 <code>%APPDATA%\com.ciadev.quinca-pro</code>. Elle est reconstruite depuis le serveur à la première
 connexion : on ne la sauvegarde pas, on ne la copie pas d'un poste à l'autre. La sauvegarde, c'est

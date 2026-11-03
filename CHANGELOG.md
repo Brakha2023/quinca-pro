@@ -42,6 +42,25 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Ajouté
 
+- **Un menu *Rapports*, et le premier d'entre eux : la marge par catégorie d'articles.** Le tableau
+  de bord dit combien la maison a gagné sur une période ; il ne dit pas *où*. Le rapport éclate le
+  même total — chiffre d'affaires hors taxes, coût d'achat, marge et taux de marge, par **catégorie
+  d'articles** puis **article par article**, avec un graphique qui met les catégories en regard
+  (en bleu ce que la marchandise a coûté, en orange ce qu'elle a rapporté). On y apprend ce qu'un
+  total cache : la famille qui fait le chiffre sans faire la marge, et celle qui dort en rapportant
+  beaucoup. Les articles **vendus à perte** sont signalés en tête, nommés et chiffrés — prix du
+  catalogue oublié, remise de trop, ou prix d'achat qui a monté.
+  Filtres : dates libres (*Ce mois*, *Mois dernier*, *Cette année*), catégorie, recherche sur le
+  code ou la désignation, et un classement au choix (marge, chiffre d'affaires, taux, quantité).
+  **Ce qui s'affiche est ce qui s'imprime** : *Imprimer / PDF* sort la feuille A4 couchée —
+  périmètre en tête, totaux, tableau des catégories, détail par article, et deux cases à signer —
+  et *Exporter Excel* rend un classeur de deux feuilles. Le rapport se lit hors ligne et se
+  recalcule à chaque vente. Il demande la permission *Consulter la consolidation et les rapports*
+  (directeur et gérant l'ont déjà ; un caissier ne voit ni l'entrée de menu ni la page, car elle
+  donne les prix d'achat). Un directeur sans filiale choisie lit le groupe entier.
+  **La remise accordée au comptoir est répartie sur les lignes de la vente** : sans cela le rapport
+  aurait annoncé une marge que personne n'a gagnée. Son chiffre d'affaires est donc exactement
+  celui du tableau de bord. Aucune migration.
 - **La maison ajoute ses propres catégories de dépense et de recette** (Trésorerie → Dépense ou
   Entrée en caisse, le **+** à côté de la liste). Gardiennage, patente, dédouanement, honoraires :
   ce que l'application ne pouvait pas prévoir finissait dans « Autre dépense », et l'état des

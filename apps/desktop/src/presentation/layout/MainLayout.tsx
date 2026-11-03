@@ -4,7 +4,7 @@ import {
   ShoppingCartIcon, CubeIcon, UserIcon,
   TruckIcon, BanknotesIcon, ChartBarIcon, Bars3Icon, XMarkIcon, UserGroupIcon,
   CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon, UsersIcon, ClockIcon,
-  Cog6ToothIcon, ExclamationTriangleIcon
+  Cog6ToothIcon, ExclamationTriangleIcon, PresentationChartLineIcon
 } from '@heroicons/react/24/outline';
 import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/Stock/onglets';
 import { SECTIONS_FOURNISSEURS, SECTION_FOURNISSEURS_DEFAUT, cheminFournisseurs } from '../pages/Fournisseurs/onglets';
@@ -57,6 +57,9 @@ const menuSections: MenuSection[] = [
     title: 'Pilotage',
     items: [
       { name: 'Consolidation', href: '/consolidation', icon: ChartBarIcon, permission: 'consolidation.lire' },
+      // Même droit que la consolidation : les deux écrans lisent les mêmes
+      // chiffres de gestion, prix d'achat compris. Un caissier n'y entre pas.
+      { name: 'Rapports', href: '/rapports', icon: PresentationChartLineIcon, permission: 'consolidation.lire' },
     ],
   },
   {
