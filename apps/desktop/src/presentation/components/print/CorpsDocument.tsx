@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { enteteDocument } from '../../../core/parametres';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { useEntrepriseDocument } from '../../features/parametres/hooks';
@@ -12,9 +12,42 @@ interface Props {
    * pièce prend l'en-tête complet sans filigrane.
    */
   nature?: string;
-  /** Feuille couchée : pour les listes larges, qui ne tiennent pas en portrait. */
+  /**
+   * Feuille couchée. Laissée de côté, l'orientation se décide toute seule :
+   * la feuille est mesurée, et elle se couche si son tableau le plus large ne
+   * tient pas debout. Passer `true` ou `false` tranche à la main.
+   */
   paysage?: boolean;
   children: ReactNode;
+}
+
+/**
+ * La feuille doit-elle se coucher ?
+ *
+ * On mesure la largeur **naturelle** de chaque tableau — celle qu'il prendrait
+ * si rien ne le contraignait — et on la compare à ce que la feuille offre
+ * debout. Un tableau qui dépasse n'est pas perdu pour autant : le navigateur
+ * le resserre en repliant le texte de ses cellules. Mais une liste de gestion
+ * resserrée devient une bouillie de mots coupés, là où la même liste tient à
+ * l'aise en travers de la page.
+ *
+ * La mesure se fait toujours en portrait : prise sur une feuille déjà couchée,
+ * elle conclurait que tout tient et la feuille se redresserait aussitôt, pour
+ * se recoucher au rendu suivant.
+ */
+function tableauTropLarge(feuille: HTMLElement): boolean {
+  const style = getComputedStyle(feuille);
+  const disponible = feuille.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  if (disponible <= 0) return false;
+  for (const table of feuille.querySelectorAll('table')) {
+    const avant = table.style.width;
+    table.style.width = 'max-content';
+    const naturelle = table.offsetWidth;
+    table.style.width = avant;
+    // Une tolérance d'un point : une feuille ne se couche pas pour un arrondi.
+    if (naturelle > disponible + 1) return true;
+  }
+  return false;
 }
 
 /**
@@ -36,8 +69,32 @@ export default function CorpsDocument({ titre, filiale, nature, paysage, childre
   const entreprise = useEntrepriseDocument(filialeId);
   const entete = enteteDocument(entreprise, filiale, nature ? entreprise?.documents[nature] : undefined);
 
+  const feuille = useRef<HTMLDivElement>(null);
+  /*
+   * L'orientation est une conséquence de la mise en page, pas un état de
+   * l'application : elle se pose donc sur le nœud, après le rendu et avant
+   * l'affichage, sans repasser par React. Une mesure rangée dans un `useState`
+   * demanderait un second rendu à chaque fois pour n'apprendre à React que ce
+   * que le navigateur venait déjà de calculer.
+   *
+   * L'effet tourne après chaque rendu : si le contenu de la feuille change —
+   * un filtre, une ligne de plus —, la mesure est refaite. `paysage` fourni,
+   * on ne mesure rien : l'appelant a tranché.
+   */
+  useLayoutEffect(() => {
+    const el = feuille.current;
+    if (paysage !== undefined || !el) return;
+    el.classList.remove('document-paysage');
+    if (tableauTropLarge(el)) el.classList.add('document-paysage');
+    el.dataset.orientation = el.classList.contains('document-paysage') ? 'paysage' : 'portrait';
+  });
+
   return (
-    <div className={`document${paysage ? ' document-paysage' : ''}`}>
+    <div
+      ref={feuille}
+      className={`document${paysage ? ' document-paysage' : ''}`}
+      data-orientation={paysage === undefined ? undefined : paysage ? 'paysage' : 'portrait'}
+    >
       {entete.filigrane && <img src={entete.filigrane} alt="" aria-hidden className="document-filigrane" />}
       <header className="document-entete">
         {entete.logo

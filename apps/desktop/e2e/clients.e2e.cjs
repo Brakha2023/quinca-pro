@@ -115,6 +115,10 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier((await page.locator('#zone-impression tbody tr:not(:last-child)').count()) === 2, 'tableau des comptes clients : aperçu imprimable');
   verifier((await page.textContent('#zone-impression .document-liste-pied')).includes('Situation des comptes clients'),
     'feuille des comptes clients : pied répété à chaque page');
+  // Neuf colonnes ne tiennent pas debout sur une A4 : la feuille se couche
+  // d'elle-même, personne n'a eu à le demander.
+  verifier((await page.getAttribute('#zone-impression .document', 'data-orientation')) === 'paysage',
+    'feuille des comptes clients : couchée d’elle-même, le tableau débordant en portrait');
   await page.keyboard.press('Escape');
 
   await sousMenu.getByRole('link', { name: 'Historique des versements' }).click();

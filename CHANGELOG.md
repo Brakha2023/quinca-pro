@@ -247,6 +247,14 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   dernières centaines de lignes — un poste ne garde pas tout —, et une liste qui s'arrête pile sur
   ce plafond le signale au lieu de laisser croire que le compte est bon.
 
+### Modifié — impression
+
+- **Une feuille trop large se couche d'elle-même.** Jusqu'ici l'orientation se décidait à la main,
+  document par document : la situation des comptes clients et le suivi de stock sortaient debout
+  sur une A4 où leurs colonnes ne tenaient pas, et le navigateur les resserrait en coupant les mots.
+  Chaque feuille est maintenant mesurée avant d'être imprimée, et passe en **paysage** si son
+  tableau le plus large déborde. Les pièces étroites — reçus, factures, bons — ne bougent pas.
+
 ### Modifié — tableaux à l'écran
 
 - **Un tableau a maintenant un haut et une ligne courante.** L'entête portait le même gris pâle

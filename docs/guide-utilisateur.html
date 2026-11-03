@@ -341,7 +341,7 @@ un caissier n'a ni Employés ni Paramètres, et c'est normal.</p>
 <h3>3.3 — Les boutons que l'on retrouve partout</h3>
 <table>
   <tr><th>Bouton</th><th>Ce qu'il fait</th></tr>
-  <tr><td class="chemin">Imprimer / PDF</td><td>Sort un document A4 propre du périmètre affiché — pas la copie de l'écran, et <strong>la liste entière</strong>, pas seulement la page que vous lisez. « Enregistrer au format PDF » dans la boîte d'impression donne un PDF.</td></tr>
+  <tr><td class="chemin">Imprimer / PDF</td><td>Sort un document A4 propre du périmètre affiché — pas la copie de l'écran, et <strong>la liste entière</strong>, pas seulement la page que vous lisez. La feuille se met <strong>en travers</strong> toute seule quand ses colonnes ne tiennent pas debout. « Enregistrer au format PDF » dans la boîte d'impression donne un PDF.</td></tr>
   <tr><td class="chemin">Exporter Excel</td><td>Produit un classeur du même périmètre. Windows demande où l'enregistrer.</td></tr>
   <tr><td class="chemin">Filtres</td><td>Période, dépôt, famille, recherche… Ce que vous filtrez à l'écran est exactement ce qui sortira à l'impression et à l'export.</td></tr>
 </table>
@@ -1219,11 +1219,21 @@ et ne descend pas sur les postes. Sans connexion, l'écran le dit clairement.</p
   <tr><td class="chemin">Consolidation</td><td>Tableau de bord A4</td></tr>
 </table>
 
-<h3>15.3 — Les codes-barres</h3>
+<h3>15.3 — Debout ou en travers</h3>
+<p>Chaque feuille est mesurée avant de partir à l'imprimante. Si son tableau est trop large pour
+tenir debout sur une A4, elle se met <strong>en travers</strong> toute seule — c'est le cas de la
+situation des comptes clients, du suivi de stock ou du rapport des marges. Les pièces étroites
+(reçus, factures, bons) restent debout. Rien à régler : l'aperçu vous montre la feuille telle
+qu'elle sortira.</p>
+<p class="note"><strong>Et la page que je lis ?</strong> L'impression et l'export ne tiennent pas
+compte de la pagination : ils sortent <strong>toute</strong> la liste du périmètre filtré, même si
+l'écran n'en montrait que cinquante lignes.</p>
+
+<h3>15.4 — Les codes-barres</h3>
 <p>Factures, reçus de caisse et fiches article portent un code-barres. Le code lu par la douchette
 est exactement celui imprimé en clair en dessous : en cas de doute, comparez.</p>
 
-<h3>15.4 — Exporter en Excel</h3>
+<h3>15.5 — Exporter en Excel</h3>
 <p><em>Exporter Excel</em> produit un classeur du périmètre affiché, colonnes, remises et totaux
 compris. Windows demande où enregistrer le fichier — ce n'est pas un téléchargement silencieux.</p>
 
