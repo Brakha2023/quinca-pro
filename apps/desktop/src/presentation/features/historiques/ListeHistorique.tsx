@@ -9,7 +9,9 @@ import {
   type SectionHistorique,
 } from '../../../core/historiques';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
+import Pagination from '../../components/ui/Pagination';
 import { formaterFcfa } from '../../hooks/useFormatage';
+import { usePagination } from '../../hooks/usePagination';
 import { useNotifier } from '../../notifications/useNotifier';
 import HistoriqueDocument from './HistoriqueDocument';
 
@@ -38,6 +40,11 @@ export default function ListeHistorique({ section, pieces, isLoading, filiale, f
   const [apercu, setApercu] = useState(false);
   const description = descriptionSection(section);
   const recap = recapHistorique(pieces);
+  // Seule la page courante est rendue ; l'impression, l'export et le
+  // récapitulatif, eux, portent sur `pieces` en entier. La section et les
+  // filtres ramènent en première page — on change de périmètre, pas de page.
+  const pages = usePagination(pieces.length, [section, JSON.stringify(filtres)]);
+  const affiches = pages.trancher(pieces);
 
   const exporter = async () => {
     try {
@@ -96,7 +103,7 @@ export default function ListeHistorique({ section, pieces, isLoading, filiale, f
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {pieces.map((p) => (
+              {affiches.map((p) => (
                 <tr key={p.id} className="hover:bg-neutral-50" data-testid={`piece-${p.reference}`}>
                   <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{dateHeure(p.date)}</td>
                   <td className="px-3 py-2 text-sm font-mono text-neutral-700">{p.reference}</td>
@@ -130,6 +137,8 @@ export default function ListeHistorique({ section, pieces, isLoading, filiale, f
         {isLoading && <div className="text-center py-10 text-neutral-400 text-sm">Chargement…</div>}
         {!isLoading && pieces.length === 0 && <div className="text-center py-10 text-neutral-400 text-sm">Aucune pièce dans ce périmètre.</div>}
       </div>
+
+      <Pagination etat={pages} nom="pièce" data-testid="pagination-historique" />
 
       {apercu && <HistoriqueDocument section={section} pieces={pieces} filiale={filiale} filtres={filtres} onClose={() => setApercu(false)} />}
       {children}

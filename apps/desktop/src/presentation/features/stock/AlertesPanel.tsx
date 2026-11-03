@@ -14,6 +14,8 @@ import {
   type LigneRotation,
   type NatureAlerte,
 } from '../../../core/stock';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
@@ -25,6 +27,9 @@ import type { InfosFiliale } from './EnteteBon';
 import { useRotationStock, useStocksParArticle } from './hooks';
 
 function Tableau({ titre, lignes, vide, tone }: { titre: string; lignes: LigneAlerteStock[]; vide: string; tone: string }) {
+  // Ruptures et stocks faibles ont chacun leur pagination : ce sont deux
+  // listes, on en parcourt une sans perdre sa place dans l'autre.
+  const pages = usePagination(lignes.length, [titre]);
   return (
     <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
       <div className={`px-4 py-3 border-b border-neutral-200 font-semibold ${tone}`}>{titre} <span className="font-normal text-neutral-500">({lignes.length})</span></div>
@@ -38,7 +43,7 @@ function Tableau({ titre, lignes, vide, tone }: { titre: string; lignes: LigneAl
               <tr><th className="px-3 py-2 text-left">Article</th><th className="px-3 py-2 text-right">Stock</th><th className="px-3 py-2 text-right">Min</th><th className="px-3 py-2 text-right">À commander</th></tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {lignes.map((l) => (
+              {pages.trancher(lignes).map((l) => (
                 <tr key={l.article_id}>
                   <td className="px-3 py-2 text-sm"><span className="font-mono text-primary-700 mr-2">{l.code}</span>{l.designation}</td>
                   <td className="px-3 py-2 text-sm text-right font-mono font-semibold">{l.quantite}</td>
@@ -48,6 +53,11 @@ function Tableau({ titre, lignes, vide, tone }: { titre: string; lignes: LigneAl
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {lignes.length > 0 && (
+        <div className="px-4 pb-3">
+          <Pagination etat={pages} nom="article" data-testid={`pagination-${titre.toLowerCase().replace(/\s+/g, '-')}`} />
         </div>
       )}
     </div>

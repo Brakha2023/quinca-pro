@@ -3,9 +3,11 @@ import { ArrowUpTrayIcon, DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, Penc
 import * as XLSX from 'xlsx';
 import { lignesDepuisGrille, margeArticle, type Article, type Cellule, type LigneImportArticle } from '../../../core/articles';
 import { ArticlesRepository } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
+import { usePagination } from '../../hooks/usePagination';
 import { useRepository } from '../../hooks/useRepository';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
+import Pagination from '../../components/ui/Pagination';
 import ArticleDetailsModal from './ArticleDetailsModal';
 import CatalogueDocument from './CatalogueDocument';
 import ArticleFormModal from './ArticleFormModal';
@@ -55,6 +57,14 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
 
   const { articles, isLoading } = useArticles(filialeId, { recherche, familleId: familleId || null, inclureInactifs });
   const { familles, famillesParId } = useFamilles(filialeId, { actives: true });
+  /*
+   * Un catalogue de quincaillerie compte des milliers de références : tout
+   * afficher d'un coup rendait la page lourde à ouvrir et interminable à
+   * parcourir. Seule la page courante est rendue ; l'impression et l'export,
+   * eux, reçoivent toujours `articles` en entier.
+   */
+  const pages = usePagination(articles.length, [recherche, familleId, inclureInactifs]);
+  const affiches = pages.trancher(articles);
 
   const handleImportExcel = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -170,10 +180,6 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
         </div>
       </div>
 
-      <p className="text-sm text-neutral-600" data-testid="compteur-articles">
-        <strong>{articles.length}</strong> article(s)
-      </p>
-
       {/* Tableau */}
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -193,7 +199,7 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {articles.map((article) => (
+              {affiches.map((article) => (
                 <tr key={article.id} className={`hover:bg-neutral-50 transition-colors ${!article.est_actif ? 'opacity-50' : ''}`}>
                   <td className="px-3 py-2 text-sm font-mono font-medium text-primary-700">{article.code}</td>
                   <td className="px-3 py-2 text-sm font-medium text-neutral-900">
@@ -265,6 +271,8 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
           </div>
         )}
       </div>
+
+      <Pagination etat={pages} nom="article" data-testid="pagination-articles" />
 
       {apercu && (
         <CatalogueDocument

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { differenceAudit, valeursAudit, type LigneAudit } from '../../../core/sync';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { controleInlineClass } from '../../components/ui/FormField';
@@ -33,6 +35,9 @@ export default function AuditPage() {
   const [utilisateurId, setUtilisateurId] = useState('');
   const filtres = useMemo(() => ({ table, action, dateDebut, dateFin, utilisateurId }), [table, action, dateDebut, dateFin, utilisateurId]);
   const { lignes, etat, erreur, recharger } = useJournalAudit(filialeId, filtres);
+  // Seule la page courante est rendue ; le journal entier reste en mémoire.
+  const pages = usePagination(lignes.length, [table, action, utilisateurId, dateDebut, dateFin]);
+  const affiches = pages.trancher(lignes);
   // Les noms viennent de la base locale : les utilisateurs, eux, sont synchronisés.
   const nomDe = useMemo(() => {
     const index = new Map(utilisateurs.map((u) => [u.id, [u.prenom, u.nom].filter(Boolean).join(' ')]));
@@ -57,7 +62,7 @@ export default function AuditPage() {
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-3 text-left">Date</th><th className="px-3 py-3 text-left">Utilisateur</th><th className="px-3 py-3 text-left">Action</th><th className="px-3 py-3 text-left">Table</th><th className="px-3 py-3 text-left">Enregistrement</th><th className="px-3 py-3 text-left">Changements</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
-            {lignes.map((l) => {
+            {affiches.map((l) => {
               const a = LIBELLES_ACTION[l.action ?? ''] ?? { label: l.action ?? '', cls: 'bg-neutral-100' };
               const diff = l.action === 'UPDATE' ? differenceAudit(l.anciennes_valeurs, l.nouvelles_valeurs) : [];
               return (
@@ -88,6 +93,8 @@ export default function AuditPage() {
         )}
         {etat === 'PRET' && lignes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun événement sur la période.</div>}
       </div>
+
+      <Pagination etat={pages} nom="événement" data-testid="pagination-audit" />
       {detail && (
         <Modal titre={`${LIBELLES_ACTION[detail.action ?? '']?.label ?? detail.action} · ${detail.table_cible}`} sousTitre={detail.enregistrement_id ?? ''} largeur="max-w-3xl" onClose={() => setDetail(null)}>
           {detail.action === 'UPDATE' ? (

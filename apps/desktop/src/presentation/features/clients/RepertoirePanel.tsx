@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BanknotesIcon, DocumentDuplicateIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, ScaleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { disponibiliteCredit, statutCredit, type Client } from '../../../core/clients';
 import { ClientsRepository } from '../../../infrastructure/powersync/repositories/ClientsRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -39,6 +41,10 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
   const { peut } = usePermissions();
   const groupes = useGroupesClients(filialeId);
   const { clients, isLoading } = useClients(filialeId, { recherche, avecCreance, inclureInactifs, groupe: groupe || null });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `clients` en entier.
+  const pages = usePagination(clients.length, [recherche, groupe, avecCreance, inclureInactifs]);
+  const affiches = pages.trancher(clients);
   const totaux = clients.reduce(
     (t, c) => ({
       initial: t.initial + c.solde_initial, factures: t.factures + c.cumul_factures, reglements: t.reglements + c.cumul_reglements, solde: t.solde + c.solde_actuel,
@@ -119,7 +125,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {clients.map((c) => {
+              {affiches.map((c) => {
                 const statut = STATUT_CREDIT_STYLE[statutCredit(c)];
                 return (
                   <tr key={c.id} className={`hover:bg-neutral-50 ${!c.est_actif ? 'opacity-50' : ''}`}>
@@ -173,6 +179,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         {!isLoading && clients.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun client.</div>}
       </div>
 
+      <Pagination etat={pages} nom="client" data-testid="pagination-clients" />
       {modal?.type === 'details' && <ClientDetailsModal filialeId={filialeId} clientId={modal.id} onClose={() => setModal(null)} />}
       {modal?.type === 'modifier' && <ClientFormModal filialeId={filialeId} client={modal.client} onClose={() => setModal(null)} />}
       {modal?.type === 'reglement' && <ReglementModal filialeId={filialeId} client={modal.client} onClose={() => setModal(null)} />}

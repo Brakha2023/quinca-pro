@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { PrinterIcon } from '@heroicons/react/24/outline';
 import { TYPES_MOUVEMENT_STOCK, type TypeMouvementStock } from '@quinca/shared-types';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_MOUVEMENT, SENS_MOUVEMENT } from '../../../core/stock';
 import { controleInlineClass } from '../../components/ui/FormField';
 import NoteHistorique from '../../components/ui/NoteHistorique';
@@ -25,6 +27,10 @@ export default function MouvementsPanel({ filialeId, filiale }: { filialeId: str
   const [bon, setBon] = useState<string | null>(null);
   const { fournisseurs } = useFournisseurs(filialeId);
   const { mouvements, isLoading } = useMouvements(filialeId, { depotId: depotId || null, type: type || null, reference: reference.trim() || null, fournisseurId: fournisseurId || null });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `mouvements` en entier.
+  const pages = usePagination(mouvements.length, [depotId, type, reference, fournisseurId]);
+  const affiches = pages.trancher(mouvements);
 
   return (
     <div className="space-y-4">
@@ -66,7 +72,7 @@ export default function MouvementsPanel({ filialeId, filiale }: { filialeId: str
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {mouvements.map((m) => {
+              {affiches.map((m) => {
                 const t = (m.type ?? 'AJUSTEMENT') as TypeMouvementStock;
                 const delta = (m.quantite_apres ?? 0) - (m.quantite_avant ?? 0);
                 const entree = SENS_MOUVEMENT[t] === 1 || delta > 0;
@@ -105,6 +111,8 @@ export default function MouvementsPanel({ filialeId, filiale }: { filialeId: str
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && mouvements.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun mouvement.</div>}
       </div>
+
+      <Pagination etat={pages} nom="mouvement" data-testid="pagination-mouvements" />
 
       {bon && <BonImprimable filialeId={filialeId} filiale={filiale} reference={bon} onClose={() => setBon(null)} />}
     </div>

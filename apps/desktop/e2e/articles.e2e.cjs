@@ -200,11 +200,36 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   })();
   await page.setInputFiles('input[type=file]', { name: 'CATALOGUE.xls', mimeType: 'application/vnd.ms-excel', buffer: gros });
   await page.locator('[aria-live]', { hasText: '120 article(s) importé(s)' }).waitFor();
-  await page.locator('tbody tr', { hasText: 'CAT-120' }).waitFor();
 
-  const compteur = page.getByTestId('compteur-articles');
-  const nombreAffiche = async () => Number((await compteur.textContent()).match(/\d+/)[0]);
+  // Le compte total se lit dans un attribut : le texte dit « 1 à 50 sur 123 »,
+  // où trois nombres se disputent la lecture.
+  const compteur = page.getByTestId('pagination-articles-compte');
+  const nombreAffiche = async () => Number(await compteur.getAttribute('data-total'));
+  await page.waitForFunction(() => Number(document.querySelector('[data-testid=pagination-articles-compte]')?.dataset.total) > 120);
   const catalogue = page.locator('#zone-impression');
+
+  console.log('Pagination du catalogue');
+  // C'est le volume qui fait le défaut : des milliers de références rendues
+  // d'un coup, une page lourde à ouvrir et interminable à parcourir.
+  verifier((await page.locator('tbody tr').count()) === 50, 'catalogue : la page en montre cinquante, pas la liste entière');
+  verifier((await compteur.textContent()).replace(/\s+/g, ' ').includes('1 à 50 sur'), 'catalogue : la barre dit quelle tranche on lit');
+  const premierDeLaUne = await page.locator('tbody tr').first().textContent();
+  await page.getByTestId('pagination-articles-suivant').click();
+  await page.waitForFunction((avant) => document.querySelector('tbody tr')?.textContent !== avant, premierDeLaUne);
+  verifier((await compteur.textContent()).replace(/\s+/g, ' ').includes('51 à 100 sur'), 'catalogue : la page suivante montre la tranche suivante');
+
+  // Un filtre ramène en première page : rester en page deux donnerait un
+  // tableau vide alors que la liste n'est pas vide.
+  await page.fill('input[type=search]', 'CAT-11');
+  await page.waitForFunction(() => Number(document.querySelector('[data-testid=pagination-articles-compte]')?.dataset.total) < 20);
+  verifier((await page.locator('tbody tr').count()) > 0, 'catalogue : une recherche depuis la page deux ramène en page une');
+  await page.fill('input[type=search]', '');
+  await page.waitForFunction(() => Number(document.querySelector('[data-testid=pagination-articles-compte]')?.dataset.total) > 120);
+
+  await page.getByTestId('pagination-articles-taille').selectOption('200');
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length > 100);
+  verifier((await page.locator('tbody tr').count()) === (await nombreAffiche()), 'catalogue : deux cents par page, tout tient sur une');
+  verifier((await page.getByTestId('pagination-articles-suivant').count()) === 0, 'catalogue : une seule page, plus de boutons');
 
   // Tout le catalogue : c'est le cas qui échouait, la liste s'arrêtant à ce
   // qui tenait dans la fenêtre.
@@ -234,8 +259,8 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   // se lit comme le catalogue entier.
   await page.locator('select').first().selectOption({ label: 'SANITAIRE' });
   await page.waitForFunction((avant) => {
-    const p = document.querySelector('[data-testid=compteur-articles]');
-    return p && Number(p.textContent.match(/\d+/)[0]) < avant;
+    const p = document.querySelector('[data-testid=pagination-articles-compte]');
+    return p && Number(p.dataset.total) < avant;
   }, total);
   const filtres = await nombreAffiche();
   await page.getByTestId('imprimer-catalogue').click();

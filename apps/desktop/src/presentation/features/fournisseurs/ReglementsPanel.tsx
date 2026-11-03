@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { PrinterIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_TYPE_REGLEMENT } from '../../../core/clients';
 import type { TypeReglement } from '@quinca/shared-types';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -21,6 +23,10 @@ export default function ReglementsPanel({ filialeId, filiale }: Props) {
   const [imprimer, setImprimer] = useState(false);
   const { fournisseurs } = useFournisseurs(filialeId, { inclureInactifs: true });
   const { reglements, isLoading } = useReglementsFournisseurs(filialeId, { fournisseurId: fournisseurId || null, dateDebut: dateDebut || null, dateFin: dateFin || null });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `reglements` en entier.
+  const pages = usePagination(reglements.length, [fournisseurId, dateDebut, dateFin]);
+  const affiches = pages.trancher(reglements);
   const total = reglements.reduce((s, r) => s + (r.montant ?? 0), 0);
   const parType = reglements.reduce<Record<string, number>>((acc, r) => { const t = r.type_reglement ?? 'ESPECES'; acc[t] = (acc[t] ?? 0) + (r.montant ?? 0); return acc; }, {});
 
@@ -46,7 +52,7 @@ export default function ReglementsPanel({ filialeId, filiale }: Props) {
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° pièce</th><th className="px-3 py-2 text-left">Fournisseur</th><th className="px-3 py-2 text-left">Mode</th><th className="px-3 py-2 text-left">Référence</th><th className="px-3 py-2 text-left">Commande</th><th className="px-3 py-2 text-left">Caisse</th><th className="px-3 py-2 text-left">Par</th><th className="px-3 py-2 text-right">Montant</th></tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {reglements.map((r) => (
+            {affiches.map((r) => (
               <tr key={r.id} className="hover:bg-neutral-50">
                 <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(r.date_reglement)}</td>
                 <td className="px-3 py-2 text-sm font-mono">{r.numero}</td>
@@ -64,6 +70,8 @@ export default function ReglementsPanel({ filialeId, filiale }: Props) {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && reglements.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun règlement sur la période.</div>}
       </div>
+
+      <Pagination etat={pages} nom="règlement" data-testid="pagination-reglements" />
       {imprimer && (
         <DocumentImprimable titre="Historique des règlements fournisseurs" filiale={filiale} onClose={() => setImprimer(false)}>
           <p>{fournisseurId ? fournisseurs.find((f) => f.id === fournisseurId)?.raison_sociale : 'Tous fournisseurs'}{dateDebut || dateFin ? ` · du ${dateDebut || '…'} au ${dateFin || '…'}` : ''} · édité le {new Date().toLocaleDateString('fr-FR')}</p>

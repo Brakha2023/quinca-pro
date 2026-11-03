@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_ETAT_STOCK, recapEtatStock, statutStock, valeurAchat, valeurVente, type StatutStock } from '../../../core/stock';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
 import { formaterFcfa, formaterDate } from '../../hooks/useFormatage';
@@ -24,6 +26,10 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
   const [alertesSeulement, setAlertesSeulement] = useState(false);
   const [apercu, setApercu] = useState(false);
   const { stocks, isLoading } = useStocks(filialeId, { depotId: depotId || null, recherche, alertesSeulement });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `stocks` en entier.
+  const pages = usePagination(stocks.length, [depotId, recherche, alertesSeulement]);
+  const affiches = pages.trancher(stocks);
 
   const recap = recapEtatStock(stocks);
 
@@ -70,7 +76,7 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {stocks.map((s) => {
+              {affiches.map((s) => {
                 const etat = statutStock(s.quantite ?? 0, s.article_stock_min ?? 0, s.article_stock_max ?? 0);
                 return (
                   <tr key={s.id} className="hover:bg-neutral-50">
@@ -95,6 +101,8 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && stocks.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune ligne de stock{alertesSeulement ? ' en alerte' : ''}.</div>}
       </div>
+
+      <Pagination etat={pages} nom="ligne de stock" data-testid="pagination-stocks" />
 
       {apercu && (
         <EtatStockDocument

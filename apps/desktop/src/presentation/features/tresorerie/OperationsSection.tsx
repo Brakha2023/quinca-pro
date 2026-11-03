@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownTrayIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { filtrerOperations, perimetreOperations, recapOperations, type LigneOperation } from '../../../core/tresorerie';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import NoteHistorique from '../../components/ui/NoteHistorique';
@@ -72,6 +74,10 @@ export default function OperationsSection({ filialeId, filiale, codes, libelles,
   );
   const retenues = useMemo(() => filtrerOperations(lignes, { categorie, recherche }), [lignes, categorie, recherche]);
   const recap = recapOperations(retenues);
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `retenues` en entier.
+  const pages = usePagination(retenues.length, [dateDebut, dateFin, caisseId, categorie, recherche]);
+  const affiches = pages.trancher(retenues);
 
   const caisseNom = caisses.find((c) => c.id === caisseId)?.nom ?? null;
   const filtres = { debut: enJour(dateDebut), fin: enJour(dateFin), caisseNom, categorieLibelle: categorie ? libelles[categorie] ?? categorie : null, recherche };
@@ -150,7 +156,7 @@ export default function OperationsSection({ filialeId, filiale, codes, libelles,
               <th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Caisse</th><th className="px-3 py-2 text-left">Catégorie</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-left">Pièce</th><th className="px-3 py-2 text-left">Par</th><th className="px-3 py-2 text-right">Montant</th>
             </tr></thead>
             <tbody className="divide-y divide-neutral-100">
-              {retenues.map((l) => (
+              {affiches.map((l) => (
                 <tr key={l.id} className="hover:bg-neutral-50" data-testid="ligne-operation">
                   <td className="px-3 py-2 text-sm text-neutral-600">{formaterDateHeure(l.date)}</td>
                   <td className="px-3 py-2 text-sm">{l.caisse}</td>
@@ -173,6 +179,8 @@ export default function OperationsSection({ filialeId, filiale, codes, libelles,
         {isLoading && <div className="text-center py-8 text-neutral-400 text-sm">Chargement…</div>}
         {!isLoading && retenues.length === 0 && <div className="text-center py-8 text-neutral-400 text-sm">Aucune opération dans ce périmètre.</div>}
       </div>
+
+      <Pagination etat={pages} nom="opération" data-testid="pagination-operations" />
 
       {apercu && <OperationsDocument titre={titre} lignes={retenues} filiale={filiale} filtres={filtres} onClose={() => setApercu(false)} />}
     </div>

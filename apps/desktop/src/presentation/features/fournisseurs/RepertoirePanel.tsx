@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BanknotesIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, ScaleIcon, TruckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import type { Fournisseur } from '../../../core/fournisseurs';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
@@ -38,6 +40,10 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
   const [verification, setVerification] = useState<string | null>(null);
   const { peut } = usePermissions();
   const { fournisseurs, isLoading } = useFournisseurs(filialeId, { recherche, avecDette, inclureInactifs });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `fournisseurs` en entier.
+  const pages = usePagination(fournisseurs.length, [recherche, avecDette, inclureInactifs]);
+  const affiches = pages.trancher(fournisseurs);
   const totaux = fournisseurs.reduce(
     (t, f) => ({ initial: t.initial + f.solde_initial, factures: t.factures + f.cumul_factures, reglements: t.reglements + f.cumul_reglements, solde: t.solde + f.solde_actuel, dettes: t.dettes + Math.max(f.solde_actuel, 0) }),
     { initial: 0, factures: 0, reglements: 0, solde: 0, dettes: 0 },
@@ -106,7 +112,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {fournisseurs.map((f) => (
+              {affiches.map((f) => (
                 <tr key={f.id} className={`hover:bg-neutral-50 ${!f.est_actif ? 'opacity-50' : ''}`}>
                   <td className="px-3 py-2 text-sm font-mono text-neutral-600">{f.numero_compte ?? f.code}</td>
                   <td className="px-3 py-2 text-sm font-medium text-neutral-900">{f.raison_sociale}{!f.est_actif && <span className="ml-2 text-xs text-neutral-500">(inactif)</span>}</td>
@@ -153,6 +159,8 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && fournisseurs.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun fournisseur.</div>}
       </div>
+
+      <Pagination etat={pages} nom="fournisseur" data-testid="pagination-fournisseurs" />
 
       {modal?.type === 'details' && <FournisseurDetailsModal filialeId={filialeId} filiale={filiale} fournisseurId={modal.id} onClose={() => setModal(null)} />}
       {modal?.type === 'modifier' && <FournisseurFormModal filialeId={filialeId} fournisseur={modal.f} onClose={() => setModal(null)} />}

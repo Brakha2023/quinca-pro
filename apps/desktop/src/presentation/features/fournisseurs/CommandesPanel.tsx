@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DocumentTextIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, TruckIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutCommandeFournisseur } from '@quinca/shared-types';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import type { Article } from '../../../core/articles';
 import { LIBELLES_STATUT_COMMANDE, bonCommandeSchema, documentsCommande, receptionSchema, totalLigneCommande, totauxCommande, type LigneCommandeFournisseur } from '../../../core/fournisseurs';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
@@ -250,6 +252,10 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
   const [modal, setModal] = useState<ModalState>(null);
   const { fournisseurs } = useFournisseurs(filialeId, { inclureInactifs: true });
   const { commandes, isLoading } = useCommandes(filialeId, { fournisseurId: fournisseurId || null, ouvertesSeulement: ouvertes, recherche });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `commandes` en entier.
+  const pages = usePagination(commandes.length, [fournisseurId, ouvertes, recherche]);
+  const affiches = pages.trancher(commandes);
   const commandeActive = modal && modal.type !== 'nouveau' ? modal.c : null;
   const lignes = useLignesCommande(commandeActive?.id ?? null);
   const fournisseurActif = useFournisseur(commandeActive?.fournisseur_id ?? null);
@@ -278,7 +284,7 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N°</th><th className="px-3 py-2 text-left">Fournisseur</th><th className="px-3 py-2 text-left">Type</th><th className="px-3 py-2 text-right">Lignes</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Reçu</th><th className="px-3 py-2 text-right">Reste à payer</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-center">Actions</th></tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {commandes.map((c) => {
+            {affiches.map((c) => {
               const statut = (c.statut ?? 'ENVOYEE') as StatutCommandeFournisseur;
               const ouverte = statut === 'ENVOYEE' || statut === 'PARTIELLE';
               // Un bon s'imprime dès sa création ; la facture attend la marchandise.
@@ -311,6 +317,8 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && commandes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune commande.</div>}
       </div>
+
+      <Pagination etat={pages} nom="commande" data-testid="pagination-commandes" />
 
       {modal?.type === 'nouveau' && <NouveauBonModal filialeId={filialeId} fournisseurId={fournisseurId} onClose={() => setModal(null)} />}
       {modal?.type === 'detail' && <DetailCommandeModal commande={modal.c} lignes={lignes} onClose={() => setModal(null)} onImprimer={() => setModal({ type: 'imprimer', c: modal.c })} onFacturer={() => setModal({ type: 'facture', c: modal.c })} />}

@@ -185,7 +185,7 @@
 <ol>
   <li><div><span class="titre-chap">Installer et démarrer</span><br /><span class="desc">Installation sur Windows, première connexion, mot de passe.</span></div></li>
   <li><div><span class="titre-chap">Comprendre l'application</span><br /><span class="desc">Le travail hors ligne, la synchronisation, le verrouillage du poste.</span></div></li>
-  <li><div><span class="titre-chap">Se repérer</span><br /><span class="desc">Le menu, le périmètre, les boutons que l'on retrouve partout.</span></div></li>
+  <li><div><span class="titre-chap">Se repérer</span><br /><span class="desc">Le menu, le périmètre, les boutons que l'on retrouve partout, et la lecture des longues listes.</span></div></li>
   <li><div><span class="titre-chap">Paramètres — rôles et utilisateurs</span><br /><span class="desc">Créer un rôle, cocher ses droits, l'affecter à quelqu'un.</span></div></li>
   <li><div><span class="titre-chap">Le point de vente</span><br /><span class="desc">Encaisser, la remise en francs, les brouillons, le ticket et la facture.</span></div></li>
   <li><div><span class="titre-chap">Ventes et catalogue</span><br /><span class="desc">Relire une vente, l'annuler, tenir les articles et les prix.</span></div></li>
@@ -341,7 +341,7 @@ un caissier n'a ni Employés ni Paramètres, et c'est normal.</p>
 <h3>3.3 — Les boutons que l'on retrouve partout</h3>
 <table>
   <tr><th>Bouton</th><th>Ce qu'il fait</th></tr>
-  <tr><td class="chemin">Imprimer / PDF</td><td>Sort un document A4 propre du périmètre affiché — pas la copie de l'écran. « Enregistrer au format PDF » dans la boîte d'impression donne un PDF.</td></tr>
+  <tr><td class="chemin">Imprimer / PDF</td><td>Sort un document A4 propre du périmètre affiché — pas la copie de l'écran, et <strong>la liste entière</strong>, pas seulement la page que vous lisez. « Enregistrer au format PDF » dans la boîte d'impression donne un PDF.</td></tr>
   <tr><td class="chemin">Exporter Excel</td><td>Produit un classeur du même périmètre. Windows demande où l'enregistrer.</td></tr>
   <tr><td class="chemin">Filtres</td><td>Période, dépôt, famille, recherche… Ce que vous filtrez à l'écran est exactement ce qui sortira à l'impression et à l'export.</td></tr>
 </table>
@@ -357,6 +357,23 @@ défiler vers la droite.</p>
   <li>Les colonnes de texte libre (adresse, motif, articles d'un bon) sont volontairement bornées et se terminent par « … » ; <strong>posez le pointeur dessus</strong> pour lire le texte entier.</li>
   <li>Si une liste est trop large pour votre goût, <em>Imprimer / PDF</em> en sort toujours la version complète, mise en page pour la feuille.</li>
 </ul>
+
+<h3>3.5 — Les listes se lisent page par page</h3>
+<p>Le catalogue de la maison compte des milliers de références, et le journal des mouvements en
+accumule autant. Les listes se lisent donc <strong>par pages de 50</strong>, avec une barre sous le
+tableau :</p>
+<ul>
+  <li>Elle dit ce que vous lisez — « 51 à 100 sur 312 articles » — et combien il y en a en tout.</li>
+  <li>Les numéros de page et les boutons <em>Précédent</em> / <em>Suivant</em> font passer de l'une à
+    l'autre ; <strong>Par page</strong> règle 25, 50, 100 ou 200 lignes.</li>
+  <li>Dès que vous filtrez ou que vous tapez une recherche, vous revenez en <strong>première
+    page</strong> : la liste a changé, la page aussi.</li>
+  <li><em>Imprimer / PDF</em> et <em>Exporter Excel</em> ne sont <strong>pas</strong> paginés — ils
+    sortent toujours la liste entière du périmètre filtré.</li>
+</ul>
+<p class="note"><strong>Une liste qui s'arrête net.</strong> Les journaux ne gardent sur le poste que
+les dernières centaines de lignes. Quand une liste s'arrête sur cette limite, la barre le dit et vous
+invite à resserrer les filtres (une période plus courte, un dépôt) pour voir le reste.</p>
 
 <!-- ============ 4. PARAMÈTRES ============ -->
 <h2><span class="num">4.</span>Paramètres — rôles et utilisateurs</h2>

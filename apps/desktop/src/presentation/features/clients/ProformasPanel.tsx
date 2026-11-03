@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRightCircleIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutProforma } from '@quinca/shared-types';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import type { Article } from '../../../core/articles';
 import { LIBELLES_STATUT_PROFORMA, calculerLigne, ligneProformaVersPanier, proformaSchema, remiseCommerciale, totauxProforma, type LignePanier, type Proforma } from '../../../core/ventes';
 import { ProformasRepository } from '../../../infrastructure/powersync/repositories/ProformasRepository';
@@ -212,6 +214,10 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
   const [modal, setModal] = useState<ModalState>(null);
   const { clients } = useClients(filialeId, { inclureInactifs: true });
   const { proformas, isLoading } = useProformas(filialeId, { clientId: clientId || null, enCoursSeulement: enCours, recherche });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `proformas` en entier.
+  const pages = usePagination(proformas.length, [clientId, enCours, recherche]);
+  const affiches = pages.trancher(proformas);
 
   const annuler = async (p: ProformaVue) => {
     if (!(await confirmer({ message: `Annuler la proforma ${p.numero} ?`, libelleConfirmer: 'Annuler la proforma', danger: true }))) return;
@@ -235,7 +241,7 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N°</th><th className="px-3 py-2 text-left">Client</th><th className="px-3 py-2 text-right">Lignes</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-left">Validité</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-left">Vente</th><th className="px-3 py-2 text-center">Actions</th></tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {proformas.map((p) => (
+            {affiches.map((p) => (
               <tr key={p.id} className="hover:bg-neutral-50">
                 <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(p.date_proforma)}</td>
                 <td className="px-3 py-2 text-sm font-mono">{p.numero}</td>
@@ -260,6 +266,8 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && proformas.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune proforma.</div>}
       </div>
+
+      <Pagination etat={pages} nom="proforma" data-testid="pagination-proformas" />
 
       {modal?.type === 'nouvelle' && <NouvelleProformaModal filialeId={filialeId} clientId={clientId} onClose={() => setModal(null)} />}
       {modal?.type === 'detail' && <DetailProformaModal proforma={modal.p} onClose={() => setModal(null)} onImprimer={() => setModal({ type: 'imprimer', p: modal.p })} />}

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { TYPES_BON_INVENTAIRE, inventaireSchema } from '../../../core/stock';
 import type { Article } from '../../../core/articles';
 import { StockRepository } from '../../../infrastructure/powersync/repositories/StockRepository';
@@ -63,6 +65,11 @@ export default function InventairePanel({ filialeId, filiale }: { filialeId: str
       .map((a) => ({ article_id: a.id, code: a.code, designation: a.designation, unite: a.unite, theorique: 0, comptee: saisies.get(a.id) ?? '' }));
     return [...depuisStock, ...ajoutees];
   }, [stocks, saisies, ajouts]);
+
+  // Un dépôt peut porter des milliers de références : seule la page courante
+  // est rendue. Les quantités déjà comptées sont rangées par article et non
+  // par rang — changer de page n'en perd aucune.
+  const pages = usePagination(lignes.length, [depotEffectif]);
 
   const ajouterArticle = (article: Article) => {
     if (lignes.some((l) => l.article_id === article.id)) return;
@@ -152,7 +159,7 @@ export default function InventairePanel({ filialeId, filiale }: { filialeId: str
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {lignes.map((l) => {
+            {pages.trancher(lignes).map((l) => {
               const ecart = l.comptee === '' ? null : l.comptee - l.theorique;
               return (
                 <tr key={l.article_id} className={ecart ? 'bg-orange-50/50' : ''}>
@@ -169,6 +176,8 @@ export default function InventairePanel({ filialeId, filiale }: { filialeId: str
           </tbody>
         </table>
       </div>
+
+      <Pagination etat={pages} nom="article à compter" data-testid="pagination-inventaire" />
       {apercu && <BonImprimable filialeId={filialeId} filiale={filiale} reference={apercu} onClose={() => setApercu(null)} />}
     </CarteBon>
   );

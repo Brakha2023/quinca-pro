@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { PrinterIcon } from '@heroicons/react/24/outline';
 import type { TypeMouvementStock } from '@quinca/shared-types';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { recapBons } from '../../../core/stock';
 import FormField, { controleInlineClass } from '../../components/ui/FormField';
 import NoteHistorique from '../../components/ui/NoteHistorique';
@@ -52,6 +54,10 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
     [types, depotId, recherche, debut, fin],
   );
   const { bons, isLoading } = useBonsStock(filialeId, filtres);
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `bons` en entier.
+  const pages = usePagination(bons.length, [JSON.stringify(filtres)]);
+  const affiches = pages.trancher(bons);
   const recap = recapBons(bons);
 
   return (
@@ -89,7 +95,7 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {bons.map((b) => (
+            {affiches.map((b) => (
               <tr key={b.reference} className="hover:bg-neutral-50" data-testid={`bon-${b.reference}`}>
                 <td className={`${cellule} text-sm text-neutral-600 whitespace-nowrap`}>{dateHeure(b.date)}</td>
                 {avecLivraison && <td className={`${cellule} text-sm text-neutral-600 whitespace-nowrap`} data-testid={`livraison-${b.reference}`}>{b.date_livraison ? dateHeure(b.date_livraison) : '—'}</td>}
@@ -118,6 +124,8 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && bons.length === 0 && <div className="text-center py-12 text-neutral-400">{videMessage}</div>}
       </div>
+
+      <Pagination etat={pages} nom="bon" data-testid="pagination-bons" />
 
       {apercu && <BonImprimable filialeId={filialeId} filiale={filiale} reference={apercu} onClose={() => setApercu(null)} />}
     </div>

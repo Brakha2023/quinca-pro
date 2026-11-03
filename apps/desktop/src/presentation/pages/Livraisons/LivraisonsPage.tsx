@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import { MagnifyingGlassIcon, PencilSquareIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { STATUTS_LIVRAISON, type StatutLivraison } from '@quinca/shared-types';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { livraisonDemandeSchema, type LivraisonDemande } from '../../../core/ventes';
 import { LivraisonsRepository, TRANSITIONS_LIVRAISON, livraisonsQuery, type LivraisonVueRow } from '../../../infrastructure/powersync/repositories/LivraisonsRepository';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
@@ -52,6 +54,10 @@ export default function LivraisonsPage() {
   const [edition, setEdition] = useState<LivraisonVueRow | null>(null);
   const { sql, params } = useMemo(() => livraisonsQuery(filialeId, statut || null, recherche), [filialeId, statut, recherche]);
   const { data: livraisons, isLoading } = useQuery<LivraisonVueRow>(sql, params);
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `livraisons` en entier.
+  const pages = usePagination(livraisons.length, [statut, recherche]);
+  const affiches = pages.trancher(livraisons);
   const compte = (s: StatutLivraison) => livraisons.filter((l) => l.statut === s).length;
 
   const changer = async (l: LivraisonVueRow, s: StatutLivraison) => {
@@ -82,7 +88,7 @@ export default function LivraisonsPage() {
             <th className="px-3 py-3 text-left">Numéro</th><th className="px-3 py-3 text-left">Prévue</th><th className="px-3 py-3 text-left">Client</th><th className="px-3 py-3 text-left">Adresse</th><th className="px-3 py-3 text-left">Chauffeur / véhicule</th><th className="px-3 py-3 text-left">Ticket</th><th className="px-3 py-3 text-right">Montant</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center print:hidden">Actions</th>
           </tr></thead>
           <tbody className="divide-y divide-neutral-100">
-            {livraisons.map((l) => {
+            {affiches.map((l) => {
               const s = (l.statut ?? 'A_PREPARER') as StatutLivraison;
               return (
                 <tr key={l.id} className="hover:bg-neutral-50">
@@ -110,6 +116,8 @@ export default function LivraisonsPage() {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && livraisons.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune livraison.</div>}
       </div>
+
+      <Pagination etat={pages} nom="livraison" plafond={500} data-testid="pagination-livraisons" />
       {edition && <EditionModal livraison={edition} onClose={() => setEdition(null)} />}
     </div>
   );

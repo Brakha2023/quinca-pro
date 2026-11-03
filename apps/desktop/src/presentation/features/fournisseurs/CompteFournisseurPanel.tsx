@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BanknotesIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_PERIODE_REGLEMENT, construireReleve } from '../../../core/fournisseurs';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
@@ -25,14 +27,19 @@ export default function CompteFournisseurPanel({ filialeId, filiale }: Props) {
   const totalDebit = releve.reduce((s, l) => s + l.debit, 0);
   const totalCredit = releve.reduce((s, l) => s + l.credit, 0);
 
+  // Seule la page courante est rendue à l'écran ; le relevé imprimé, lui,
+  // reprend `releve` en entier.
+  const pages = usePagination(releve.length, [fournisseurId]);
+
   const tableau = (
     <table className="tableau">
       <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
         <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Pièce</th><th className="px-3 py-2 text-left">Libellé</th><th className="px-3 py-2 text-right">Débit</th><th className="px-3 py-2 text-right">Crédit</th><th className="px-3 py-2 text-right">Solde</th></tr>
       </thead>
       <tbody className="divide-y divide-neutral-100">
-        {releve.map((l, i) => (
-          <tr key={i} className={i === 0 ? 'bg-neutral-50 font-medium' : ''}>
+        {pages.trancher(releve).map((l, i) => (
+          /* Le solde d'ouverture se reconnaît à ce qu'il est, non à son rang. */
+          <tr key={i} className={l === releve[0] ? 'bg-neutral-50 font-medium' : ''}>
             <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDate(l.date)}</td>
             <td className="px-3 py-2 text-sm font-mono">{l.piece}</td>
             <td className="px-3 py-2 text-sm">{l.libelle}</td>
@@ -72,6 +79,7 @@ export default function CompteFournisseurPanel({ filialeId, filiale }: Props) {
             <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Conditions</p><p className="text-sm font-medium mt-1">{fournisseur.periode_reglement ? LIBELLES_PERIODE_REGLEMENT[fournisseur.periode_reglement] : '—'}</p><p className="text-xs text-neutral-500">Plafond {formaterFcfa(fournisseur.plafond_credit)}{fournisseur.delai_echeance_jours ? ` · échéance ${fournisseur.delai_echeance_jours} j` : ''}</p></div>
           </div>
           <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">{tableau}</div>
+          <Pagination etat={pages} nom="ligne" data-testid="pagination-compte-fournisseur" />
         </>
       ) : (
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400">Choisissez un fournisseur pour consulter son compte.</div>

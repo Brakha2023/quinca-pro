@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { PlusIcon, PrinterIcon, ReceiptPercentIcon } from '@heroicons/react/24/outline';
 import { useQuery } from '@powersync/react';
 import type { TypeReglement } from '@quinca/shared-types';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_NATURE_VERSEMENT, LIBELLES_TYPE_REGLEMENT, lettrerVersements, type FactureClient, type VersementLettre } from '../../../core/clients';
 import { FACTURES_CLIENT_QUERY } from '../../../infrastructure/powersync/repositories/ClientsRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -47,6 +49,10 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
   const [modal, setModal] = useState<{ type: 'nouveau' } | { type: 'recu'; v: VersementVueRow } | { type: 'historique' } | null>(null);
   const { clients } = useClients(filialeId, { inclureInactifs: true });
   const { versements, isLoading } = useVersements(filialeId, { clientId: clientId || null, dateDebut: dateDebut || null, dateFin: dateFin || null });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `versements` en entier.
+  const pages = usePagination(versements.length, [clientId, dateDebut, dateFin]);
+  const affiches = pages.trancher(versements);
   // Le lettrage (utilisé / disponibilité) n'a de sens que client par client.
   const lettrage = useLettrage(clientId || null);
   const lettre = (v: VersementVueRow): VersementLettre | undefined => lettrage.get(v.id);
@@ -77,7 +83,7 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° règlement</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right">Apport</th><th className="px-3 py-2 text-right">Mt. utilisé</th><th className="px-3 py-2 text-right">Disponibilité</th><th className="px-3 py-2 text-left">Type</th><th className="px-3 py-2 text-left">N° chèque / réf.</th><th className="px-3 py-2 text-left">Client</th><th className="px-3 py-2 text-left">N° vente</th><th className="px-3 py-2 text-left">Utilisateur</th><th className="w-10" /></tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
-            {versements.map((v) => {
+            {affiches.map((v) => {
               const l = lettre(v);
               return (
                 <tr key={v.id} className="hover:bg-neutral-50">
@@ -106,6 +112,8 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && versements.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun versement sur la période.</div>}
       </div>
+
+      <Pagination etat={pages} nom="versement" data-testid="pagination-versements" />
 
       {modal?.type === 'nouveau' && <NouveauVersement filialeId={filialeId} onClose={() => setModal(null)} />}
       {modal?.type === 'recu' && (

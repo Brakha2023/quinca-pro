@@ -228,6 +228,25 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   l'ignorait, et une fiche fournisseur paraissait effaçable alors qu'elle avait livré. Les
   mouvements déjà enregistrés ne sont pas retouchés.
 
+### Ajouté — pagination des listes
+
+- **Les listes se lisent page par page.** Le catalogue de la maison compte des milliers de
+  références : les afficher d'un coup rendait la page lourde à ouvrir et interminable à parcourir,
+  et l'on descendait sans jamais savoir où l'on en était. Chaque liste se lit désormais par pages
+  de 50 — 25, 100 ou 200 au choix —, avec une barre qui dit ce qu'on lit (« 51 à 100 sur 312
+  articles ») et les numéros de page. Un filtre ou une recherche ramène en première page : rester
+  en page sept donnerait un tableau vide alors que la liste ne l'est pas.
+- **Vingt écrans suivent** : catalogue, clients et fournisseurs (répertoires, comptes, versements,
+  règlements, proformas, commandes), stock (suivi, mouvements, alertes, inventaire, bons), ventes,
+  livraisons, trésorerie, historiques, journal d'audit et le détail du rapport des marges. Les
+  listes courtes — familles, dépôts, employés, caisses, utilisateurs, rôles — n'ont rien gagné à
+  être coupées et restent d'un seul tenant.
+- **L'impression et l'export ne sont pas paginés** : ce qui part sur le papier ou dans Excel reste
+  la liste entière, quelle que soit la page qu'on regardait.
+- **Une liste arrêtée par le plafond de sa requête le dit.** Les journaux ne lisent que les
+  dernières centaines de lignes — un poste ne garde pas tout —, et une liste qui s'arrête pile sur
+  ce plafond le signale au lieu de laisser croire que le compte est bon.
+
 ### Modifié — tableaux à l'écran
 
 - **Un tableau a maintenant un haut et une ligne courante.** L'entête portait le même gris pâle

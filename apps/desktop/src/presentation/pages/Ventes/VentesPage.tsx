@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { CheckIcon, EyeIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { STATUTS_VENTE, type ModePaiement, type StatutVente } from '@quinca/shared-types';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, recapJournalVentes } from '../../../core/ventes';
 import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import { usePermissions } from '../../auth/usePermissions';
@@ -40,6 +42,10 @@ export default function VentesPage() {
   const [apercu, setApercu] = useState(false);
 
   const { ventes, isLoading } = useVentes(filialeId, { dateDebut, dateFin, caisseId: caisseId || null, statut: statut || null, recherche, montantTtc });
+  // Seule la page courante est rendue ; l'impression et l'export, eux,
+  // reçoivent toujours `ventes` en entier.
+  const pages = usePagination(ventes.length, [dateDebut, dateFin, caisseId, statut, recherche, montantTtc]);
+  const affiches = pages.trancher(ventes);
   const peutValider = peut('ventes.valider');
 
   // Les mêmes totaux que le journal imprimé : une seule règle, dans `core/ventes`.
@@ -129,7 +135,7 @@ export default function VentesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {ventes.map((v) => {
+              {affiches.map((v) => {
                 const st = (v.statut ?? 'EN_ATTENTE') as StatutVente;
                 return (
                   <tr key={v.id} className={`hover:bg-neutral-50 ${st === 'ANNULEE' ? 'opacity-50' : ''}`}>
@@ -154,6 +160,8 @@ export default function VentesPage() {
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && ventes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune vente sur la période.</div>}
       </div>
+
+      <Pagination etat={pages} nom="vente" data-testid="pagination-ventes" />
 
       {apercu && (
         <JournalVentesDocument

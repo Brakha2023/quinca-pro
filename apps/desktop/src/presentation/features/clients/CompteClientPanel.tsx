@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BanknotesIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_PERIODE_REGLEMENT_CLIENT, construireReleveClient, disponibiliteCredit } from '../../../core/clients';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import FormField, { inputClass } from '../../components/ui/FormField';
@@ -31,8 +33,13 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
   const totalFacture = releve.reduce((s, l) => s + l.facture, 0);
   const totalReglement = releve.reduce((s, l) => s + l.reglement, 0);
 
-  const lignesTable = (imprimer: boolean) => releve.map((l, i) => (
-    <tr key={i} className={!imprimer && i === 0 ? 'bg-neutral-50 font-medium' : ''}>
+  // La page courante à l'écran, le relevé entier sur le papier : la fonction
+  // prend donc ses lignes au lieu de les chercher elle-même.
+  const pages = usePagination(releve.length, [clientId, dateDebut, dateFin]);
+  const lignesTable = (lignes: typeof releve, imprimer: boolean) => lignes.map((l, i) => (
+    // Le solde d'ouverture se reconnaît à ce qu'il est, non à son rang : en
+    // page deux, le premier rang est une opération comme une autre.
+    <tr key={i} className={!imprimer && l === releve[0] ? 'bg-neutral-50 font-medium' : ''}>
       <td className={imprimer ? '' : 'px-3 py-2 text-sm text-neutral-600 whitespace-nowrap'}>{formaterDate(l.date)}</td>
       <td className={imprimer ? '' : 'px-3 py-2 text-sm font-mono'}>{l.piece}</td>
       <td className={imprimer ? '' : 'px-3 py-2 text-sm'}>{l.designation}</td>
@@ -72,12 +79,14 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
               <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
                 <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° pièce</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right">Facture</th><th className="px-3 py-2 text-right">Règlement</th><th className="px-3 py-2 text-right">Disponibilité</th><th className="px-3 py-2 text-right">Solde</th></tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">{lignesTable(false)}</tbody>
+              <tbody className="divide-y divide-neutral-100">{lignesTable(pages.trancher(releve), false)}</tbody>
               <tfoot className="bg-yellow-50 border-t border-neutral-200 text-sm font-semibold">
                 <tr><td colSpan={3} className="px-3 py-2 text-right">Total</td><td className="px-3 py-2 text-right font-mono text-red-600">{formaterFcfa(totalFacture)}</td><td className="px-3 py-2 text-right font-mono text-green-700">{formaterFcfa(totalReglement)}</td><td className="px-3 py-2 text-right font-mono text-blue-700">{formaterFcfa(Math.max(-client.solde_actuel, 0))}</td><td className="px-3 py-2 text-right font-mono">{formaterFcfa(client.solde_actuel)}</td></tr>
               </tfoot>
             </table>
           </div>
+
+          <Pagination etat={pages} nom="ligne" data-testid="pagination-compte-client" />
         </>
       ) : (
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm text-center py-16 text-neutral-400">Choisissez un client pour consulter ses opérations.</div>
@@ -93,7 +102,7 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
           <table className="document-liste">
             <thead><tr><th>Date</th><th>N° pièce</th><th>Désignation</th><th>Facture</th><th>Règlement</th><th>Disponibilité</th><th>Solde</th></tr></thead>
             <tbody>
-              {lignesTable(true)}
+              {lignesTable(releve, true)}
               <tr><th colSpan={3}>Total</th><th className="num">{formaterFcfa(totalFacture)}</th><th className="num">{formaterFcfa(totalReglement)}</th><th className="num">{formaterFcfa(Math.max(-client.solde_actuel, 0))}</th><th className="num">{formaterFcfa(client.solde_actuel)}</th></tr>
             </tbody>
             <tfoot><tr><td colSpan={7} className="document-liste-pied">Relevé de compte · {client.raison_sociale} · {filiale.nom} · solde {formaterFcfa(client.solde_actuel)} · édité le {new Date().toLocaleDateString('fr-FR')}</td></tr></tfoot>

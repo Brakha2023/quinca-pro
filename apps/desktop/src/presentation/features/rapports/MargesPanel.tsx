@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownTrayIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Pagination from '../../components/ui/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { formaterPourcentage } from '../../../core/commun/prix';
 import { debutDuJour, finDuJour } from '../../../core/pilotage';
 import {
@@ -65,6 +67,10 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
   const retenus = useMemo(() => filtrerMarges(articles, { familleCle, recherche }), [articles, familleCle, recherche]);
   const categories = useMemo(() => trierMarges(avecParts(margesCategories(retenus)), tri), [retenus, tri]);
   const detail = useMemo(() => trierMarges(avecParts(retenus), tri), [retenus, tri]);
+  // Le détail suit la taille du catalogue : seule la page courante est rendue.
+  // La feuille A4 et l'export reçoivent `detail` en entier.
+  const pages = usePagination(detail.length, [dateDebut, dateFin, familleCle, recherche, tri]);
+  const affichesDetail = pages.trancher(detail);
   const recap = recapMarges(retenus);
   const { aPerte, perte } = alertesMarges(retenus);
 
@@ -252,7 +258,7 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
               <th className="px-3 py-2 text-right">Taux</th>
             </tr></thead>
             <tbody className="divide-y divide-neutral-100">
-              {detail.map((l) => (
+              {affichesDetail.map((l) => (
                 <tr key={l.cle} className="hover:bg-neutral-50" data-testid="ligne-article-marge">
                   <td className="px-3 py-2 font-mono text-sm text-primary-700">{l.code}</td>
                   <td className="max-w-xs truncate px-3 py-2 text-sm" title={l.libelle}>{l.libelle}</td>
@@ -269,6 +275,8 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
         </div>
         {!isLoading && detail.length === 0 && <div className="py-8 text-center text-sm text-neutral-400">Aucun article dans ce périmètre.</div>}
       </div>
+
+      <Pagination etat={pages} nom="article" data-testid="pagination-marges" />
 
       <div className="space-y-1">
         <NoteHistorique quoi="ces ventes" />
