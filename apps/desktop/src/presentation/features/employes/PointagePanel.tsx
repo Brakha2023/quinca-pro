@@ -96,7 +96,7 @@ export default function PointagePanel({ filialeId, filiale }: Props) {
 
       {imprimer && (
         <DocumentImprimable titre={`Feuille de présence — ${libellePeriode(periode)}`} filiale={filiale} onClose={() => setImprimer(false)}>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>Matricule</th><th>Employé</th><th>Fonction</th><th>Présents</th><th>Absents</th><th>Justifiés</th></tr></thead>
             <tbody>{employes.map((e) => { const r = recap.get(e.id) ?? { PRESENT: 0, ABSENT: 0, JUSTIFIE: 0 }; return <tr key={e.id}><td>{e.matricule}</td><td>{nomComplet(e)}</td><td>{e.fonction ?? ''}</td><td className="num">{r.PRESENT}</td><td className="num">{r.ABSENT}</td><td className="num">{r.JUSTIFIE}</td></tr>; })}</tbody>
           </table>

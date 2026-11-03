@@ -179,7 +179,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
       {modal?.type === 'tableau' && (
         <DocumentImprimable titre="Situation des comptes clients" filiale={filiale} onClose={() => setModal(null)}>
           <p>Arrêtée au {new Date().toLocaleDateString('fr-FR')} · {clients.length} client(s){groupe ? ` · groupe ${groupe}` : ''}</p>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>Code</th><th>Raison sociale</th><th>Mobile</th><th>Solde initial</th><th>Facture</th><th>Règlement</th><th>Solde</th><th>Disponibilité</th><th>Plafond</th></tr></thead>
             <tbody>
               {clients.map((c) => (

@@ -27,8 +27,15 @@
   .ticket-pied { text-align: center; margin-top: 6px; }
 }
 
-/* Documents A4 (bon de commande, balance, relevé…) : aperçu à l'écran, seuls imprimés. */
-.document { font: 12px/1.4 Arial, Helvetica, sans-serif; color: #000; background: #fff; max-width: 190mm; margin: 0 auto; padding: 8mm; }
+/* Documents A4 (bon de commande, balance, relevé…) : aperçu à l'écran, seuls imprimés.
+
+   `print-color-adjust` : le navigateur supprime les fonds à l'impression, par
+   économie d'encre. Ici ils portent du sens — la bande grise d'un entête de
+   colonne, le bandeau du titre, et surtout le cadre « FACTURE ANNULÉE », qui
+   doit se voir de loin sur une pièce classée. Sans cette ligne, l'aperçu
+   montre une feuille que l'imprimante ne rend pas. */
+.document { font: 12px/1.4 Arial, Helvetica, sans-serif; color: #000; background: #fff; max-width: 190mm; margin: 0 auto; padding: 8mm;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .document-entete { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; }
 .document-logo { font: bold 26px Georgia, serif; border: 3px double #000; border-radius: 8px; padding: 4px 14px; }
 .document-societe { text-align: right; }
@@ -101,11 +108,23 @@
    pages suivantes ne portent aucune identification. */
 .document .document-liste tfoot { display: table-footer-group; }
 .document .document-liste .document-liste-pied { border: 0; border-top: 1px solid #000; padding-top: 3px; font-size: 9px; text-align: center; }
-/* Feuille couchée : une liste trop large en portrait s'imprime en paysage.
-   La règle `@page` étant globale, on passe par une page nommée — le navigateur
-   bascule l'orientation pour les seules feuilles qui la demandent. */
+/* Les marges d'une feuille A4.
+
+   La règle `@page` globale vaut 4 mm, parce qu'elle gouverne aussi le ticket
+   de caisse, qui tient sur 72 mm de rouleau et n'a pas de marge à perdre. Une
+   pièce A4 demande l'inverse : beaucoup d'imprimantes ne savent rien poser à
+   moins de 5 mm du bord, et un tableau qui touche le bord y perd sa dernière
+   colonne. Chaque orientation prend donc sa **page nommée**, à 10 mm.
+
+   Ces 10 mm ne sont pas un chiffre rond pris au hasard : 210 − 20 = 190, la
+   largeur même que l'aperçu donne à la feuille (`.document`), et 297 − 20 =
+   277, celle de la feuille couchée. Ce qui s'affiche à l'écran et ce qui sort
+   de l'imprimante ont ainsi la même largeur, colonne pour colonne. */
+.document { page: a4-portrait; }
+@page a4-portrait { size: A4 portrait; margin: 10mm; }
+/* Feuille couchée : une liste trop large en portrait s'imprime en paysage. */
 .document.document-paysage { max-width: 277mm; page: paysage; }
-@page paysage { size: A4 landscape; margin: 4mm; }
+@page paysage { size: A4 landscape; margin: 10mm; }
 /* Intertitre, quand une feuille porte deux listes (stock dormant, stock actif). */
 .document .document-section { font-size: 12px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #000; margin: 10px 0 4px; padding-bottom: 2px; }
 /* Ce que la liste compte au juste, en bas de feuille et en petits caractères. */

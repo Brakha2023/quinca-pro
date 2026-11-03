@@ -61,8 +61,10 @@ export function feuillesAImprimer(sortie: SortiePapier): Feuille[] {
 
 /**
  * Ce que le poste propose d'office. Le format par défaut du poste décide du
- * papier (Paramètres → Documents) ; une livraison demandée au ticket appelle
- * son bon, puisque la marchandise ne part pas avec le client.
+ * papier (Paramètres → Documents) : un poste réglé sur le ticket garde son
+ * ticket, même pour une livraison — le bon s'imprime alors d'un clic. Sur un
+ * poste en A4, une livraison demandée fait venir son bon avec la facture,
+ * puisque la marchandise ne part pas avec le client.
  */
 export function sortieParDefaut(format: FormatImpression, avecLivraison: boolean): SortiePapier {
   if (format === 'TICKET') return 'TICKET';

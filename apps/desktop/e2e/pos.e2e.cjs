@@ -261,6 +261,21 @@ const pagesImprimees = async (page) => {
   verifier((await page.textContent('[role=dialog]')).includes('Rendu'), 'encaissement espèces avec rendu monnaie');
   verifier((await page.locator('#zone-impression.ticket').count()) === 1, 'ticket imprimable rendu (format du poste)');
 
+  // Ce qui part sur le papier, et rien d'autre. Le ticket se rend dans une
+  // zone à part, masquée à l'écran ; c'est la feuille de style d'impression
+  // qui efface l'application et la boîte de dialogue autour. À l'écran tout
+  // paraît juste même si cette règle saute — seul le média `print` le dit.
+  await page.emulateMedia({ media: 'print' });
+  const surLePapier = await page.evaluate(() => ({
+    application: getComputedStyle(document.querySelector('#root')).display,
+    ticket: getComputedStyle(document.querySelector('#zone-impression')).display,
+    dialogue: document.querySelector('[role=dialog][aria-modal=true]').checkVisibility(),
+  }));
+  await page.emulateMedia({ media: null });
+  verifier(surLePapier.ticket === 'block', 'impression : le ticket sort');
+  verifier(surLePapier.application === 'none', 'impression : l’application ne le suit pas sur le papier');
+  verifier(surLePapier.dialogue === false, 'impression : la boîte « Vente enregistrée » non plus');
+
   // L'impression système est remplacée par un témoin : en test, aucune boîte d'impression ne doit s'ouvrir.
   await page.evaluate(() => { window.__impressions = []; window.print = () => window.__impressions.push(document.querySelector('#zone-impression')?.className ?? ''); });
   await page.getByTestId('imprimer-facture').click();

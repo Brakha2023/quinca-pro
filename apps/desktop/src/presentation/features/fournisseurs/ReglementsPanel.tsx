@@ -67,7 +67,7 @@ export default function ReglementsPanel({ filialeId, filiale }: Props) {
       {imprimer && (
         <DocumentImprimable titre="Historique des règlements fournisseurs" filiale={filiale} onClose={() => setImprimer(false)}>
           <p>{fournisseurId ? fournisseurs.find((f) => f.id === fournisseurId)?.raison_sociale : 'Tous fournisseurs'}{dateDebut || dateFin ? ` · du ${dateDebut || '…'} au ${dateFin || '…'}` : ''} · édité le {new Date().toLocaleDateString('fr-FR')}</p>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>Date</th><th>N° pièce</th><th>Fournisseur</th><th>Mode</th><th>Référence</th><th>Montant</th></tr></thead>
             <tbody>{reglements.map((r) => <tr key={r.id}><td>{formaterDateHeure(r.date_reglement)}</td><td>{r.numero}</td><td>{r.fournisseur_nom}</td><td>{LIBELLES_TYPE_REGLEMENT[(r.type_reglement ?? 'ESPECES') as TypeReglement]}</td><td>{r.reference ?? ''}</td><td className="num">{formaterFcfa(r.montant)}</td></tr>)}</tbody>
             <tfoot><tr><th colSpan={5}>Total</th><th className="num">{formaterFcfa(total)}</th></tr></tfoot>

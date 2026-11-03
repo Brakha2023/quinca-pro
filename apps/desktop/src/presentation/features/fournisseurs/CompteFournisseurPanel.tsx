@@ -84,7 +84,7 @@ export default function CompteFournisseurPanel({ filialeId, filiale }: Props) {
             <div className="document-bloc"><strong>{fournisseur.raison_sociale}</strong><br />N° compte : {fournisseur.numero_compte ?? fournisseur.code}<br />{fournisseur.adresse ?? ''}<br />{fournisseur.telephone ?? fournisseur.mobile ?? ''}</div>
             <div className="document-bloc">Arrêté au {new Date().toLocaleDateString('fr-FR')}<br />Solde actuel : <strong>{formaterFcfa(fournisseur.solde_actuel)}</strong></div>
           </div>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>Date</th><th>Pièce</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Solde</th></tr></thead>
             <tbody>{releve.map((l, i) => <tr key={i}><td>{formaterDate(l.date)}</td><td>{l.piece}</td><td>{l.libelle}</td><td className="num">{l.debit ? formaterFcfa(l.debit) : ''}</td><td className="num">{l.credit ? formaterFcfa(l.credit) : ''}</td><td className="num">{formaterFcfa(l.solde)}</td></tr>)}</tbody>
             <tfoot><tr><th colSpan={3}>Totaux</th><th className="num">{formaterFcfa(totalDebit)}</th><th className="num">{formaterFcfa(totalCredit)}</th><th className="num">{formaterFcfa(fournisseur.solde_actuel)}</th></tr></tfoot>

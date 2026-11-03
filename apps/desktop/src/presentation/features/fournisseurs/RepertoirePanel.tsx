@@ -161,7 +161,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
       {modal?.type === 'balance' && (
         <DocumentImprimable titre="Balance générale fournisseurs" filiale={filiale} onClose={() => setModal(null)}>
           <p>Arrêtée au {new Date().toLocaleDateString('fr-FR')} · {fournisseurs.length} fournisseur(s)</p>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>N° compte</th><th>Raison sociale</th><th>Solde initial</th><th>Facture</th><th>Règlement</th><th>Solde</th></tr></thead>
             <tbody>
               {fournisseurs.map((f) => (

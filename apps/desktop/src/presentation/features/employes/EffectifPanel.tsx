@@ -126,7 +126,7 @@ export default function EffectifPanel({ filialeId, filiale }: Props) {
       {modal?.type === 'imprimer' && (
         <DocumentImprimable titre="Liste du personnel" filiale={filiale} onClose={() => setModal(null)}>
           <p>Éditée le {new Date().toLocaleDateString('fr-FR')} · {employes.length} employé(s)</p>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>Matricule</th><th>Nom et prénom</th><th>Sexe</th><th>Téléphone</th><th>Fonction</th><th>Contrat</th><th>Début</th><th>Statut</th></tr></thead>
             <tbody>{employes.map((e) => <tr key={e.id}><td>{e.matricule}</td><td>{nomComplet(e)}</td><td>{e.sexe ?? ''}</td><td>{e.telephone ?? ''}</td><td>{e.fonction ?? ''}</td><td>{LIBELLES_TYPE_CONTRAT[e.type_contrat]}</td><td>{e.date_debut ? formaterDate(e.date_debut) : ''}</td><td>{e.est_actif ? 'Actif' : 'Inactif'}</td></tr>)}</tbody>
           </table>

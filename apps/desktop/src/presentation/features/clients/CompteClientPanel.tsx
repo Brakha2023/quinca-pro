@@ -90,7 +90,7 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
             <div className="document-bloc"><strong>{client.raison_sociale}</strong><br />Code : {client.numero_compte ?? client.code}<br />{client.adresse ?? ''}<br />{client.mobile ?? client.telephone ?? ''}</div>
             <div className="document-bloc">{dateDebut || dateFin ? `Période du ${dateDebut || '…'} au ${dateFin || '…'}` : `Arrêté au ${new Date().toLocaleDateString('fr-FR')}`}<br />Solde d'ouverture : {formaterFcfa(client.solde_initial)}<br />Solde : <strong>{formaterFcfa(client.solde_actuel)}</strong></div>
           </div>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>Date</th><th>N° pièce</th><th>Désignation</th><th>Facture</th><th>Règlement</th><th>Disponibilité</th><th>Solde</th></tr></thead>
             <tbody>{lignesTable(true)}</tbody>
             <tfoot><tr><th colSpan={3}>Total</th><th className="num">{formaterFcfa(totalFacture)}</th><th className="num">{formaterFcfa(totalReglement)}</th><th className="num">{formaterFcfa(Math.max(-client.solde_actuel, 0))}</th><th className="num">{formaterFcfa(client.solde_actuel)}</th></tr></tfoot>

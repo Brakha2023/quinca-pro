@@ -82,7 +82,7 @@ export default function PaiementPanel({ filialeId, filiale }: Props) {
       {document?.type === 'emargement' && (
         <DocumentImprimable titre={`Fiche d'émargement — ${libellePeriode(periode)}`} filiale={filiale} onClose={() => setDocument(null)}>
           <p>Paiement des salaires de {libellePeriode(periode)} · {paies.length} employé(s){document.avecSalaire ? ` · total ${formaterFcfa(total)}` : ''}</p>
-          <table>
+          <table className="document-liste">
             <thead><tr><th>N°</th><th>Matricule</th><th>Nom et prénom</th><th>Fonction</th>{document.avecSalaire && <th>Net payé</th>}<th style={{ width: '38mm' }}>Émargement</th></tr></thead>
             <tbody>{paies.map((p, i) => <tr key={p.id} style={{ height: 34 }}><td className="num">{i + 1}</td><td>{p.matricule}</td><td>{nomComplet(p)}</td><td>{p.fonction ?? ''}</td>{document.avecSalaire && <td className="num">{formaterFcfa(p.net_a_payer)}</td>}<td /></tr>)}</tbody>
             {document.avecSalaire && <tfoot><tr><th colSpan={4}>Total</th><th className="num">{formaterFcfa(total)}</th><th /></tr></tfoot>}

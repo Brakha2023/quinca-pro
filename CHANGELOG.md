@@ -186,6 +186,19 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   défaut touchait la *Consolidation* — les tuiles comme l'histogramme — et le *Rapport des marges*.
   Une vente annulée ne pèse désormais dans aucun mois, ni par son chiffre d'affaires ni par son
   coût. Les chiffres déjà affichés se corrigent d'eux-mêmes : rien à ressaisir, aucune migration.
+- **Les listes imprimées ne coupent plus une ligne en deux.** La situation des comptes clients, la
+  balance générale fournisseurs, les historiques de versements et de règlements, les relevés de
+  compte client et fournisseur, la liste du personnel, la feuille de présence et la fiche
+  d'émargement sortaient en tableau nu : un saut de page pouvait trancher une ligne par le milieu,
+  et une liste large débordait de la feuille. Elles reprennent le gabarit des autres listes —
+  caractères resserrés, et une ligne reste entière sur sa page.
+- **Ce que montre l'aperçu est ce qui sort de l'imprimante.** Par économie d'encre, le navigateur
+  supprime les fonds : les bandes grises des entêtes de colonnes, le bandeau du titre et surtout le
+  cadre **FACTURE ANNULÉE** sortaient en blanc. Une facture annulée doit se reconnaître de loin
+  dans un classeur ; ces fonds s'impriment désormais. Et les marges d'une feuille A4 passent de
+  4 mm à 10 mm — 4 mm, c'est la marge du ticket de caisse, qui tient sur 72 mm de rouleau ; sur une
+  A4, beaucoup d'imprimantes ne savent rien poser à moins de 5 mm du bord. La feuille imprimée fait
+  désormais exactement la largeur de son aperçu, colonne pour colonne.
 - **Les tableaux ne coupent plus les mots en quatre.** Sur une fenêtre étroite, une désignation
   d'article, une raison sociale ou un numéro de bon se brisaient sur trois lignes et la liste
   devenait illisible. Chaque tableau garde désormais sa **largeur naturelle** et c'est son cadre
