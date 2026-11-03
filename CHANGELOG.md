@@ -186,6 +186,12 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   défaut touchait la *Consolidation* — les tuiles comme l'histogramme — et le *Rapport des marges*.
   Une vente annulée ne pèse désormais dans aucun mois, ni par son chiffre d'affaires ni par son
   coût. Les chiffres déjà affichés se corrigent d'eux-mêmes : rien à ressaisir, aucune migration.
+- **Les polices ne viennent plus d'Internet.** *Inter* et *JetBrains Mono* étaient chargées depuis
+  Google à chaque démarrage : pour une application qui tient à fonctionner hors ligne, c'était une
+  promesse à moitié tenue — à la première coupure, toute l'interface changeait de caractères. Les
+  deux polices sont désormais dans l'installeur (188 Ko, latin seulement), et l'application
+  n'appelle plus aucun serveur extérieur pour s'afficher. Les pièces imprimées, elles, n'étaient
+  pas concernées : elles s'écrivent en Arial, qui est sur la machine.
 - **Les listes imprimées ne coupent plus une ligne en deux.** La situation des comptes clients, la
   balance générale fournisseurs, les historiques de versements et de règlements, les relevés de
   compte client et fournisseur, la liste du personnel, la feuille de présence et la fiche

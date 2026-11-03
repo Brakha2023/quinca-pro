@@ -1,3 +1,58 @@
+/* ---------- Les polices, embarquées ----------
+
+   Elles venaient de `fonts.googleapis.com`. Pour une application qui tient à
+   fonctionner hors ligne, c'était une promesse à moitié tenue : à la première
+   coupure, toute l'interface changeait de caractères. Les pièces imprimées y
+   échappaient — elles s'écrivent en Arial, qui est sur la machine —, mais
+   l'écran, lui, retombait sur la police du système.
+
+   Les fichiers viennent de `@fontsource-variable`, qui les tient de Google
+   Fonts ; Inter et JetBrains Mono sont sous licence OFL, faite pour être
+   redistribuée. On n'en embarque que ce qui sert : le latin et son extension,
+   en romain, et **une seule graisse variable** par famille qui les couvre
+   toutes de 100 à 900 — 185 Ko pour les quatre fichiers, au lieu des deux
+   mégaoctets des alphabets cyrillique, grec et vietnamien.
+
+   Les deux familles gardent leur nom ordinaire : la pile de `tailwind.config`
+   et celle du `body` les nomment déjà, et le système reste derrière en
+   secours. Pas d'italique : l'interface n'en pose jamais, et le navigateur
+   sait en incliner une au besoin. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
