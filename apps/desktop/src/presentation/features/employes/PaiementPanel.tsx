@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DocumentTextIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import { LIBELLES_STATUT_PAIE, LIBELLES_TYPE_CONTRAT, libellePeriode, nomComplet, periodeCourante } from '../../../core/employes';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
@@ -49,9 +50,9 @@ export default function PaiementPanel({ filialeId, filiale }: Props) {
       <div className="flex flex-wrap items-end gap-3">
         <SelectPeriode value={periode} onChange={setPeriode} />
         <div className="ml-auto flex flex-wrap gap-2">
-          <button type="button" onClick={() => setDocument({ type: 'emargement', avecSalaire: false })} disabled={paies.length === 0} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Émargement sans salaire</button>
-          <button type="button" onClick={() => setDocument({ type: 'emargement', avecSalaire: true })} disabled={paies.length === 0} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Émargement avec salaire</button>
-          <button type="button" onClick={() => setDocument({ type: 'bulletins' })} disabled={paies.length === 0} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><DocumentTextIcon className="w-5 h-5" /> Bulletins de paie</button>
+          <Bouton onClick={() => setDocument({ type: 'emargement', avecSalaire: false })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50 text-neutral-700 font-medium rounded-lg" disabled={paies.length === 0}>Émargement sans salaire</Bouton>
+          <Bouton onClick={() => setDocument({ type: 'emargement', avecSalaire: true })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-50 text-neutral-700 font-medium rounded-lg" disabled={paies.length === 0}>Émargement avec salaire</Bouton>
+          <Bouton onClick={() => setDocument({ type: 'bulletins' })} icone={DocumentTextIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={paies.length === 0}>Bulletins de paie</Bouton>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-4">
@@ -71,7 +72,7 @@ export default function PaiementPanel({ filialeId, filiale }: Props) {
                 <td className="px-3 py-2 text-sm text-right font-mono font-bold">{formaterFcfa(p.net_a_payer)}</td>
                 <td className="px-3 py-2 text-sm"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.statut === 'PAYEE' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{LIBELLES_STATUT_PAIE[p.statut]}</span></td>
                 <td className="px-3 py-2 text-sm text-neutral-600">{p.date_paiement ? `${formaterDate(p.date_paiement)}${p.caisse_nom ? ` · ${p.caisse_nom}` : ''}${p.reference ? ` · ${p.reference}` : ''}` : '—'}</td>
-                <td className="px-3 py-2 text-center"><button type="button" onClick={() => setDocument({ type: 'bulletin', p })} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Bulletin de paie"><DocumentTextIcon className="w-4 h-4" /></button></td>
+                <td className="px-3 py-2 text-center"><Bouton onClick={() => setDocument({ type: 'bulletin', p })} icone={DocumentTextIcon} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Bulletin de paie"></Bouton></td>
               </tr>
             ))}
           </tbody>

@@ -14,6 +14,7 @@ import {
   type StatutTransfertStock,
   type TransfertStockVue,
 } from '../../../core/stock';
+import Bouton from '../../components/ui/Bouton';
 import type { Depot } from '../../../core/articles';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { TransfertsStockRepository } from '../../../infrastructure/powersync/repositories/TransfertsStockRepository';
@@ -168,9 +169,7 @@ export default function TransfertFilialeStockPanel({ filialeId, filiale, filiale
           <span className="text-sm text-neutral-600" data-testid="compteur-transferts">
             <strong>{recap.nombre}</strong> bon(s) · {recap.en_transit} en transit · valeur <strong className="font-mono">{formaterFcfa(recap.valeur)}</strong>
           </span>
-          <button onClick={exporter} className="ml-auto flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-transferts">
-            <ArrowDownTrayIcon className="w-4 h-4" /> Exporter Excel
-          </button>
+          <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="ml-auto flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-transferts">Exporter Excel</Bouton>
         </div>
 
         <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
@@ -211,7 +210,7 @@ export default function TransfertFilialeStockPanel({ filialeId, filiale, filiale
                       <td className="px-3 py-2 text-sm text-neutral-600">{t.utilisateur_envoi ?? '—'}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center justify-center gap-2">
-                          <button type="button" onClick={() => setApercu(t)} title="Imprimer le bon" className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100" data-testid={`imprimer-transfert-${t.numero}`}><PrinterIcon className="w-4 h-4" /></button>
+                          <Bouton onClick={() => setApercu(t)} icone={PrinterIcon} className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100" title="Imprimer le bon" data-testid={`imprimer-transfert-${t.numero}`}></Bouton>
                           {transfertReceptionnable(t, filialeId) && (
                             <button type="button" onClick={() => setReception(t)} className="px-3 py-1 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-medium" data-testid="receptionner-transfert">Réceptionner</button>
                           )}
@@ -357,9 +356,7 @@ function ModaleReception({ transfert, depots, onClose, onReceptionner }: {
       pied={
         <>
           <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Fermer</button>
-          <button type="button" disabled={enCours || !depotId} onClick={async () => { setEnCours(true); await onReceptionner(depotId); setEnCours(false); }} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="confirmer-reception">
-            Faire entrer en stock
-          </button>
+          <Bouton type="button" onClick={async () => { setEnCours(true); await onReceptionner(depotId); setEnCours(false); }} enCours={enCours} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours || !depotId} data-testid="confirmer-reception">Faire entrer en stock</Bouton>
         </>
       }
     >

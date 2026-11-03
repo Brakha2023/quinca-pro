@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DocumentTextIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, TruckIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutCommandeFournisseur } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import type { Article } from '../../../core/articles';
@@ -93,7 +94,7 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
         <span className="mr-auto text-sm text-neutral-600">Net à payer : <strong className="font-mono">{formaterFcfa(totaux.net_a_payer)}</strong></span>
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
         <button type="button" onClick={exporter} disabled={lignes.length === 0} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 disabled:text-neutral-400 text-neutral-700 font-medium rounded-lg" data-testid="exporter-excel">Exporter en Excel</button>
-        <button type="button" onClick={valider} disabled={enCours || lignes.length === 0 || !fid} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg">Créer le bon</button>
+        <Bouton type="button" onClick={valider} enCours={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours || lignes.length === 0 || !fid}>Créer le bon</Bouton>
       </>
     }>
       <div className="space-y-4">
@@ -176,7 +177,7 @@ function ReceptionModal({ filialeId, commande, lignes, onClose }: { filialeId: s
     <Modal titre={`Réceptionner ${commande.numero}`} sousTitre={`${commande.fournisseur_nom} · les quantités reçues entrent en stock au prix de commande`} largeur="max-w-3xl" onClose={onClose} pied={
       <>
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
-        <button type="button" onClick={valider} disabled={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg">Valider la réception</button>
+        <Bouton type="button" onClick={valider} enCours={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours}>Valider la réception</Bouton>
       </>
     }>
       <div className="space-y-4">
@@ -208,8 +209,8 @@ function DetailCommandeModal({ commande, lignes, onClose, onImprimer, onFacturer
   return (
     <Modal titre={`Commande ${commande.numero}`} sousTitre={`${commande.fournisseur_nom} · ${formaterDateHeure(commande.date_commande)}`} largeur="max-w-3xl" onClose={onClose} pied={
       <>
-        {documents.includes('BON') && <button type="button" onClick={onImprimer} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-4 h-4" /> Imprimer le bon</button>}
-        {documents.includes('FACTURE') && <button type="button" onClick={onFacturer} className={`${documents.includes('BON') ? '' : 'mr-auto '}flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg`} data-testid="facture-depuis-detail"><DocumentTextIcon className="w-4 h-4" /> Facture d'achat</button>}
+        {documents.includes('BON') && <Bouton onClick={onImprimer} icone={PrinterIcon} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer le bon</Bouton>}
+        {documents.includes('FACTURE') && <Bouton onClick={onFacturer} icone={DocumentTextIcon} className={`${documents.includes('BON') ? '' : 'mr-auto '}flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg`} data-testid="facture-depuis-detail">Facture d'achat</Bouton>}
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Fermer</button>
       </>
     }>
@@ -303,8 +304,8 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
                   <td className="px-3 py-2 text-center">
                     <div className="flex items-center justify-center gap-0.5">
                       <button onClick={() => setModal({ type: 'detail', c })} className="p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Détail"><EyeIcon className="w-4 h-4" /></button>
-                      {documents.includes('BON') && <button onClick={() => setModal({ type: 'imprimer', c })} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer le bon de commande"><PrinterIcon className="w-4 h-4" /></button>}
-                      {documents.includes('FACTURE') && <button onClick={() => setModal({ type: 'facture', c })} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer la facture d'achat" data-testid={`facture-${c.numero}`}><DocumentTextIcon className="w-4 h-4" /></button>}
+                      {documents.includes('BON') && <Bouton onClick={() => setModal({ type: 'imprimer', c })} icone={PrinterIcon} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer le bon de commande"></Bouton>}
+                      {documents.includes('FACTURE') && <Bouton onClick={() => setModal({ type: 'facture', c })} icone={DocumentTextIcon} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer la facture d'achat" data-testid={`facture-${c.numero}`}></Bouton>}
                       {ouverte && <button onClick={() => setModal({ type: 'reception', c })} className="p-1.5 rounded hover:bg-primary-50 text-primary-700" title="Réceptionner"><TruckIcon className="w-4 h-4" /></button>}
                       {statut === 'ENVOYEE' && <button onClick={() => annuler(c)} className="p-1.5 rounded hover:bg-red-50 text-red-600" title="Annuler le bon"><XCircleIcon className="w-4 h-4" /></button>}
                     </div>

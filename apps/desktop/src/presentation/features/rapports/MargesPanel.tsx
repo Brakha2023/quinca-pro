@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownTrayIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { formaterPourcentage } from '../../../core/commun/prix';
@@ -148,8 +149,8 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
           <span className="whitespace-nowrap pb-2 text-sm text-neutral-600" data-testid="marges-compteur">
             <strong>{recap.categories}</strong> catégorie(s) · <strong>{recap.articles}</strong> article(s)
           </span>
-          <button type="button" onClick={() => setApercu(true)} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200" data-testid="imprimer-marges"><PrinterIcon className="h-4 w-4" /> Imprimer / PDF</button>
-          <button type="button" onClick={exporter} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200" data-testid="exporter-marges"><ArrowDownTrayIcon className="h-4 w-4" /> Exporter Excel</button>
+          <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200" data-testid="imprimer-marges">Imprimer / PDF</Bouton>
+          <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200" data-testid="exporter-marges">Exporter Excel</Bouton>
         </div>
       </div>
 

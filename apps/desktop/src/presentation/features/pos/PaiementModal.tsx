@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { CheckCircleIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { MODES_PAIEMENT, type ModePaiement } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import { disponibiliteCredit } from '../../../core/clients';
 import { StockInsuffisantError } from '../../../core/stock';
 import {
@@ -201,9 +202,7 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
       pied={
         <>
           <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Retour</button>
-          <button type="button" onClick={() => encaisser()} disabled={enCours || !apercu.ok} className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-semibold rounded-lg">
-            Valider la vente
-          </button>
+          <Bouton type="button" onClick={() => encaisser()} enCours={enCours} className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-semibold rounded-lg" disabled={enCours || !apercu.ok}>Valider la vente</Bouton>
         </>
       }
     >

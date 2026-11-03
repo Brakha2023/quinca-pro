@@ -231,6 +231,30 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   verifier((await page.locator('tbody tr').count()) === (await nombreAffiche()), 'catalogue : deux cents par page, tout tient sur une');
   verifier((await page.getByTestId('pagination-articles-suivant').count()) === 0, 'catalogue : une seule page, plus de boutons');
 
+  console.log('Le bouton pendant qu’il travaille');
+  // Entre le clic et l'aperçu, il s'écoule une à trois secondes sur un vrai
+  // catalogue. Sans rien à l'écran, le caissier recliquait et le travail
+  // partait deux fois. On observe le bouton plutôt que de deviner quand le
+  // regarder : la fenêtre d'attente ne dure que quelques dizaines de
+  // millisecondes sur ce jeu d'essai.
+  await page.evaluate(() => {
+    window.__attente = [];
+    const b = document.querySelector('[data-testid=imprimer-catalogue]');
+    new MutationObserver(() => window.__attente.push({
+      desarme: b.disabled, occupe: b.getAttribute('aria-busy'),
+      texte: b.textContent.trim(), tourniquet: !!b.querySelector('svg.animate-spin'),
+    })).observe(b, { attributes: true, childList: true, subtree: true, characterData: true });
+  });
+  await page.getByTestId('imprimer-catalogue').click();
+  await page.locator('#zone-impression .document').waitFor();
+  const pendant = (await page.evaluate(() => window.__attente)).find((v) => v.occupe === 'true');
+  verifier(pendant !== undefined && pendant.desarme, 'bouton : désarmé pendant le travail, le second clic ne porte pas');
+  verifier(pendant !== undefined && pendant.tourniquet && pendant.texte === 'Impression…',
+    'bouton : il dit ce qu’il fait, et le dit avec son propre verbe');
+  await page.locator('#zone-impression').getByRole('button', { name: "Fermer l'aperçu" }).click();
+  await page.waitForFunction(() => !document.querySelector('[data-testid=imprimer-catalogue]').disabled);
+  verifier(true, 'bouton : revenu à lui une fois le travail fait');
+
   // Tout le catalogue : c'est le cas qui échouait, la liste s'arrêtant à ce
   // qui tenait dans la fenêtre.
   const total = await nombreAffiche();

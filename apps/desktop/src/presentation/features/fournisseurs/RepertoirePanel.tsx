@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BanknotesIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, ScaleIcon, TruckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import type { Fournisseur } from '../../../core/fournisseurs';
@@ -128,7 +129,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
                       <button onClick={() => setModal({ type: 'details', id: f.id })} className={`${action} hover:bg-blue-50 text-blue-600`} title="Fiche fournisseur"><EyeIcon className="w-4 h-4" /></button>
                       <button onClick={() => setModal({ type: 'modifier', f })} className={`${action} hover:bg-neutral-100 text-neutral-700`} title="Modifier"><PencilSquareIcon className="w-4 h-4" /></button>
                       <button onClick={() => navigate(cheminFournisseurs('compte', f.id))} className={`${action} hover:bg-neutral-100 text-neutral-700`} title="Compte fournisseur"><ScaleIcon className="w-4 h-4" /></button>
-                      <button onClick={() => navigate(cheminFournisseurs('commandes', f.id))} className={`${action} hover:bg-primary-50 text-primary-700`} title="Nouvelle commande"><DocumentTextIcon className="w-4 h-4" /></button>
+                      <Bouton onClick={() => navigate(cheminFournisseurs('commandes', f.id))} icone={DocumentTextIcon} className={`${action} hover:bg-primary-50 text-primary-700`} title="Nouvelle commande"></Bouton>
                       <button onClick={() => setModal({ type: 'achat', f })} className={`${action} hover:bg-primary-50 text-primary-700`} title="Réceptionner un achat"><TruckIcon className="w-4 h-4" /></button>
                       <button onClick={() => setModal({ type: 'reglement', f })} className={`${action} hover:bg-green-50 text-green-700`} title="Règlement"><BanknotesIcon className="w-4 h-4" /></button>
                       <button onClick={() => navigate(cheminFournisseurs('relance', f.id))} className={`${action} hover:bg-orange-50 text-orange-600`} title="Relance par e-mail" disabled={!f.email}><EnvelopeIcon className="w-4 h-4" /></button>

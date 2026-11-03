@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_TYPE_REGLEMENT } from '../../../core/clients';
@@ -38,7 +39,7 @@ export default function ReglementsPanel({ filialeId, filiale }: Props) {
         </FormField>
         <FormField label="Du"><input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} className={inputClass} /></FormField>
         <FormField label="Au"><input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} className={inputClass} /></FormField>
-        <button type="button" onClick={() => setImprimer(true)} className="flex items-center justify-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer</button>
+        <Bouton onClick={() => setImprimer(true)} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center justify-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer</Bouton>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Total réglé</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(total)}</p><p className="text-xs text-neutral-500">{reglements.length} règlement(s)</p></div>

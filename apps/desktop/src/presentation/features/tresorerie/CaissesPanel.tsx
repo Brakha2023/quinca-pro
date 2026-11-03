@@ -4,6 +4,7 @@ import {
   ETATS_CAISSE, construireJournalCaisse, filtrerCaisses, perimetreCaisses, recapEtatCaisses,
   type Caisse, type EtatCaisseRetenu, type LigneEtatCaisse,
 } from '../../../core/tresorerie';
+import Bouton from '../../components/ui/Bouton';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -168,8 +169,8 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
           <span className="text-sm text-neutral-600 pb-2" data-testid="compteur-caisses">
             <strong>{recap.nombre}</strong> caisse(s) · clôture <strong className="font-mono">{formaterFcfa(recap.cloture)}</strong>
           </span>
-          <button type="button" onClick={() => setModal({ type: 'etat' })} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-caisses"><PrinterIcon className="w-4 h-4" /> Imprimer / PDF</button>
-          <button type="button" onClick={exporterEtat} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-caisses"><ArrowDownTrayIcon className="w-4 h-4" /> Exporter Excel</button>
+          <Bouton onClick={() => setModal({ type: 'etat' })} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-caisses">Imprimer / PDF</Bouton>
+          <Bouton onClick={exporterEtat} icone={ArrowDownTrayIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-caisses">Exporter Excel</Bouton>
         </div>
       </div>
 
@@ -244,8 +245,8 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
           </select>
         </label>
         <div className="ml-auto flex gap-2">
-          <button type="button" onClick={() => setModal({ type: 'journal' })} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer le journal</button>
-          <button type="button" onClick={exporterJournal} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="exporter-journal"><ArrowDownTrayIcon className="w-5 h-5" /> Exporter Excel</button>
+          <Bouton onClick={() => setModal({ type: 'journal' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer le journal</Bouton>
+          <Bouton onClick={exporterJournal} icone={ArrowDownTrayIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="exporter-journal">Exporter Excel</Bouton>
         </div>
       </div>
 

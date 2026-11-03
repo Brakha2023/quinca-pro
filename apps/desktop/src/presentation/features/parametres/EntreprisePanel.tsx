@@ -6,6 +6,7 @@ import {
   FORMES_JURIDIQUES, PAYS, TAILLE_MAX_LOGO, champsManquants, entrepriseFormSchema,
   initiales, type Entreprise, type EntrepriseForm, type EntrepriseFormInput,
 } from '../../../core/parametres';
+import Bouton from '../../components/ui/Bouton';
 import { redimensionnerLogo, tailleDataUrl } from '../../../infrastructure/fichiers/piecesJointes';
 import { EntrepriseRepository } from '../../../infrastructure/powersync/repositories/EntrepriseRepository';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
@@ -235,10 +236,7 @@ function ChoixLogo({ champ, libelle, detail, valeur, nom, peutModifier, onChange
         <div className="mt-2 flex items-center gap-2">
           <input ref={entree} type="file" accept="image/png,image/jpeg" className="hidden"
                  onChange={(e) => void choisir(e.target.files?.[0])} data-testid={`fichier-${champ}`} />
-          <button type="button" onClick={() => entree.current?.click()} disabled={enCours}
-                  className="flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
-            <ArrowUpTrayIcon className="h-3.5 w-3.5" /> {enCours ? '…' : valeur ? 'Changer' : 'Charger'}
-          </button>
+          <Bouton onClick={() => entree.current?.click()} icone={ArrowUpTrayIcon} tailleIcone="h-3.5 w-3.5" className="flex items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 disabled:opacity-50" disabled={enCours}>{enCours ? '…' : valeur ? 'Changer' : 'Charger'}</Bouton>
           {valeur && (
             <button type="button" onClick={() => void onChange(null)} title="Retirer ce logo"
                     className="rounded-md p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"

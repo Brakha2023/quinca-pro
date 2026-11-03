@@ -5,6 +5,7 @@ import {
   PORTEES, normaliserCodeRole, roleFormSchema,
   type Role, type RoleForm, type RoleFormInput, type UtilisateurAdministre,
 } from '../../../core/parametres';
+import Bouton from '../../components/ui/Bouton';
 import { changerMotDePasse } from '../../../infrastructure/auth/motDePasse';
 import { RolesRepository } from '../../../infrastructure/powersync/repositories/RolesRepository';
 import Modal from '../../components/ui/Modal';
@@ -130,7 +131,7 @@ export function AffectationModal({
       pied={
         <>
           <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
-          <button type="button" onClick={enregistrer} disabled={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="affectation-enregistrer">Enregistrer</button>
+          <Bouton type="button" onClick={enregistrer} enCours={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours} data-testid="affectation-enregistrer">Enregistrer</Bouton>
         </>
       }
     >
@@ -205,9 +206,7 @@ export function MotDePasseModal({
           {!obligatoire && (
             <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
           )}
-          <button type="button" onClick={enregistrer} disabled={enCours || !nouveau} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="mot-de-passe-enregistrer">
-            Enregistrer
-          </button>
+          <Bouton type="button" onClick={enregistrer} enCours={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours || !nouveau} data-testid="mot-de-passe-enregistrer">Enregistrer</Bouton>
         </>
       }
     >

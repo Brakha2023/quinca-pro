@@ -14,6 +14,7 @@ import {
   type LigneRotation,
   type NatureAlerte,
 } from '../../../core/stock';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
@@ -222,12 +223,8 @@ export default function AlertesPanel({ filialeId, filiale }: { filialeId: string
           <strong>{retenues.length}</strong> en alerte · à commander <strong className="font-mono">{formaterFcfa(recap.montant_a_commander)}</strong>
         </span>
         <div className="ml-auto flex gap-2">
-          <button onClick={() => setApercu(true)} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-alertes">
-            <PrinterIcon className="w-4 h-4" /> Imprimer / PDF
-          </button>
-          <button onClick={exporter} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-alertes">
-            <ArrowDownTrayIcon className="w-4 h-4" /> Exporter Excel
-          </button>
+          <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-alertes">Imprimer / PDF</Bouton>
+          <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-alertes">Exporter Excel</Bouton>
         </div>
       </div>
 
@@ -247,12 +244,8 @@ export default function AlertesPanel({ filialeId, filiale }: { filialeId: string
             <select id="seuil-dormance" value={seuilJours} onChange={(e) => setSeuilJours(Number(e.target.value))} className={controleInlineClass} data-testid="seuil-dormance">
               {SEUILS_DORMANCE.map((j) => <option key={j} value={j}>{j} jours</option>)}
             </select>
-            <button onClick={() => setApercuRotation(true)} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-rotation">
-              <PrinterIcon className="w-4 h-4" /> Imprimer / PDF
-            </button>
-            <button onClick={exporterRotation} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-rotation">
-              <ArrowDownTrayIcon className="w-4 h-4" /> Exporter Excel
-            </button>
+            <Bouton onClick={() => setApercuRotation(true)} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-rotation">Imprimer / PDF</Bouton>
+            <Bouton onClick={exporterRotation} icone={ArrowDownTrayIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-rotation">Exporter Excel</Bouton>
           </div>
         </div>
         <p className="text-sm text-neutral-600" data-testid="compteur-rotation">

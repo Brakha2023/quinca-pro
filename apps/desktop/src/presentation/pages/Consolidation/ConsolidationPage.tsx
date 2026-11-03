@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ArrowDownTrayIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import { formaterFcfa, formaterPourcentage } from '../../../core/commun/prix';
 import { consolider, fenetrePilotage, type Periode } from '../../../core/pilotage';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
@@ -105,12 +106,8 @@ export default function ConsolidationPage() {
         </div>
         <div className="flex items-center gap-2">
           <SelecteurPeriode periode={periode} onChange={setPeriode} />
-          <button type="button" onClick={() => setApercu(true)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100" data-testid="imprimer-tableau-de-bord">
-            <PrinterIcon className="h-4 w-4" /> Imprimer / PDF
-          </button>
-          <button type="button" onClick={exporter} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100" data-testid="exporter-tableau-de-bord">
-            <ArrowDownTrayIcon className="h-4 w-4" /> Exporter Excel
-          </button>
+          <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100" data-testid="imprimer-tableau-de-bord">Imprimer / PDF</Bouton>
+          <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100" data-testid="exporter-tableau-de-bord">Exporter Excel</Bouton>
         </div>
       </div>
 

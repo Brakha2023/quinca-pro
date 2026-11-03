@@ -5,6 +5,7 @@ import {
   LIBELLES_MODE_PAIEMENT, ajouterAuPanier, calculerTotaux, lignesPanierDepuisVente,
   preparerVente, remiseDepuisVente, type LignePanier,
 } from '../../../core/ventes';
+import Bouton from '../../components/ui/Bouton';
 import type { Client } from '../../../core/clients';
 import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import ChampMontant from '../../components/ui/ChampMontant';
@@ -117,15 +118,7 @@ export default function VenteEditionModal({ vente, filialeId, onClose }: Props) 
       pied={
         <>
           <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
-          <button
-            type="button"
-            onClick={enregistrer}
-            disabled={enCours || !apercu.ok}
-            className="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-semibold rounded-lg"
-            data-testid="enregistrer-correction"
-          >
-            Enregistrer la correction
-          </button>
+          <Bouton type="button" onClick={enregistrer} enCours={enCours} className="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-semibold rounded-lg" disabled={enCours || !apercu.ok} data-testid="enregistrer-correction">Enregistrer la correction</Bouton>
         </>
       }
     >

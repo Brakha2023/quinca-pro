@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ExclamationTriangleIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import { LONGUEUR_CODE_ANNULATION, codeAnnulationDefini, normaliserCodeAnnulation } from '../../../core/parametres';
 import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import Modal from '../../components/ui/Modal';
@@ -61,15 +62,7 @@ export default function AnnulationVenteModal({ vente, filialeId, onClose, onAnnu
       pied={
         <>
           <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Retour</button>
-          <button
-            type="button"
-            onClick={annuler}
-            disabled={!pret || enCours}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"
-            data-testid="confirmer-annulation"
-          >
-            Confirmer l'annulation
-          </button>
+          <Bouton type="button" onClick={annuler} enCours={enCours} className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={!pret || enCours} data-testid="confirmer-annulation">Confirmer l'annulation</Bouton>
         </>
       }
     >

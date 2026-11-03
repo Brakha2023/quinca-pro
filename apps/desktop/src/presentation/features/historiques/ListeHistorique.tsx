@@ -8,6 +8,7 @@ import {
   type PieceHistorique,
   type SectionHistorique,
 } from '../../../core/historiques';
+import Bouton from '../../components/ui/Bouton';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import Pagination from '../../components/ui/Pagination';
 import { formaterFcfa } from '../../hooks/useFormatage';
@@ -75,12 +76,8 @@ export default function ListeHistorique({ section, pieces, isLoading, filiale, f
           <strong>{recap.pieces}</strong> {description.piece}(s) · {recap.lignes} ligne(s) · {description.montant.toLowerCase()} <strong className="font-mono">{formaterFcfa(recap.montant)}</strong>
         </span>
         <div className="ml-auto flex gap-2">
-          <button type="button" onClick={() => setApercu(true)} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-historique">
-            <PrinterIcon className="w-4 h-4" /> Imprimer / PDF
-          </button>
-          <button type="button" onClick={exporter} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-historique">
-            <ArrowDownTrayIcon className="w-4 h-4" /> Exporter Excel
-          </button>
+          <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-historique">Imprimer / PDF</Bouton>
+          <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-historique">Exporter Excel</Bouton>
         </div>
       </div>
 

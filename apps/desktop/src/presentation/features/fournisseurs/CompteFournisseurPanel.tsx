@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BanknotesIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_PERIODE_REGLEMENT, construireReleve } from '../../../core/fournisseurs';
@@ -63,7 +64,7 @@ export default function CompteFournisseurPanel({ filialeId, filiale }: Props) {
         <SelectFournisseur filialeId={filialeId} value={fournisseurId} onChange={(id) => setParams(id ? { id } : {})} />
         {fournisseur && (
           <div className="md:col-span-2 flex flex-wrap gap-2 justify-end">
-            <button type="button" onClick={() => setModal('imprimer')} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer le relevé</button>
+            <Bouton onClick={() => setModal('imprimer')} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer le relevé</Bouton>
             <button type="button" onClick={() => setModal('reglement')} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg"><BanknotesIcon className="w-5 h-5" /> Règlement</button>
           </div>
         )}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PrinterIcon } from '@heroicons/react/24/outline';
 import { TYPES_MOUVEMENT_STOCK, type TypeMouvementStock } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_MOUVEMENT, SENS_MOUVEMENT } from '../../../core/stock';
@@ -91,15 +92,7 @@ export default function MouvementsPanel({ filialeId, filiale }: { filialeId: str
                     <td className="px-3 py-2 text-sm text-neutral-600">{[m.utilisateur_prenom, m.utilisateur_nom].filter(Boolean).join(' ') || '—'}</td>
                     <td className="px-3 py-2 text-center print:hidden">
                       {m.reference && (
-                        <button
-                          type="button"
-                          onClick={() => setBon(m.reference)}
-                          className="p-1.5 hover:bg-primary-50 rounded text-primary-700"
-                          title={`Imprimer le bon ${m.reference}`}
-                          data-testid={`bon-${m.reference}`}
-                        >
-                          <PrinterIcon className="w-4 h-4" />
-                        </button>
+                        <Bouton onClick={() => setBon(m.reference)} icone={PrinterIcon} className="p-1.5 hover:bg-primary-50 rounded text-primary-700" title={`Imprimer le bon ${m.reference}`} data-testid={`bon-${m.reference}`}></Bouton>
                       )}
                     </td>
                   </tr>

@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { PrinterIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import CorpsDocument from './CorpsDocument';
 
 interface Props {
@@ -32,7 +33,7 @@ export default function DocumentImprimable({ titre, filiale, nature, paysage, on
       <div className="apercu-barre">
         <span>{titre}</span>
         <div>
-          <button type="button" onClick={() => window.print()} className="apercu-bouton apercu-bouton-primaire"><PrinterIcon className="w-4 h-4" /> Imprimer</button>
+          <Bouton onClick={() => window.print()} icone={PrinterIcon} className="apercu-bouton apercu-bouton-primaire">Imprimer</Bouton>
           <button type="button" onClick={onClose} className="apercu-bouton" aria-label="Fermer l'aperçu"><XMarkIcon className="w-4 h-4" /> Fermer</button>
         </div>
       </div>

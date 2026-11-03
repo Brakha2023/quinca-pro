@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import FormField, { inputClass } from '../../components/ui/FormField';
 import type { Depot } from '../../../core/articles';
 import BonStockDocument from './BonStockDocument';
@@ -21,9 +22,7 @@ export function BonImprimable({ filialeId, filiale, reference, onClose }: { fili
 /** Proposé après l'enregistrement : la pièce que le magasinier signe et classe. */
 export function BoutonImprimerBon({ reference, onClick }: { reference: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 text-white font-medium rounded-lg" data-testid="imprimer-bon">
-      <PrinterIcon className="w-4 h-4" /> Imprimer le bon {reference}
-    </button>
+    <Bouton onClick={onClick} icone={PrinterIcon} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 text-white font-medium rounded-lg" data-testid="imprimer-bon">Imprimer le bon {reference}</Bouton>
   );
 }
 

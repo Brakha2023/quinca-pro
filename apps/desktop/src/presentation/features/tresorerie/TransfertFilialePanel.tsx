@@ -6,6 +6,7 @@ import {
   LIBELLES_STATUT_TRANSFERT, construireBordereauFonds, roleFiliale, transfertFilialeSchema,
   type Caisse, type TransfertFilialeForm, type TransfertFilialeFormInput,
 } from '../../../core/tresorerie';
+import Bouton from '../../components/ui/Bouton';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
 import Modal from '../../components/ui/Modal';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
@@ -103,9 +104,7 @@ export default function TransfertFilialePanel({ filialeId, filiale, filiales }: 
                     <td className="px-3 py-2 text-center">
                       {/* La pièce se réimprime à tout moment : un bordereau se perd en
                           route, et un transfert annulé se classe lui aussi. */}
-                      <button type="button" onClick={() => setApercu(t)} title="Imprimer le bordereau" className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100" data-testid={`imprimer-bordereau-${t.numero}`}>
-                        <PrinterIcon className="w-4 h-4" />
-                      </button>
+                      <Bouton onClick={() => setApercu(t)} icone={PrinterIcon} className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100" title="Imprimer le bordereau" data-testid={`imprimer-bordereau-${t.numero}`}></Bouton>
                     </td>
                   </tr>
                 );
@@ -205,7 +204,7 @@ function ModaleReception({ transfert, caisses, onClose, onEncaisser }: { transfe
       pied={
         <>
           <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
-          <button type="button" disabled={enCours || !caisseId} onClick={async () => { setEnCours(true); await onEncaisser(caisseId); setEnCours(false); }} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="confirmer-encaissement">Encaisser</button>
+          <Bouton type="button" onClick={async () => { setEnCours(true); await onEncaisser(caisseId); setEnCours(false); }} enCours={enCours} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours || !caisseId} data-testid="confirmer-encaissement">Encaisser</Bouton>
         </>
       }
     >

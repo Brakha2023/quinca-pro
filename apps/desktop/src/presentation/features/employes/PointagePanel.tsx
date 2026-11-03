@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CheckIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { STATUTS_POINTAGE, type StatutPointage } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import { LIBELLES_STATUT_POINTAGE, libellePeriode, nomComplet } from '../../../core/employes';
 import { EmployesRepository } from '../../../infrastructure/powersync/repositories/EmployesRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -57,7 +58,7 @@ export default function PointagePanel({ filialeId, filiale }: Props) {
         <FormField label="Jour"><input type="date" value={jour} max={aujourdhui()} onChange={(e) => setJour(e.target.value)} className={inputClass} /></FormField>
         <p className="text-sm text-neutral-600 pb-2">{employes.length - nonPointes} / {employes.length} pointé(s){nonPointes > 0 && <span className="text-orange-700"> · {nonPointes} à pointer</span>}</p>
         <div className="ml-auto flex gap-2">
-          <button type="button" onClick={() => setImprimer(true)} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Feuille de présence du mois</button>
+          <Bouton onClick={() => setImprimer(true)} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Feuille de présence du mois</Bouton>
           <button type="button" onClick={tousPresents} disabled={nonPointes === 0} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><CheckIcon className="w-5 h-5" /> Tous présents</button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { ArrowUpTrayIcon, DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon, TrashIcon } from '@heroicons/react/24/outline';
 import * as XLSX from 'xlsx';
+import Bouton from '../../components/ui/Bouton';
 import { lignesDepuisGrille, margeArticle, type Article, type Cellule, type LigneImportArticle } from '../../../core/articles';
 import { ArticlesRepository } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
 import { usePagination } from '../../hooks/usePagination';
@@ -54,6 +55,8 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
   const [apercu, setApercu] = useState(false);
   /** Article dont on interroge le serveur : le bouton attend sa réponse. */
   const [verification, setVerification] = useState<string | null>(null);
+  /** Lecture et insertion du classeur : c'est là qu'on attend, pas au clic. */
+  const [importEnCours, setImportEnCours] = useState(false);
 
   const { articles, isLoading } = useArticles(filialeId, { recherche, familleId: familleId || null, inclureInactifs });
   const { familles, famillesParId } = useFamilles(filialeId, { actives: true });
@@ -69,6 +72,7 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
   const handleImportExcel = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setImportEnCours(true);
     try {
       const lignes = lireFichierExcel(await file.arrayBuffer());
       const { importes, ignores } = await repository.importMany(filialeId, lignes);
@@ -80,6 +84,7 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
     } catch (error) {
       notifier('erreur', error instanceof Error ? error.message : "Échec de l'import.");
     } finally {
+      setImportEnCours(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -158,19 +163,8 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
         </div>
         <div className="flex gap-2">
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImportExcel} className="hidden" />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm"
-          >
-            <ArrowUpTrayIcon className="w-4 h-4" /> Importer Excel
-          </button>
-          <button
-            onClick={() => setApercu(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm"
-            data-testid="imprimer-catalogue"
-          >
-            <PrinterIcon className="w-4 h-4" /> Imprimer
-          </button>
+          <Bouton onClick={() => fileInputRef.current?.click()} enCours={importEnCours} icone={ArrowUpTrayIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm">Importer Excel</Bouton>
+          <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-catalogue">Imprimer</Bouton>
           <button
             onClick={() => setModal({ mode: 'creer' })}
             className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg text-sm"

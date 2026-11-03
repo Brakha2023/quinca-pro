@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BanknotesIcon, DocumentDuplicateIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, ScaleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { disponibiliteCredit, statutCredit, type Client } from '../../../core/clients';
@@ -111,7 +112,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         <select value={groupe} onChange={(e) => setGroupe(e.target.value)} className={controleInlineClass} aria-label="Groupe"><option value="">Tous les groupes</option>{groupes.map((g) => <option key={g} value={g}>{g}</option>)}</select>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={avecCreance} onChange={(e) => setAvecCreance(e.target.checked)} className="rounded" /> Avec créance</label>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={inclureInactifs} onChange={(e) => setInclureInactifs(e.target.checked)} className="rounded" /> Inclure en sommeil</label>
-        <button type="button" onClick={() => setModal({ type: 'tableau' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer le tableau</button>
+        <Bouton onClick={() => setModal({ type: 'tableau' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer le tableau</Bouton>
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">

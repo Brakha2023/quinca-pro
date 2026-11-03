@@ -4,6 +4,7 @@ import {
   LONGUEUR_CODE_ANNULATION, codeAnnulationDefini, motifCodeInvalide, normaliserCodeAnnulation,
   type Entreprise,
 } from '../../../core/parametres';
+import Bouton from '../../components/ui/Bouton';
 import { EntrepriseRepository } from '../../../infrastructure/powersync/repositories/EntrepriseRepository';
 import { inputClass } from '../../components/ui/FormField';
 import { useConfirmation } from '../../confirmation/useConfirmation';
@@ -120,15 +121,7 @@ export default function SecuritePanel({ entreprise, peutModifier }: Props) {
           Le code n'est pas enregistré en clair : il ne se relit nulle part. Oublié, il se remplace.
         </p>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={enregistrer}
-            disabled={!pret || enCours}
-            className="rounded-lg bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700 disabled:bg-neutral-300"
-            data-testid="enregistrer-code-annulation"
-          >
-            Enregistrer le code
-          </button>
+          <Bouton type="button" onClick={enregistrer} enCours={enCours} className="rounded-lg bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700 disabled:bg-neutral-300" disabled={!pret || enCours} data-testid="enregistrer-code-annulation">Enregistrer le code</Bouton>
           {defini && peutModifier && (
             <button type="button" onClick={retirer} className="rounded-lg px-4 py-2 font-medium text-red-600 hover:bg-red-50">
               Retirer le code

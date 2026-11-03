@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Bouton from '../../components/ui/Bouton';
 import { achatSchema, totauxAchat, type Fournisseur } from '../../../core/fournisseurs';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 import Modal from '../../components/ui/Modal';
@@ -55,7 +56,7 @@ export default function AchatModal({ filialeId, filiale, fournisseur, onClose }:
       <>
         <span className="mr-auto text-sm text-neutral-600">Total TTC : <strong className="font-mono">{formaterFcfa(totaux.total_ttc)}</strong></span>
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
-        <button type="button" onClick={valider} disabled={enCours || lignes.length === 0} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg">Réceptionner</button>
+        <Bouton type="button" onClick={valider} enCours={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours || lignes.length === 0}>Réceptionner</Bouton>
       </>
     }>
       <div className="space-y-4">

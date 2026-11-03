@@ -247,6 +247,20 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   dernières centaines de lignes — un poste ne garde pas tout —, et une liste qui s'arrête pile sur
   ce plafond le signale au lieu de laisser croire que le compte est bon.
 
+### Modifié — les boutons qui font attendre
+
+- **Un bouton qui travaille le dit, et ne se laisse plus cliquer deux fois.** Entre le clic sur
+  *Imprimer* et l'aperçu d'un catalogue de mille références, il s'écoule une à trois secondes
+  pendant lesquelles rien ne bougeait : on recliquait, et le travail partait deux fois — deux
+  boîtes d'enregistrement pour un même export, deux suppressions demandées au serveur. Les
+  soixante-douze boutons qui font attendre — impressions, exports Excel, imports, validations de
+  bons, enregistrements de fiches, suppressions vérifiées auprès du serveur — se désarment
+  désormais pendant leur travail, montrent un tourniquet à la place de leur icône et disent ce
+  qu'ils font : *Impression…*, *Export…*, *Validation…* Ils reviennent **quoi qu'il arrive**, y
+  compris quand l'opération échoue.
+- Les boutons immédiats — *Fermer*, *Annuler*, le choix d'un onglet, l'ajout d'une ligne — n'ont
+  rien gagné à être habillés et restent tels quels.
+
 ### Modifié — impression
 
 - **Une feuille trop large se couche d'elle-même.** Jusqu'ici l'orientation se décidait à la main,

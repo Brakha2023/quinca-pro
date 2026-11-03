@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import { EyeIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { LigneProductionRow, ProductionRow } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import type { Article } from '../../../core/articles';
 import { StockInsuffisantError, ecartProduction, ligneProductionFromRow, productionSchema, repartirCoutProduction } from '../../../core/stock';
 import {
@@ -207,7 +208,7 @@ function SaisieProduction({ filialeId }: { filialeId: string }) {
 
       <div className="flex justify-between gap-3 pt-2 border-t border-neutral-200">
         <button type="button" onClick={nouvelle} className={`${boutonSecondaire} flex items-center gap-2`}><PlusIcon className="w-4 h-4" /> Nouvelle production</button>
-        <button type="button" onClick={enregistrer} className={boutonPrimaire} disabled={enCours || matieres.length === 0 || produits.length === 0}>Enregistrer la production</button>
+        <Bouton type="button" onClick={enregistrer} enCours={enCours} className={boutonPrimaire} disabled={enCours || matieres.length === 0 || produits.length === 0}>Enregistrer la production</Bouton>
       </div>
     </div>
   );

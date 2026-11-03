@@ -9,6 +9,7 @@ import {
   type PeriodeFiche,
   type StatutStock,
 } from '../../../core/articles';
+import Bouton from '../../components/ui/Bouton';
 import { LIBELLES_MOUVEMENT, SENS_MOUVEMENT } from '../../../core/stock';
 import Modal from '../../components/ui/Modal';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
@@ -70,7 +71,7 @@ export default function ArticleDetailsModal({ filialeId, articleId, filiale, onC
         pied={
           <>
             <button type="button" onClick={() => setVue('modifier')} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PencilSquareIcon className="w-4 h-4" /> Modifier</button>
-            <button type="button" onClick={() => setVue('imprimer')} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg" data-testid="imprimer-fiche-article"><DocumentTextIcon className="w-4 h-4" /> Imprimer la fiche</button>
+            <Bouton onClick={() => setVue('imprimer')} icone={DocumentTextIcon} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg" data-testid="imprimer-fiche-article">Imprimer la fiche</Bouton>
           </>
         }
       >

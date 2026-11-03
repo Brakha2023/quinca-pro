@@ -6,6 +6,7 @@ import {
   recapVenteEnregistree, venteModifiable,
 } from '../../../core/ventes';
 import type { ModePaiement, StatutVente } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import type { VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import Modal from '../../components/ui/Modal';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
@@ -63,9 +64,7 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
               <PencilSquareIcon className="w-4 h-4" /> Corriger
             </button>
           )}
-          <button type="button" onClick={imprimerFacture} disabled={!dateVente} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="reimprimer-facture-a4">
-            <DocumentTextIcon className="w-4 h-4" /> Facture A4
-          </button>
+          <Bouton onClick={imprimerFacture} icone={DocumentTextIcon} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={!dateVente} data-testid="reimprimer-facture-a4">Facture A4</Bouton>
         </>
       }
     >

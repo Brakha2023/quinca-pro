@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_ETAT_STOCK, recapEtatStock, statutStock, valeurAchat, valeurVente, type StatutStock } from '../../../core/stock';
@@ -53,7 +54,7 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
           {' · '}à la vente <strong className="font-mono">{formaterFcfa(recap.valeur_vente)}</strong>
           {' · '}marge <strong className="font-mono">{formaterFcfa(recap.marge)}</strong> ({recap.marge_percent} %)
         </span>
-        <button onClick={() => setApercu(true)} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-etat-stock"><PrinterIcon className="w-4 h-4" /> Imprimer</button>
+        <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-etat-stock">Imprimer</Bouton>
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">

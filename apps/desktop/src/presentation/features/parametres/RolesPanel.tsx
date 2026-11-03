@@ -6,6 +6,7 @@ import {
   CATALOGUE_PERMISSIONS, libellePortee, matricePermissions, motifNonSupprimable, permissionsModifiables,
   recapRoles, roleDesactivable,
 } from '../../../core/parametres';
+import Bouton from '../../components/ui/Bouton';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { RolesRepository } from '../../../infrastructure/powersync/repositories/RolesRepository';
 import { useConfirmation } from '../../confirmation/useConfirmation';
@@ -166,12 +167,8 @@ export default function RolesPanel({ filiale, peutModifier }: Props) {
           {recap.sans_porteur > 0 && <span className="ml-2 text-neutral-500">· {recap.sans_porteur} sans porteur</span>}
         </p>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setModal({ type: 'matrice' })} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="imprimer-roles">
-            <PrinterIcon className="w-4 h-4" /> Imprimer / PDF
-          </button>
-          <button type="button" onClick={exporter} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="exporter-roles">
-            <ArrowDownTrayIcon className="w-4 h-4" /> Exporter Excel
-          </button>
+          <Bouton onClick={() => setModal({ type: 'matrice' })} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="imprimer-roles">Imprimer / PDF</Bouton>
+          <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="exporter-roles">Exporter Excel</Bouton>
           {peutModifier && (
             <button type="button" onClick={() => setModal({ type: 'role' })} className="flex items-center gap-2 px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg" data-testid="nouveau-role">
               <PlusIcon className="w-4 h-4" /> Nouveau rôle
@@ -282,9 +279,7 @@ export default function RolesPanel({ filiale, peutModifier }: Props) {
             {brouillon && (
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setEdition(null)} className="px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-200 rounded-lg">Annuler</button>
-                <button type="button" onClick={enregistrerPermissions} disabled={enCours} className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" data-testid="enregistrer-permissions">
-                  Enregistrer
-                </button>
+                <Bouton type="button" onClick={enregistrerPermissions} enCours={enCours} className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours} data-testid="enregistrer-permissions">Enregistrer</Bouton>
               </div>
             )}
           </div>

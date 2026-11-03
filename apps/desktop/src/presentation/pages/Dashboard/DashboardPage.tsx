@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { PrinterIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import { formaterFcfa } from '../../../core/commun/prix';
 import { fenetrePilotage, type Periode } from '../../../core/pilotage';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
@@ -84,14 +85,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <SelecteurPeriode periode={periode} onChange={setPeriode} />
-          <button
-            type="button"
-            onClick={() => setApercu(true)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
-            data-testid="imprimer-tableau-de-bord"
-          >
-            <PrinterIcon className="h-4 w-4" /> Imprimer / PDF
-          </button>
+          <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100" data-testid="imprimer-tableau-de-bord">Imprimer / PDF</Bouton>
         </div>
       </div>
 

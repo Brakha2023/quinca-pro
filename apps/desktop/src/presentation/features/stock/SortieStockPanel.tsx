@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Bouton from '../../components/ui/Bouton';
 import { TYPES_BON_SORTIE, sortieStockSchema } from '../../../core/stock';
 import { StockRepository } from '../../../infrastructure/powersync/repositories/StockRepository';
 import FormField, { inputClass } from '../../components/ui/FormField';
@@ -74,7 +75,7 @@ export default function SortieStockPanel({ filialeId, filiale }: { filialeId: st
         <>
           {dernierBon && <BoutonImprimerBon reference={dernierBon} onClick={() => setApercu(dernierBon)} />}
           <button type="button" onClick={reinitialiser} className={boutonSecondaire} disabled={lignes.length === 0}>Vider</button>
-          <button type="button" onClick={valider} className={boutonPrimaire} disabled={enCours || lignes.length === 0}>Valider la sortie</button>
+          <Bouton type="button" onClick={valider} enCours={enCours} className={boutonPrimaire} disabled={enCours || lignes.length === 0}>Valider la sortie</Bouton>
         </>
       }
     >

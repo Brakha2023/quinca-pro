@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { PrinterIcon } from '@heroicons/react/24/outline';
 import type { TypeMouvementStock } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { recapBons } from '../../../core/stock';
@@ -113,9 +114,7 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
                 </td>
                 <td className={`${cellule} text-sm text-neutral-600 whitespace-nowrap`}>{b.utilisateur ?? '—'}</td>
                 <td className={`${cellule} text-center print:hidden`}>
-                  <button type="button" onClick={() => setApercu(b.reference)} className="p-1.5 rounded text-primary-700 hover:bg-primary-50" title={`Imprimer le bon ${b.reference}`} data-testid={`imprimer-bon-${b.reference}`}>
-                    <PrinterIcon className="w-4 h-4" />
-                  </button>
+                  <Bouton onClick={() => setApercu(b.reference)} icone={PrinterIcon} className="p-1.5 rounded text-primary-700 hover:bg-primary-50" title={`Imprimer le bon ${b.reference}`} data-testid={`imprimer-bon-${b.reference}`}></Bouton>
                 </td>
               </tr>
             ))}

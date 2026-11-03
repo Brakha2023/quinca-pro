@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DocumentTextIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import { LIBELLES_SEXE, LIBELLES_TYPE_CONTRAT, nomComplet, type Employe } from '../../../core/employes';
 import { EmployesRepository } from '../../../infrastructure/powersync/repositories/EmployesRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -27,7 +28,7 @@ function DetailEmploye({ filialeId, employeId, onClose }: { filialeId: string; e
     <>
       <Modal titre={nomComplet(employe)} sousTitre={`${employe.matricule} · ${employe.fonction ?? 'Fonction non renseignée'}`} largeur="max-w-2xl" onClose={onClose} pied={
         <>
-          {employe.contrat_fichier && <button type="button" onClick={() => setModal('contrat')} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><DocumentTextIcon className="w-4 h-4" /> Voir le contrat</button>}
+          {employe.contrat_fichier && <Bouton onClick={() => setModal('contrat')} icone={DocumentTextIcon} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Voir le contrat</Bouton>}
           <button type="button" onClick={() => setModal('modifier')} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg"><PencilSquareIcon className="w-4 h-4" /> Modifier</button>
         </>
       }>
@@ -86,7 +87,7 @@ export default function EffectifPanel({ filialeId, filiale }: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[16rem] max-w-md"><MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" /><input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Matricule, nom, fonction, téléphone…" className={`${inputClass} pl-10`} /></div>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={inclureInactifs} onChange={(e) => setInclureInactifs(e.target.checked)} className="rounded" /> Inclure les inactifs</label>
-        <button type="button" onClick={() => setModal({ type: 'imprimer' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer l'effectif</button>
+        <Bouton onClick={() => setModal({ type: 'imprimer' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer l'effectif</Bouton>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
         <table className="tableau">

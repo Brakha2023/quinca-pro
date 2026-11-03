@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { PlusIcon, PrinterIcon, ReceiptPercentIcon } from '@heroicons/react/24/outline';
 import { useQuery } from '@powersync/react';
 import type { TypeReglement } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_NATURE_VERSEMENT, LIBELLES_TYPE_REGLEMENT, lettrerVersements, type FactureClient, type VersementLettre } from '../../../core/clients';
@@ -68,7 +69,7 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
         <FormField label="Du"><input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} className={inputClass} /></FormField>
         <FormField label="Au"><input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} className={inputClass} /></FormField>
         <div className="col-span-2 flex gap-2 justify-end">
-          <button type="button" onClick={() => setModal({ type: 'historique' })} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-5 h-5" /> Imprimer l'historique</button>
+          <Bouton onClick={() => setModal({ type: 'historique' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer l'historique</Bouton>
           <button type="button" onClick={() => setModal({ type: 'nouveau' })} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouveau versement</button>
         </div>
       </div>

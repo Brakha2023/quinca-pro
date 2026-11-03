@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRightCircleIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutProforma } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import type { Article } from '../../../core/articles';
@@ -72,7 +73,7 @@ function NouvelleProformaModal({ filialeId, clientId, onClose }: { filialeId: st
       <>
         <span className="mr-auto text-sm text-neutral-600">Total TTC : <strong className="font-mono">{formaterFcfa(totaux.total_ttc)}</strong></span>
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Annuler</button>
-        <button type="button" onClick={valider} disabled={enCours || lignes.length === 0} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg">Créer la proforma</button>
+        <Bouton type="button" onClick={valider} enCours={enCours} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={enCours || lignes.length === 0}>Créer la proforma</Bouton>
       </>
     }>
       <div className="space-y-4">
@@ -163,7 +164,7 @@ function DetailProformaModal({ proforma, onClose, onImprimer }: { proforma: Prof
   return (
     <Modal titre={`Proforma ${proforma.numero}`} sousTitre={`${proforma.client_libelle} · ${formaterDateHeure(proforma.date_proforma)}`} largeur="max-w-3xl" onClose={onClose} pied={
       <>
-        <button type="button" onClick={onImprimer} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PrinterIcon className="w-4 h-4" /> Imprimer</button>
+        <Bouton onClick={onImprimer} icone={PrinterIcon} className="mr-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer</Bouton>
         <button type="button" onClick={onClose} className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Fermer</button>
       </>
     }>
@@ -254,7 +255,7 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
                 <td className="px-3 py-2 text-center">
                   <div className="flex items-center justify-center gap-0.5">
                     <button onClick={() => setModal({ type: 'detail', p })} className="p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Détail"><EyeIcon className="w-4 h-4" /></button>
-                    <button onClick={() => setModal({ type: 'imprimer', p })} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer"><PrinterIcon className="w-4 h-4" /></button>
+                    <Bouton onClick={() => setModal({ type: 'imprimer', p })} icone={PrinterIcon} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-700" title="Imprimer"></Bouton>
                     {p.statut === 'EN_COURS' && <BoutonFacturer proforma={p} />}
                     {p.statut === 'EN_COURS' && <button onClick={() => annuler(p)} className="p-1.5 rounded hover:bg-red-50 text-red-600" title="Annuler la proforma"><XCircleIcon className="w-4 h-4" /></button>}
                   </div>

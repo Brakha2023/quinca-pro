@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CheckIcon, EyeIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { STATUTS_VENTE, type ModePaiement, type StatutVente } from '@quinca/shared-types';
+import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, recapJournalVentes } from '../../../core/ventes';
@@ -84,7 +85,7 @@ export default function VentesPage() {
           <NoteHistorique quoi="les ventes" />
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setApercu(true)} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="imprimer-journal-ventes"><PrinterIcon className="w-5 h-5" /> Imprimer</button>
+          <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} tailleIcone="w-5 h-5" className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="imprimer-journal-ventes">Imprimer</Bouton>
           {peutValider && (
             <button onClick={validerSelection} disabled={selection.size === 0} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg">
               <CheckIcon className="w-5 h-5" /> Valider ({[...selection].filter((id) => enAttenteIds.includes(id)).length})

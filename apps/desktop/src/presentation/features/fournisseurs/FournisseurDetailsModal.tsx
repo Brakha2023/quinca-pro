@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BanknotesIcon, PencilSquareIcon, PrinterIcon, TruckIcon } from '@heroicons/react/24/outline';
+import Bouton from '../../components/ui/Bouton';
 import { LIBELLES_TYPE_REGLEMENT } from '../../../core/clients';
 import { LIBELLES_STATUT_COMMANDE, estFacturable } from '../../../core/fournisseurs';
 import Modal from '../../components/ui/Modal';
@@ -45,7 +46,7 @@ export default function FournisseurDetailsModal({ filialeId, filiale, fournisseu
               <table className="tableau text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Numéro</th><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Payé</th><th className="px-3 py-2 text-right">Reste</th><th className="px-3 py-2 text-center">Facture</th></tr></thead>
                 <tbody className="divide-y divide-neutral-100">{achats.map((a) => (
                   <tr key={a.id}><td className="px-3 py-2 font-mono">{a.numero}</td><td className="px-3 py-2">{formaterDate(a.date_commande)}</td><td className="px-3 py-2">{LIBELLES_STATUT_COMMANDE[a.statut]}</td><td className="px-3 py-2 text-right font-mono">{formaterFcfa(a.total_ttc)}</td><td className="px-3 py-2 text-right font-mono text-green-700">{formaterFcfa(a.montant_paye)}</td><td className={`px-3 py-2 text-right font-mono ${a.reste_a_payer > 0 ? 'text-red-600' : ''}`}>{formaterFcfa(a.reste_a_payer)}</td>
-                  <td className="px-3 py-2 text-center">{estFacturable(a) && <button type="button" onClick={() => setFacture(a.id)} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-600" title="Imprimer la facture d'achat" data-testid={`facture-achat-${a.numero}`}><PrinterIcon className="w-4 h-4" /></button>}</td></tr>
+                  <td className="px-3 py-2 text-center">{estFacturable(a) && <Bouton onClick={() => setFacture(a.id)} icone={PrinterIcon} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-600" title="Imprimer la facture d'achat" data-testid={`facture-achat-${a.numero}`}></Bouton>}</td></tr>
                 ))}</tbody></table>
             )}
           </section>

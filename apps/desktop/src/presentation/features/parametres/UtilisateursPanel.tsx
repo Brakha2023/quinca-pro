@@ -6,6 +6,7 @@ import {
   filtrerUtilisateurs, libellePortee, nomComplet, recapUtilisateurs,
   type EtatCompteRetenu, type UtilisateurAdministre,
 } from '../../../core/parametres';
+import Bouton from '../../components/ui/Bouton';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { RolesRepository } from '../../../infrastructure/powersync/repositories/RolesRepository';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
@@ -126,12 +127,8 @@ export default function UtilisateursPanel({ filiale, filiales, utilisateurCouran
           <button type="button" onClick={() => setModal({ type: 'mot-de-passe' })} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="changer-mon-mot-de-passe">
             <KeyIcon className="w-4 h-4" /> Mon mot de passe
           </button>
-          <button type="button" onClick={() => setModal({ type: 'liste' })} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="imprimer-utilisateurs">
-            <PrinterIcon className="w-4 h-4" /> Imprimer / PDF
-          </button>
-          <button type="button" onClick={exporter} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="exporter-utilisateurs">
-            <ArrowDownTrayIcon className="w-4 h-4" /> Exporter Excel
-          </button>
+          <Bouton onClick={() => setModal({ type: 'liste' })} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="imprimer-utilisateurs">Imprimer / PDF</Bouton>
+          <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="exporter-utilisateurs">Exporter Excel</Bouton>
         </div>
       </div>
 
