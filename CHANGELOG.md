@@ -178,6 +178,14 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
 
 ### Corrigé
 
+- **Une vente annulée ne fausse plus la marge du mois.** Quand un ticket était annulé un jour — ou
+  un mois — après avoir été fait, sa sortie de stock restait dans la période de la vente tandis que
+  le retour tombait dans celle de l'annulation. Le mois de la vente affichait alors un coût sans sa
+  recette, soit une perte venue de nulle part, et le mois de l'annulation le même montant en gain.
+  Sur un ticket de peinture de 150 000 F, c'étaient 108 000 F de marge offerts au mois suivant. Le
+  défaut touchait la *Consolidation* — les tuiles comme l'histogramme — et le *Rapport des marges*.
+  Une vente annulée ne pèse désormais dans aucun mois, ni par son chiffre d'affaires ni par son
+  coût. Les chiffres déjà affichés se corrigent d'eux-mêmes : rien à ressaisir, aucune migration.
 - **Les tableaux ne coupent plus les mots en quatre.** Sur une fenêtre étroite, une désignation
   d'article, une raison sociale ou un numéro de bon se brisaient sur trois lignes et la liste
   devenait illisible. Chaque tableau garde désormais sa **largeur naturelle** et c'est son cadre

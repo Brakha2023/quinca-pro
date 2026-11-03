@@ -23,6 +23,38 @@ import type { Granularite } from '../../../core/pilotage';
 /** Dépenses d'exploitation : ni règlements fournisseurs, ni mouvements de trésorerie. */
 const CATEGORIES_CHARGES = "('TRANSPORT','FOURNITURES','LOYER','SALAIRE','ELECTRICITE_EAU','ENTRETIEN','REPAS','AUTRE_DEPENSE')";
 
+/**
+ * Le mouvement de stock `m` n'appartient pas à une vente annulée.
+ *
+ * Le chiffre d'affaires d'une vente annulée est écarté partout par
+ * `statut != 'ANNULEE'` ; son coût doit l'être de la même façon, sinon il
+ * reste seul. Or l'annulation vient **après** la vente et peut tomber dans un
+ * autre mois : la sortie creuserait alors une perte dans le mois de la vente,
+ * et le retour offrirait le même montant à celui de l'annulation. Les deux
+ * mouvements se reconnaissent au numéro de la pièce, qu'ils portent en
+ * référence.
+ *
+ * Posé ici parce que c'est ici que se définit ce que coûte la marchandise
+ * vendue ; le rapport des marges s'en sert aussi, pour que les deux écrans ne
+ * puissent pas diverger.
+ *
+ * ### Pourquoi un `NOT IN` et non un `NOT EXISTS`
+ *
+ * La base du poste ne porte aucun index : un `NOT EXISTS` corrélé relirait la
+ * table des ventes à chaque mouvement. La liste des pièces annulées, elle, ne
+ * dépend pas du mouvement — SQLite ne la calcule qu'une fois. Les deux `IS
+ * NULL` ne sont pas de la prudence gratuite : un seul `numero` nul dans la
+ * liste rendrait le `NOT IN` indécidable et écarterait **tout**, et un
+ * mouvement sans référence — une casse, un inventaire — doit être gardé.
+ *
+ * Le numéro suffit à désigner la pièce : il porte le code de la caisse et un
+ * suffixe tiré au sort, il ne se répète pas d'une filiale à l'autre.
+ */
+export const MOUVEMENT_HORS_VENTE_ANNULEE = `
+  (m.reference IS NULL OR m.reference NOT IN (
+    SELECT numero FROM ventes WHERE statut = 'ANNULEE' AND numero IS NOT NULL
+  ))`;
+
 const COUT_SORTIES = `
   SELECT COALESCE(SUM(
     CASE WHEN m.type = 'RETOUR_CLIENT' THEN -1 ELSE 1 END
@@ -30,7 +62,7 @@ const COUT_SORTIES = `
   ), 0)
   FROM mouvements_stock m
   LEFT JOIN stocks st ON st.article_id = m.article_id AND st.depot_id = m.depot_id
-  WHERE m.type IN ('SORTIE_VENTE', 'RETOUR_CLIENT')`;
+  WHERE m.type IN ('SORTIE_VENTE', 'RETOUR_CLIENT') AND ${MOUVEMENT_HORS_VENTE_ANNULEE}`;
 
 /**
  * Tous les indicateurs, filiale par filiale : le gérant en lit une ligne, le
@@ -127,6 +159,7 @@ export function serieQuery(granularite: Granularite): string {
       FROM mouvements_stock m
       LEFT JOIN stocks st ON st.article_id = m.article_id AND st.depot_id = m.depot_id
       WHERE m.type IN ('SORTIE_VENTE', 'RETOUR_CLIENT') AND m.created_at BETWEEN ? AND ? AND (? = '' OR m.filiale_id = ?)
+        AND ${MOUVEMENT_HORS_VENTE_ANNULEE}
       GROUP BY cle
     ) GROUP BY cle`;
 }

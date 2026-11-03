@@ -29,9 +29,9 @@ function baseDeDemonstration() {
     CREATE TABLE familles_articles (id TEXT PRIMARY KEY, nom TEXT, filiale_id TEXT, est_active INTEGER);
     CREATE TABLE articles (id TEXT PRIMARY KEY, code TEXT, designation TEXT, unite TEXT, famille_id TEXT, filiale_id TEXT);
     CREATE TABLE stocks (id TEXT PRIMARY KEY, article_id TEXT, depot_id TEXT, cout_moyen REAL);
-    CREATE TABLE ventes (id TEXT PRIMARY KEY, filiale_id TEXT, statut TEXT, date_vente TEXT, total_net_ht REAL);
+    CREATE TABLE ventes (id TEXT PRIMARY KEY, numero TEXT, filiale_id TEXT, statut TEXT, date_vente TEXT, total_net_ht REAL);
     CREATE TABLE lignes_vente (id TEXT PRIMARY KEY, vente_id TEXT, article_id TEXT, code_article TEXT, designation TEXT, quantite REAL, total_ht REAL);
-    CREATE TABLE mouvements_stock (id TEXT PRIMARY KEY, article_id TEXT, depot_id TEXT, filiale_id TEXT, type TEXT, quantite REAL, cout_unitaire REAL, created_at TEXT);
+    CREATE TABLE mouvements_stock (id TEXT PRIMARY KEY, article_id TEXT, depot_id TEXT, filiale_id TEXT, type TEXT, quantite REAL, cout_unitaire REAL, reference TEXT, created_at TEXT);
 
     INSERT INTO familles_articles VALUES ('f1','Matériaux','F',1), ('f2','Peinture','F',1);
     INSERT INTO articles VALUES
@@ -42,45 +42,53 @@ function baseDeDemonstration() {
     INSERT INTO stocks VALUES ('s1','a1','d1',3000), ('s2','a2','d1',18000), ('s3','a3','d1',2000);
 
     -- Vente sans remise : 300 000 HT de lignes, 300 000 de net.
-    INSERT INTO ventes VALUES ('v1','F','VALIDEE','2026-11-02T10:00:00.000Z',300000);
+    INSERT INTO ventes VALUES ('v1','VTE-1','F','VALIDEE','2026-11-02T10:00:00.000Z',300000);
     INSERT INTO lignes_vente VALUES
       ('l1','v1','a1','CIM-50','Ciment 50 kg',50,200000),
       ('l2','v1','a2','PEI-20','Peinture 20 L',4,100000);
     INSERT INTO mouvements_stock VALUES
-      ('m1','a1','d1','F','SORTIE_VENTE',50,3000,'2026-11-02T10:00:00.000Z'),
-      ('m2','a2','d1','F','SORTIE_VENTE',4,18000,'2026-11-02T10:00:00.000Z');
+      ('m1','a1','d1','F','SORTIE_VENTE',50,3000,'VTE-1','2026-11-02T10:00:00.000Z'),
+      ('m2','a2','d1','F','SORTIE_VENTE',4,18000,'VTE-1','2026-11-02T10:00:00.000Z');
 
     -- Vente remisée : 100 000 HT de lignes, 90 000 de net. Le fer y figure
     -- sous son ancienne désignation, le catalogue l'a renommé depuis.
-    INSERT INTO ventes VALUES ('v2','F','VALIDEE','2026-11-03T09:00:00.000Z',90000);
+    INSERT INTO ventes VALUES ('v2','VTE-2','F','VALIDEE','2026-11-03T09:00:00.000Z',90000);
     INSERT INTO lignes_vente VALUES
       ('l3','v2','a3','FER-12','Fer 12',20,60000),
       ('l4','v2','a1','CIM-50','Ciment 50 kg',10,40000);
     -- Sortie sans coût au journal : elle retombe sur le coût moyen du dépôt.
     INSERT INTO mouvements_stock VALUES
-      ('m3','a3','d1','F','SORTIE_VENTE',20,NULL,'2026-11-03T09:00:00.000Z'),
-      ('m4','a1','d1','F','SORTIE_VENTE',10,3000,'2026-11-03T09:00:00.000Z');
+      ('m3','a3','d1','F','SORTIE_VENTE',20,NULL,'VTE-2','2026-11-03T09:00:00.000Z'),
+      ('m4','a1','d1','F','SORTIE_VENTE',10,3000,'VTE-2','2026-11-03T09:00:00.000Z');
 
     -- Vente annulée : hors du chiffre d'affaires, et son coût s'annule.
-    INSERT INTO ventes VALUES ('v3','F','ANNULEE','2026-11-03T15:00:00.000Z',50000);
+    INSERT INTO ventes VALUES ('v3','VTE-3','F','ANNULEE','2026-11-03T15:00:00.000Z',50000);
     INSERT INTO lignes_vente VALUES ('l5','v3','a2','PEI-20','Peinture 20 L',2,50000);
     INSERT INTO mouvements_stock VALUES
-      ('m5','a2','d1','F','SORTIE_VENTE',2,18000,'2026-11-03T15:00:00.000Z'),
-      ('m6','a2','d1','F','RETOUR_CLIENT',2,18000,'2026-11-03T15:30:00.000Z');
+      ('m5','a2','d1','F','SORTIE_VENTE',2,18000,'VTE-3','2026-11-03T15:00:00.000Z'),
+      ('m6','a2','d1','F','RETOUR_CLIENT',2,18000,'VTE-3','2026-11-03T15:30:00.000Z');
 
     -- Hors période.
-    INSERT INTO ventes VALUES ('v4','F','VALIDEE','2026-10-01T10:00:00.000Z',80000);
+    INSERT INTO ventes VALUES ('v4','VTE-4','F','VALIDEE','2026-10-01T10:00:00.000Z',80000);
     INSERT INTO lignes_vente VALUES ('l6','v4','a1','CIM-50','Ciment 50 kg',20,80000);
-    INSERT INTO mouvements_stock VALUES ('m7','a1','d1','F','SORTIE_VENTE',20,3000,'2026-10-01T10:00:00.000Z');
+    INSERT INTO mouvements_stock VALUES ('m7','a1','d1','F','SORTIE_VENTE',20,3000,'VTE-4','2026-10-01T10:00:00.000Z');
 
     -- Autre filiale.
-    INSERT INTO ventes VALUES ('v5','AUTRE','VALIDEE','2026-11-02T11:00:00.000Z',70000);
+    INSERT INTO ventes VALUES ('v5','VTE-5','AUTRE','VALIDEE','2026-11-02T11:00:00.000Z',70000);
     INSERT INTO lignes_vente VALUES ('l7','v5','a9','AUT-01','Article d''une autre filiale',7,70000);
-    INSERT INTO mouvements_stock VALUES ('m8','a9','d1','AUTRE','SORTIE_VENTE',7,5000,'2026-11-02T11:00:00.000Z');
+    INSERT INTO mouvements_stock VALUES ('m8','a9','d1','AUTRE','SORTIE_VENTE',7,5000,'VTE-5','2026-11-02T11:00:00.000Z');
 
     -- Article sorti du catalogue : la ligne de vente en garde la trace.
-    INSERT INTO ventes VALUES ('v6','F','VALIDEE','2026-11-02T16:00:00.000Z',10000);
+    INSERT INTO ventes VALUES ('v6','VTE-6','F','VALIDEE','2026-11-02T16:00:00.000Z',10000);
     INSERT INTO lignes_vente VALUES ('l8','v6',NULL,'OLD-9','Article supprimé',1,10000);
+
+    -- Vente d'octobre annulée en novembre : la sortie est dans un mois, le
+    -- retour dans l'autre. Ni l'un ni l'autre mois ne doit s'en trouver changé.
+    INSERT INTO ventes VALUES ('v7','VTE-7','F','ANNULEE','2026-10-20T10:00:00.000Z',150000);
+    INSERT INTO lignes_vente VALUES ('l9','v7','a2','PEI-20','Peinture 20 L',6,150000);
+    INSERT INTO mouvements_stock VALUES
+      ('m9','a2','d1','F','SORTIE_VENTE',6,18000,'VTE-7','2026-10-20T10:00:00.000Z'),
+      ('m10','a2','d1','F','RETOUR_CLIENT',6,18000,'VTE-7','2026-11-02T08:00:00.000Z');
   `);
   return db;
 }
@@ -124,6 +132,23 @@ describe('margesQuery', () => {
     // Les 50 000 annulés n'entrent pas, et la sortie suivie du retour laisse
     // le coût des 4 pots vendus, pas celui des 6 qui sont sortis.
     expect(peinture).toMatchObject({ ca_ht: 100_000, cout: 72_000, lignes: 1 });
+  });
+
+  /**
+   * Une vente d'octobre annulée en novembre : la sortie de stock est restée
+   * dans octobre, le retour est tombé dans novembre. Pris mois par mois, le
+   * coût sans son chiffre d'affaires creusait une perte en octobre et un gain
+   * de même montant en novembre — deux chiffres faux pour une vente qui
+   * n'existe plus. Une vente annulée ne pèse donc dans aucun mois.
+   */
+  it('n’emporte pas le coût d’une vente annulée dans un autre mois', () => {
+    const octobre = margesArticles(lire('F', { debut: '2026-10-01T00:00:00.000Z', fin: '2026-10-31T23:59:59.999Z' }));
+    expect(octobre.find((l) => l.code === 'PEI-20')).toBeUndefined();
+    expect(recapMarges(octobre)).toMatchObject({ ca_ht: 80_000, cout: 60_000, marge: 20_000 });
+
+    // Et novembre ne reçoit pas le retour en cadeau : la peinture y garde les
+    // 4 pots réellement vendus.
+    expect(margesArticles(lire('F')).find((l) => l.code === 'PEI-20')).toMatchObject({ ca_ht: 100_000, cout: 72_000 });
   });
 
   it('fait une seule ligne d’un article renommé depuis la vente', () => {

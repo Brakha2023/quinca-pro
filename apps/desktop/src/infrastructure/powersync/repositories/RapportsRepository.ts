@@ -38,7 +38,14 @@
  * `created_at` du mouvement — les deux sont écrits dans la même transaction,
  * au même instant. C'est la convention du tableau de bord, et elle est
  * reprise ici pour que les deux écrans affichent le même total.
+ *
+ * Une exception : l'annulation. Elle intervient **après**, et peut tomber dans
+ * un autre mois que la vente. Les mouvements d'une vente annulée sont donc
+ * écartés par leur numéro de pièce, sortie et retour ensemble ; voir le
+ * commentaire de la branche du coût.
  */
+
+import { MOUVEMENT_HORS_VENTE_ANNULEE } from './PilotageRepository';
 
 /** Sorties qui consomment du stock vendu, et les retours qui l'annulent. */
 const TYPES_VENTE = "('SORTIE_VENTE', 'RETOUR_CLIENT')";
@@ -113,6 +120,9 @@ export function margesQuery(filialeId: string | null, filtres: FiltresMargesQuer
         LEFT JOIN articles a ON a.id = m.article_id
         LEFT JOIN familles_articles fa ON fa.id = a.famille_id
         WHERE m.type IN ${TYPES_VENTE} AND m.created_at BETWEEN ? AND ? AND (? = '' OR m.filiale_id = ?)
+          -- Une vente annulée ne pèse dans aucun mois : règle commune au
+          -- tableau de bord, d'où elle est reprise telle quelle.
+          AND ${MOUVEMENT_HORS_VENTE_ANNULEE}
       )
       GROUP BY cle
       ORDER BY designation`,
