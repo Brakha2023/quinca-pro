@@ -1,0 +1,302 @@
+# Mémoire du projet — à lire avant de toucher au code
+
+Ce fichier s'adresse à une **session d'IA qui reprend QuincaPro à froid**. Il ne
+redit pas le [README](README.md), qui décrit l'architecture, le flux de données,
+le fonctionnement hors ligne et les règles de domaine : lis-le, il fait foi. Ici
+se trouve ce qu'il ne dit pas — comment on travaille sur ce dépôt, ce qu'on
+vérifie avant de livrer, et les pièges qui ont déjà coûté du temps.
+
+Quand ce fichier et le code se contredisent, **le code a raison** : vérifie
+avant de t'appuyer sur une ligne d'ici.
+
+---
+
+## 1. Ce qu'est le projet, en trois phrases
+
+ERP de la quincaillerie **« Cissé & Frères »**, Côte d'Ivoire, en francs CFA.
+Plusieurs filiales, un poste par caisse, et le réseau qui tombe souvent : tout
+est **local-first** — l'application lit et écrit dans une base SQLite locale,
+PowerSync rejoue vers Supabase quand la connexion revient.
+
+Les utilisateurs sont des gérants, des caissiers et des magasiniers, pas des
+informaticiens. L'écran doit dire ce qu'il fait en français courant.
+
+Version actuelle : **0.4.0**. Installeur Windows produit le 6 novembre 2026.
+
+---
+
+## 2. Les règles de la maison
+
+### La langue
+Tout est en **français** : interface, noms de variables et de fonctions,
+commentaires, messages de commit, documentation. `margesCategories`,
+`listePlafonnee`, `peindre`. Pas d'anglais dans le code neuf.
+
+### Les commentaires
+Les fichiers portent de **longs cartouches** qui expliquent *pourquoi*, pas
+*quoi*. Ils nomment le problème réel qu'on a rencontré, et souvent ce qui a été
+essayé puis abandonné. Lis-en trois avant d'écrire le tien
+(`core/rapports/marges.ts`, `index.css`, `components/ui/Bouton.tsx`) : c'est le
+registre attendu. Un commentaire qui paraphrase le code n'a pas sa place.
+
+### Les messages de commit
+Sujet en français, à l'indicatif, qui dit l'effet pour l'utilisateur :
+`fix(pilotage): une vente annulée ne pèse dans aucun mois`. Corps long :
+le problème, la décision, ce qui a été écarté et pourquoi, puis l'état de la
+vérification. Terminer par :
+
+```
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+```
+
+**Laisser toujours non commités** : `apps/desktop/src-tauri/Cargo.lock` et
+`supabase/sync-streams_old.yaml`. C'est l'usage depuis le début.
+
+### Les couches
+`core/` (domaine pur, aucune dépendance React ou PowerSync, testé par vitest)
+→ `infrastructure/` (Supabase, PowerSync, repositories, export Excel)
+→ `presentation/` (React). Un calcul qui vit dans une page est un calcul mal
+placé : il va dans `core/`, où il se teste sans navigateur.
+
+---
+
+## 3. Les commandes
+
+Tout depuis `apps/desktop/`, sauf mention contraire.
+
+| Quoi | Commande |
+|---|---|
+| Serveur de dev | `pnpm dev --port 1421` |
+| Types | `pnpm exec tsc -p tsconfig.json --noEmit` |
+| Lint | `pnpm run lint` |
+| Tests unitaires | `pnpm exec vitest run` |
+| Chaîne e2e (18 scénarios) | `E2E_BASE_URL=http://localhost:1421 NODE_PATH="<racine>/node_modules/.pnpm/playwright@1.58.2/node_modules" pnpm run e2e` |
+| Guide PDF | depuis la racine : `NODE_PATH="$(pwd)/node_modules/.pnpm/playwright@1.58.2/node_modules" node docs/generer-pdf.cjs` |
+| **Installeur Windows** | depuis la racine : `pnpm build:windows` (= `apps/desktop/scripts/windows/build.sh`) |
+
+### Le port 1421, pas 1420
+**1420 est réservé par Tauri** (`devUrl` dans `tauri.conf.json`). Le serveur de
+dev pour les essais tourne sur **1421**, et les scénarios e2e lisent
+`E2E_BASE_URL`.
+
+### Le `NODE_PATH` de Playwright
+pnpm remonte les dépendances à la **racine du dépôt** :
+`apps/desktop/node_modules/.pnpm/` n'existe pas. Sans `NODE_PATH`, les
+scénarios échouent sur `Cannot find module 'playwright'`.
+
+### L'installeur Windows
+**Ne tente pas de compiler autrement.** Le script `scripts/windows/build.sh`
+fait tout dans **Docker** (Linux natif, caches cargo/xwin/pnpm conservés entre
+deux builds) et sort `apps/desktop/dist-windows/QuincaPro_<version>_x64-setup.exe`.
+
+Une tentative de compilation croisée directe depuis macOS (`cargo-xwin`) a
+téléchargé 1,1 Go de SDK Microsoft pour s'arrêter sur un `llvm-rc` manquant :
+c'est une impasse, le script Docker est la seule voie.
+
+Le script applique `git diff HEAD` par-dessus l'archive du commit : les
+modifications en cours sont donc embarquées, commitées ou non.
+
+---
+
+## 4. La discipline de vérification
+
+Avant tout commit, dans cet ordre : **types → lint → tests unitaires → chaîne
+e2e complète**. Les quatre doivent être verts.
+
+Repères actuels, à comparer : **746 tests unitaires** (64 fichiers),
+**744 assertions e2e**, lint à **0 erreur / 17 avertissements** (les 17 sont
+anciens et connus ; en ajouter un est une régression).
+
+### Ne modifie jamais les sources pendant que la chaîne e2e tourne
+Vite recharge à chaud, et le scénario qui simule la coupure réseau voit passer
+les erreurs de rechargement : il échoue sur « aucune erreur console ».
+C'est arrivé, le diagnostic a coûté du temps, et l'échec n'était pas réel.
+
+### Regarde l'écran, ne te fie pas aux tests
+Plusieurs défauts de cette session passaient types, lint et tests, et ne se
+voyaient qu'en capture d'écran ou en mesurant dans le navigateur : un bouton
+qui ne se réarmait jamais, des icônes rétrécies, un tableau tronqué à
+l'impression. **Prends des captures** (Playwright + `simulerSession`), et pour
+l'impression émule le média `print` ou génère un PDF — l'écran ment sur ce que
+rend le papier.
+
+### Écrire le test qui échoue d'abord
+Pour une correction de calcul, écris le test qui démontre le bug avant de le
+corriger, puis vérifie qu'il échoue sans le correctif. Deux bugs de cette
+session ont été prouvés ainsi ; sans cela on corrige une intuition.
+
+---
+
+## 5. Les pièges, par ordre de coût
+
+### WebView Tauri
+- `alert()`, `confirm()`, `prompt()` **ne fonctionnent pas** (`confirm` renvoie
+  `false`). Utiliser `useNotifier()` et `useConfirmation()`.
+- **`window.print()` sous WebView2 n'a jamais été vérifié** : tout est éprouvé
+  dans Chromium, et la machine de développement est un Mac. À confirmer sur un
+  poste Windows.
+
+### Scénarios e2e
+- Après `simulerSession(page)`, il faut **`page.goto(...)` puis
+  `page.reload()`** : un simple changement de hash ne relit pas la session et
+  renvoie à l'écran de connexion.
+- Les scénarios ne peuvent pas tourner **en parallèle** : ils partagent
+  l'IndexedDB de l'origine. Un probe lancé pendant la chaîne échouera.
+- Attendre ce qui arrive **tard** avant de viser un bouton : une ligne qui
+  s'insère pousse la mise en page, et Playwright renonce faute de voir
+  l'élément immobile (cas réel : `verrou.e2e.cjs`).
+- `page.pdf()` est la seule façon de vérifier les sauts de page.
+
+### Impression
+- `document-section` est un **intertitre**, pas un conteneur : il met en
+  capitales tout ce qu'il contient. Le tableau vient *après* lui.
+- Le navigateur **supprime les fonds** à l'impression ; `.document` porte
+  `print-color-adjust: exact` pour que l'aperçu dise vrai.
+- Les marges : `@page` global à 4 mm pour le **ticket** (72 mm de rouleau),
+  pages nommées à 10 mm pour les **A4** (`a4-portrait`, `paysage`), de sorte
+  que la feuille imprimée fasse la largeur de son aperçu.
+- L'orientation se décide **toute seule** (`CorpsDocument` mesure la largeur
+  naturelle des tableaux) ; l'attribut `paysage` tranche à la main.
+- **L'impression et l'export ne sont jamais paginés** : ils reçoivent la liste
+  entière, pas la page affichée. Toute pagination nouvelle doit respecter ça.
+
+### React
+- **Mode strict** : React monte, démonte, remonte. Un drapeau « encore monté »
+  posé dans un `useEffect` doit se **relever** au montage, sinon il reste à
+  faux pour toujours (bug réel : les boutons ne se réarmaient jamais).
+- Remettre un état à zéro quand une entrée change se fait **pendant le rendu**
+  (comparer une signature), pas dans un effet : la règle de lint l'exige.
+- Une classe dérivée de la mise en page se pose sur le nœud dans un
+  `useLayoutEffect`, sans passer par un état.
+
+### Détails qui mordent
+- `formaterPourcentage` utilise `maximumFractionDigits` : 25 s'écrit `25 %`,
+  pas `25,0 %`.
+- `familleFormSchema` met le nom de famille **en capitales**.
+- La base locale **n'a aucun index** : préférer une sous-requête non corrélée
+  (`NOT IN`) à un `NOT EXISTS` corrélé. Et garder les `IS NOT NULL` : un seul
+  `NULL` rend un `NOT IN` indécidable et vide le résultat.
+
+---
+
+## 6. Le vocabulaire visuel
+
+### La palette (`tailwind.config.js`)
+Deux familles : un **bleu** du ciel à la nuit, un **orange**. La règle décide
+de tout :
+
+> **Le bleu porte les surfaces, l'orange ne porte que ce sur quoi on agit.**
+
+L'écran courant dans le menu, l'onglet courant, le bouton qui fait la chose.
+Un orange décoratif ne montrerait plus rien — c'est pourquoi les bandeaux de
+cartes sont bleu nuit et non orange.
+
+L'échelle `primary` ne bouge que par le bas : **50 à 700 habillent trois cents
+endroits** et ne doivent pas changer ; 800/900/950 sont la nuit.
+
+### Les pièces partagées
+| Pièce | Rôle |
+|---|---|
+| `components/ui/Bouton` | Se désarme pendant son travail, montre un tourniquet, dit ce qu'il fait. Le travail part **après** un affichage (`peindre()`), sinon le tourniquet ne se voit pas. |
+| `components/ui/Carte` | Carte à bandeau bleu nuit + icône. |
+| `components/ui/Pagination` + `hooks/usePagination` | Pages de 50 ; un filtre ramène en page 1, pas le total qui bouge. |
+| `components/print/DocumentImprimable` | Aperçu A4 ; l'orientation se mesure seule. |
+| `features/pilotage/Indicateur` | Tuile de chiffre, teinte + pastille d'icône. La teinte dit la **nature** du chiffre, jamais s'il est bon. |
+| `.tableau` (dans `index.css`) | Tous les tableaux d'écran : entête bleuté, zébrure, survol, ligne au clavier. Les teintes se superposent en `background-image` pour ne pas effacer une ligne d'alerte. |
+
+Un changement d'allure se fait **dans ces pièces ou dans `index.css`**, pas
+dans les 43 fichiers d'écran.
+
+---
+
+## 7. Les règles de calcul à ne pas réinventer
+
+- **Marge** = chiffre d'affaires HT (remises déduites) − coût d'achat de la
+  marchandise sortie. Taux = marge / CA, **jamais sur le coût**. Même
+  définition au tableau de bord et au rapport des marges : les deux écrans
+  doivent afficher le même total.
+- **La remise se négocie en francs sur la vente entière** et n'est pas
+  redescendue dans `lignes_vente.total_ht`. Tout calcul par article doit la
+  répartir au prorata (`margesQuery`), sinon la marge est surévaluée.
+- **Une vente annulée ne pèse dans aucun mois.** Son CA est écarté par le
+  statut ; son coût doit l'être aussi, sortie *et* retour, par la constante
+  partagée `MOUVEMENT_HORS_VENTE_ANNULEE` (dans `PilotageRepository`, importée
+  par `RapportsRepository`). L'annulation vient après la vente et peut tomber
+  dans un autre mois.
+- **Les permissions** : « un droit qu'on n'aurait aucune raison de retirer n'a
+  pas à être une permission ». Le catalogue vit dans
+  `core/parametres/permissions.ts`, pas dans un CHECK Postgres : ajouter une
+  permission ne demande pas de migration.
+
+---
+
+## 8. Sécurité — contraintes permanentes
+
+- **Le `.env` est gravé dans l'installeur Windows** (URL Supabase, clé anon,
+  URL PowerSync). Cet `.exe` **ne doit pas circuler hors de l'entreprise**.
+- Ne jamais écrire de mot de passe de base dans un fichier de mémoire, un
+  commit ou un commentaire.
+- Le scénario `pnpm e2e:sync` **écrit dans la base de production** : ne pas le
+  lancer sans accord explicite.
+- À faire avant la production, côté utilisateur : changer le mot de passe
+  Postgres, désactiver les *Development tokens* PowerSync, changer les trois
+  mots de passe d'essai (`Essai@2026`, en clair dans
+  `supabase/outils/reinitialiser_essais.sql`). Le mot de passe superadmin
+  semé est public et l'application force son changement à la première
+  connexion.
+
+---
+
+## 9. Où en est le projet
+
+Livré en 0.4.0 (voir [CHANGELOG.md](CHANGELOG.md) pour le détail) : remise en
+francs, catégories de trésorerie, menu **Rapports** (marge par catégorie),
+pagination de vingt écrans, boutons qui montrent leur travail, impression
+reprise de bout en bout, polices embarquées, et l'habillage bleu nuit / orange.
+
+### Resté en suspens
+
+1. **L'impression sous WebView2** n'a jamais été vérifiée sur un vrai poste
+   Windows. C'est le point le plus important.
+2. **L'habillage n'est fait qu'à moitié** : seuls les sept blocs du tableau de
+   bord ont leur bandeau `Carte`. Trésorerie, Clients, Fournisseurs et Stock
+   gardent leurs cartes blanches.
+3. Listes converties récemment sans pied de page d'identification : aucune —
+   les vingt-deux listes imprimables en ont un. Vérifier pour toute liste
+   nouvelle.
+
+### Questions posées à l'utilisateur, jamais tranchées
+
+Ne pas décider seul ; les reposer si le sujet revient.
+
+- Les catégories de trésorerie doivent-elles être partagées entre filiales ?
+- Le compte d'une liste doit-il aussi figurer **au-dessus** du tableau ?
+- Faut-il pouvoir fermer le rapport des marges à un gérant (permission dédiée) ?
+- *Transfert entre filiales* doit-il ouvrir directement sur *Historique* ?
+- La dormance par défaut : 180 jours au lieu de 90 ?
+- Les entrées en stock doivent-elles apparaître dans *Historiques → Commandes
+  fournisseurs* ?
+- La « valeur à la vente » du stock doit-elle tenir compte d'une remise
+  moyenne ou du prix VIP ?
+
+### Dettes connues, non corrigées
+
+- Divergence **CHEQUE** : un déclencheur serveur bouge `caisses.solde_actuel`,
+  le code local non.
+- `audit.e2e.cjs:71` et quatre attentes de `horloge.e2e.cjs` sont fragiles.
+- `supabase/sync-streams_old.yaml` traîne ; à supprimer ou renommer.
+
+---
+
+## 10. Comment travailler ici
+
+1. **Lis le README** et les cartouches des fichiers que tu touches.
+2. **Agis** quand tu as de quoi : pas de plan à faire valider pour une
+   correction ordinaire.
+3. **Vérifie dans le navigateur**, pas seulement par les tests.
+4. **Dis ce qui ne va pas**, y compris tes propres erreurs : la session passée
+   a produit plusieurs corrections de défauts introduits en cours de route, et
+   les signaler vaut mieux que les laisser passer.
+5. **Ne construis pas l'installeur** sans qu'on te le demande.
+6. Mets à jour **CHANGELOG.md** et, si l'utilisateur est concerné,
+   `docs/guide-utilisateur.html` (puis régénère le PDF).
