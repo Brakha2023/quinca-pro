@@ -33,7 +33,7 @@ export default function ClientsPage() {
         <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
           <div className="flex overflow-x-auto border-b border-neutral-200 bg-neutral-50">
             {SECTIONS_CLIENTS.map((s) => (
-              <NavLink key={s.id} to={cheminClients(s.id)} className={({ isActive }) => `flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${isActive ? 'border-primary-600 text-primary-700 bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'}`}>
+              <NavLink key={s.id} to={cheminClients(s.id)} className={({ isActive }) => `flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${isActive ? 'border-accent-500 text-accent-600 bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'}`}>
                 <s.icon className="w-4 h-4" />{s.label}
               </NavLink>
             ))}

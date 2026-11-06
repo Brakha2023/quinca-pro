@@ -170,7 +170,7 @@ export default function RolesPanel({ filiale, peutModifier }: Props) {
           <Bouton onClick={() => setModal({ type: 'matrice' })} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="imprimer-roles">Imprimer / PDF</Bouton>
           <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 rounded-lg" data-testid="exporter-roles">Exporter Excel</Bouton>
           {peutModifier && (
-            <button type="button" onClick={() => setModal({ type: 'role' })} className="flex items-center gap-2 px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg" data-testid="nouveau-role">
+            <button type="button" onClick={() => setModal({ type: 'role' })} className="flex items-center gap-2 px-4 py-2 text-sm bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg" data-testid="nouveau-role">
               <PlusIcon className="w-4 h-4" /> Nouveau rôle
             </button>
           )}

@@ -64,7 +64,7 @@ export default function HistoriquesPage() {
                 to={cheminHistorique(s.id)}
                 className={({ isActive }) =>
                   `flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                    isActive ? 'border-primary-600 text-primary-700 bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+                    isActive ? 'border-accent-500 text-accent-600 bg-white' : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
                   }`
                 }
               >

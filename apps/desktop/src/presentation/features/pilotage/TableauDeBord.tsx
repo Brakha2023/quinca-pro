@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import Carte from '../../components/ui/Carte';
+import { ArrowTrendingUpIcon, BanknotesIcon, BuildingLibraryIcon, BuildingOffice2Icon, ChartBarIcon, ClipboardDocumentCheckIcon, ClockIcon, CubeIcon, ExclamationTriangleIcon, ScaleIcon, ShoppingCartIcon, Squares2X2Icon, StarIcon, TruckIcon, UserIcon } from '@heroicons/react/24/outline';
 import { formaterFcfa, formaterPourcentage } from '../../../core/commun/prix';
 import {
   classement, dormantsLesPlusLourds, evolution, fenetrePrecedente, pointsDeVigilance, type Fenetre,
@@ -87,6 +88,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           sens="HAUT_BON"
           ton="text-primary-700"
           sous={`${total.ventes} vente(s) · panier moyen ${formaterFcfa(total.panier_moyen)}`}
+          couleur="bleu" icone={BanknotesIcon}
           testId="kpi-ca"
         />
         <Indicateur
@@ -97,6 +99,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           sens="HAUT_BON"
           ton={total.marge < 0 ? 'text-red-600' : 'text-neutral-900'}
           sous={`${formaterPourcentage(total.taux_marge)} du CA HT · coût d'achat ${formaterFcfa(total.cout_ventes)}`}
+          couleur="orange" icone={ArrowTrendingUpIcon}
           testId="kpi-marge"
         />
         <Indicateur
@@ -105,6 +108,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           sens="HAUT_BON"
           ton={total.resultat < 0 ? 'text-red-600' : 'text-green-700'}
           sous={`marge moins ${formaterFcfa(total.charges)} de dépenses passées en caisse`}
+          couleur="ambre" icone={ScaleIcon}
           testId="kpi-resultat"
         />
         <Indicateur
@@ -116,6 +120,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
               ? `+ ${horsCaisses.join(' · ')}, pas encore en caisse`
               : `encaissé sur la période ${formaterFcfa(total.encaisse)}`
           }
+          couleur="vert" icone={BuildingLibraryIcon}
           testId="kpi-tresorerie"
         />
       </div>
@@ -128,6 +133,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           sens="BAS_BON"
           ton={total.creances > 0 ? 'text-red-600' : 'text-neutral-900'}
           sous={anciennete.au_dela_de_90 > 0 ? `dont ${formaterFcfa(anciennete.au_dela_de_90)} à plus de 90 jours` : `${total.clients_servis} client(s) servi(s)`}
+          couleur="rouge" icone={UserIcon}
           testId="kpi-creances"
         />
         <Indicateur
@@ -136,6 +142,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           sens="BAS_BON"
           ton={total.dettes > 0 ? 'text-orange-700' : 'text-neutral-900'}
           sous={`${total.commandes_ouvertes} commande(s) encore ouverte(s)`}
+          couleur="orange" icone={TruckIcon}
           testId="kpi-dettes"
         />
         <Indicateur
@@ -148,6 +155,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
                 ? `dont ${formaterFcfa(repartition.valeur_dormante)} dormant`
                 : `${repartition.articles} article(s)`
           }
+          couleur="bleu" icone={CubeIcon}
           testId="kpi-stock"
         />
         <Indicateur
@@ -155,6 +163,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           valeur={`${total.livraisons_attente}`}
           ton={total.livraisons_retard > 0 ? 'text-red-600' : 'text-neutral-900'}
           sous={total.livraisons_retard > 0 ? `${total.livraisons_retard} en retard sur la date prévue` : 'aucun retard'}
+          couleur="violet" icone={ClipboardDocumentCheckIcon}
           testId="kpi-livraisons"
         />
       </div>
@@ -186,19 +195,11 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
       )}
 
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm xl:col-span-2">
-          <h3 className="text-base font-semibold text-neutral-800">Chiffre d'affaires et marge</h3>
-          <p className="mb-4 mt-0.5 text-xs text-neutral-500">
-            La hauteur donne l'activité, la part orange ce qu'elle a rapporté — {fenetre.libelle}.
-          </p>
+        <Carte titre="Chiffre d'affaires et marge" icone={ChartBarIcon} sous={<>La hauteur donne l'activité, la part orange ce qu'elle a rapporté — {fenetre.libelle}.</>} className="xl:col-span-2">
           <HistogrammeCaMarge serie={serie} />
-        </div>
+        </Carte>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-neutral-800">Où dort l'argent du stock</h3>
-          <p className="mb-4 mt-0.5 text-xs text-neutral-500">
-            {formaterFcfa(repartition.valeur)} en magasin, {repartition.articles} article(s).
-          </p>
+        <Carte titre="Où dort l'argent du stock" icone={CubeIcon} sous={<>{formaterFcfa(repartition.valeur)} en magasin, {repartition.articles} article(s).</>}>
           <EtatStock repartition={repartition} />
           {dormants.length > 0 && (
             <div className="mt-4 border-t border-neutral-100 pt-3">
@@ -213,19 +214,15 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
               </ul>
             </div>
           )}
-        </div>
+        </Carte>
       </div>
 
       <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-neutral-800">Chiffre d'affaires par famille</h3>
-          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Hors taxes · {fenetre.libelle}</p>
+        <Carte titre="Chiffre d'affaires par famille" icone={Squares2X2Icon} sous={<>Hors taxes · {fenetre.libelle}</>}>
           <BarresClassement lignes={familles.lignes} maximum={familles.maximum} mesure="du CA HT" vide="Aucune vente sur la période." />
-        </div>
+        </Carte>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-neutral-800">Articles les plus vendus</h3>
-          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Toutes taxes · {fenetre.libelle}</p>
+        <Carte titre="Articles les plus vendus" icone={StarIcon} sous={<>Toutes taxes · {fenetre.libelle}</>}>
           {articles.length === 0 ? (
             <p className="py-8 text-center text-sm text-neutral-400">Aucune vente sur la période.</p>
           ) : (
@@ -240,19 +237,13 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
               ))}
             </ol>
           )}
-        </div>
+        </Carte>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-neutral-800">Qui achète</h3>
-          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Les plus gros clients de la période, TTC</p>
+        <Carte titre="Qui achète" icone={ShoppingCartIcon} sous={<>Les plus gros clients de la période, TTC</>}>
           <BarresClassement lignes={clients.lignes} maximum={clients.maximum} mesure="du CA TTC" vide="Aucune vente sur la période." />
-        </div>
+        </Carte>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-neutral-800">Ancienneté des impayés</h3>
-          <p className="mb-4 mt-0.5 text-xs text-neutral-500">
-            {formaterFcfa(anciennete.total)} sur {anciennete.factures} facture(s) non soldée(s)
-          </p>
+        <Carte titre="Ancienneté des impayés" icone={ClockIcon} sous={<>{formaterFcfa(anciennete.total)} sur {anciennete.factures} facture(s) non soldée(s)</>}>
           <AncienneteCreances repartition={anciennete} />
           {ecartCreances > 1 && (
             <p className="mt-3 text-xs text-neutral-400">
@@ -260,15 +251,13 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
               qui ne portent pas de date de facture.
             </p>
           )}
-        </div>
+        </Carte>
       </div>
 
       {comparerFiliales && filiales.length > 1 && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-neutral-800">Les filiales entre elles</h3>
-          <p className="mb-4 mt-0.5 text-xs text-neutral-500">Chiffre d'affaires TTC de la période, et taux de marge</p>
+        <Carte titre="Les filiales entre elles" icone={BuildingOffice2Icon} sous={<>Chiffre d'affaires TTC de la période, et taux de marge</>}>
           <BarresClassement lignes={parFiliale.lignes} maximum={parFiliale.maximum} mesure="du CA du groupe" />
-        </div>
+        </Carte>
       )}
     </div>
   );

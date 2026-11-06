@@ -234,7 +234,7 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
         </FormField>
         <FormField label="Recherche"><input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N° ou client…" className={inputClass} /></FormField>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={enCours} onChange={(e) => setEnCours(e.target.checked)} className="rounded" /> En cours seulement</label>
-        <button type="button" onClick={() => setModal({ type: 'nouvelle' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle proforma</button>
+        <button type="button" onClick={() => setModal({ type: 'nouvelle' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle proforma</button>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
         <table className="tableau">

@@ -202,19 +202,13 @@ export default function MainLayout() {
         {/* Logo */}
         <div className={`border-b border-primary-800 ${isSidebarOpen ? 'p-6' : 'p-4 flex justify-center'}`}>
           {isSidebarOpen ? (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-primary-700 font-bold text-lg">QCF</span>
-              </div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight">CISSÉ & FRÈRES</h1>
-                <p className="text-xs text-primary-300">Quincaillerie - SASU</p>
-              </div>
+            <div className="text-center">
+              <p className="text-3xl font-extrabold tracking-tight leading-none">QCF</p>
+              <h1 className="mt-2 text-base font-bold tracking-tight leading-tight">CISSÉ &amp; FRÈRES</h1>
+              <p className="text-xs text-primary-300">Quincaillerie - SASU</p>
             </div>
           ) : (
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-primary-700 font-bold text-lg">QCF</span>
-            </div>
+            <p className="text-xl font-extrabold tracking-tight">QCF</p>
           )}
         </div>
 
@@ -226,7 +220,7 @@ export default function MainLayout() {
           {sections.map((section) => (
             <div key={section.title}>
               {isSidebarOpen && (
-                <p className="text-xs text-primary-400 uppercase tracking-wider px-3 mb-2 font-medium">
+                <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-primary-300/80">
                   {section.title}
                 </p>
               )}
@@ -240,7 +234,7 @@ export default function MainLayout() {
                     <div key={item.name}>
                       <div
                         className={`flex items-center rounded-lg transition-colors ${
-                          actif ? 'bg-primary-700 text-white border-l-4 border-orange-400' : 'text-primary-100 hover:bg-primary-800 hover:text-white'
+                          actif ? 'bg-accent-500 text-white shadow-sm' : 'text-primary-100 hover:bg-primary-800 hover:text-white'
                         }`}
                       >
                         <NavLink
@@ -253,20 +247,20 @@ export default function MainLayout() {
                           {isSidebarOpen && <span>{item.name}</span>}
                         </NavLink>
                         {isSidebarOpen && item.children && (
-                          <button type="button" aria-label={deplie ? `Replier ${item.name}` : `Déplier ${item.name}`} onClick={basculer} className="p-1.5 mr-1.5 rounded hover:bg-primary-600">
+                          <button type="button" aria-label={deplie ? `Replier ${item.name}` : `Déplier ${item.name}`} onClick={basculer} className="p-1.5 mr-1.5 rounded hover:bg-white/20">
                             <ChevronDownIcon className={`w-4 h-4 transition-transform ${deplie ? 'rotate-180' : ''}`} />
                           </button>
                         )}
                       </div>
                       {deplie && (
-                        <div className="mt-1 ml-4 pl-3 border-l border-primary-700 space-y-0.5" data-testid={`sous-menu-${item.name.toLowerCase()}`}>
+                        <div className="mt-1 ml-4 pl-3 border-l border-primary-800 space-y-0.5" data-testid={`sous-menu-${item.name.toLowerCase()}`}>
                           {item.children!.map((c) => (
                             <NavLink
                               key={c.href}
                               to={c.href}
                               className={({ isActive }) =>
                                 `flex items-center gap-2 px-2 py-1.5 text-sm rounded-md transition-colors ${
-                                  isActive ? 'text-white font-medium bg-primary-800' : 'text-primary-200 hover:bg-primary-800 hover:text-white'
+                                  isActive ? 'bg-primary-800 font-medium text-white' : 'text-primary-200 hover:bg-primary-800 hover:text-white'
                                 }`
                               }
                             >
@@ -287,7 +281,7 @@ export default function MainLayout() {
         {/* Profil utilisateur */}
         <div className={`border-t border-primary-800 ${isSidebarOpen ? 'p-4' : 'p-2'}`}>
           <div className={`flex items-center gap-3 ${!isSidebarOpen ? 'justify-center' : ''}`}>
-            <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-accent-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {utilisateur ? initiales(utilisateur.nom, utilisateur.prenom) : '…'}
             </div>
             {isSidebarOpen && (
@@ -329,7 +323,7 @@ export default function MainLayout() {
               )}
             </button>
             
-            <h2 className="text-lg font-semibold text-neutral-800">
+            <h2 className="text-xl font-bold text-primary-900">
               {getCurrentPageName()}
             </h2>
           </div>

@@ -143,7 +143,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
           Total en caisses aujourd'hui : <strong className="font-mono">{formaterFcfa(recap.solde_actuel)}</strong>
           {recap.negatives > 0 && <span className="ml-2 text-red-600">· {recap.negatives} à découvert</span>}
         </p>
-        <button type="button" onClick={() => setModal({ type: 'caisse' })} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle caisse</button>
+        <button type="button" onClick={() => setModal({ type: 'caisse' })} className="flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg shadow-sm"><PlusIcon className="w-5 h-5" /> Nouvelle caisse</button>
       </div>
       <NoteHistorique quoi="le journal de caisse" />
 

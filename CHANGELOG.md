@@ -13,10 +13,23 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
-## 0.4.0 — 29 octobre 2026
+## 0.4.0 — 3 novembre 2026
 
 Le comptoir, revu là où il coûtait du temps : la remise, la saisie des montants, et les clients
 qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
+
+Puis deux choses qu'on ne voit qu'à l'usage, quand la maison grossit. Les **listes** : un catalogue
+de milliers de références s'affichait d'un bloc, et les journaux s'arrêtaient en silence au plafond
+de leur requête — elles se lisent maintenant page par page, et disent ce qu'elles ne montrent pas.
+Les **boutons** : entre le clic et l'aperçu il s'écoulait des secondes pendant lesquelles rien ne
+bougeait, on recliquait, et le travail partait deux fois.
+
+Un nouveau menu, **Rapports**, dit enfin où se fait la marge. Et une erreur de calcul qui s'y
+cachait — celle des ventes annulées après coup — est corrigée au tableau de bord comme au rapport.
+
+L'impression, enfin, a été reprise de bout en bout : des feuilles qui se couchent quand elles
+débordent, des pages qui disent d'où elles sortent, et ce que montre l'aperçu est ce qui sort de
+l'imprimante.
 
 ### Modifié
 
@@ -227,6 +240,19 @@ qu'on fait patienter. Puis le magasin, où l'on ne retrouvait pas ses bons.
   savait pas de qui venait cette marchandise : le filtre par fournisseur de l'onglet *Mouvements*
   l'ignorait, et une fiche fournisseur paraissait effaçable alors qu'elle avait livré. Les
   mouvements déjà enregistrés ne sont pas retouchés.
+
+### Modifié — l'habillage de l'application
+
+- **L'application prend les couleurs de la maison.** Barre latérale **bleu nuit** au lieu du bleu
+  vif, logo QCF en tête, et un **orange** qui ne sert plus qu'à montrer du doigt : l'écran où l'on
+  se trouve dans le menu, l'onglet courant, le bouton qui fait la chose (*Nouvel article*,
+  *Nouvelle caisse*). Un orange qui servirait à décorer ne montrerait plus rien.
+- **Les chiffres se retrouvent à leur couleur.** Une rangée de huit tuiles blanches se relisait en
+  entier pour trouver la bonne ; chacune porte désormais sa teinte et sa pastille — l'argent qui
+  entre en bleu, la marge en orange, la trésorerie en vert, les créances en rouge. La teinte dit
+  la nature du chiffre, jamais s'il est bon : c'est à l'évolution de le dire.
+- **Les blocs d'un écran ont une tête.** Les cartes du tableau de bord prennent un bandeau bleu
+  nuit avec leur icône, au lieu de se fondre les unes dans les autres sur le fond gris.
 
 ### Ajouté — pagination des listes
 

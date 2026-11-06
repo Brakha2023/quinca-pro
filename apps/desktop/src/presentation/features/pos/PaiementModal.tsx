@@ -123,7 +123,7 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
     const vendeur = utilisateur ? `${utilisateur.prenom ?? ''} ${utilisateur.nom}`.trim() : '';
     return (
       <Modal titre="Vente enregistrée" largeur="max-w-md" onClose={onTerminee} pied={
-        <button type="button" onClick={onTerminee} autoFocus className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg">Nouvelle vente (F10)</button>
+        <button type="button" onClick={onTerminee} autoFocus className="px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg">Nouvelle vente (F10)</button>
       }>
         <div className="text-center space-y-3">
           <CheckCircleIcon className="w-14 h-14 text-green-600 mx-auto" />

@@ -34,6 +34,12 @@ export async function connectSync(): Promise<void> {
   await db.connect(connector);
 }
 
+/** Relance immédiatement l'échange avec le service sans modifier la base locale. */
+export async function synchroniserMaintenant(): Promise<void> {
+  await db.disconnect();
+  await db.connect(connector);
+}
+
 /** Coupe la synchronisation sans toucher aux données locales. */
 export async function disconnectSync(): Promise<void> {
   await db.disconnect();

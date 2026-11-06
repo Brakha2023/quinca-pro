@@ -101,7 +101,7 @@ export default function DepotsPanel({ filialeId }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between print:hidden">
         <p className="text-sm text-neutral-600"><strong>{depots.length}</strong> dépôt(s)</p>
-        <button onClick={() => setModal({})} className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg text-sm">
+        <button onClick={() => setModal({})} className="flex items-center gap-2 px-3 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg text-sm">
           <PlusIcon className="w-4 h-4" /> Nouveau dépôt
         </button>
       </div>

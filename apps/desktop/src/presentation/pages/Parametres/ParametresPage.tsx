@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Navigate, NavLink, useParams } from 'react-router-dom';
-import { BuildingOffice2Icon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, BuildingOffice2Icon } from '@heroicons/react/24/outline';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { usePermissions } from '../../auth/usePermissions';
+import { synchroniserMaintenant } from '../../../infrastructure/powersync/database';
+import { useNotifier } from '../../notifications/useNotifier';
 import DocumentsPanel from '../../features/parametres/DocumentsPanel';
 import EntreprisePanel from '../../features/parametres/EntreprisePanel';
 import FiscalitePanel from '../../features/parametres/FiscalitePanel';
@@ -31,6 +33,8 @@ export default function ParametresPage() {
   const { section } = useParams();
   const { utilisateur, filiale, filiales, filialeId, estDirecteur } = useFilialeCourante();
   const { peut, isLoading } = usePermissions();
+  const notifier = useNotifier();
+  const [synchronisationEnCours, setSynchronisationEnCours] = useState(false);
 
   // Un directeur en vue consolidée n'a pas de filiale : les paramètres
   // décrivent un établissement, il faut donc en désigner un.
@@ -66,6 +70,23 @@ export default function ParametresPage() {
   /** Les quatre premières sections décrivent une filiale : elles ont besoin de sa fiche. */
   const surLaFiliale = ['entreprise', 'fiscalite', 'documents', 'numerotation', 'securite'].includes(section);
 
+  const synchroniser = async () => {
+    if (synchronisationEnCours) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      notifier('erreur', 'Aucune connexion Internet. Les données locales restent disponibles et seront synchronisées au retour du réseau.');
+      return;
+    }
+    setSynchronisationEnCours(true);
+    try {
+      await synchroniserMaintenant();
+      notifier('info', 'Synchronisation relancée. Suivez l’envoi et la réception dans le bandeau en haut de l’application.');
+    } catch (erreur) {
+      notifier('erreur', erreur instanceof Error ? `Impossible de relancer la synchronisation : ${erreur.message}` : 'Impossible de relancer la synchronisation.');
+    } finally {
+      setSynchronisationEnCours(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -73,20 +94,32 @@ export default function ParametresPage() {
           <h1 className="text-2xl font-bold text-neutral-900">Paramètres · {onglet.label}</h1>
           <p className="mt-1 text-sm text-neutral-500">{onglet.accroche}</p>
         </div>
-        {surLaFiliale && estDirecteur && filiales.length > 1 && (
-          <label className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-sm">
-            <BuildingOffice2Icon className="h-4 w-4 text-neutral-400" />
-            <span className="sr-only">Filiale réglée</span>
-            <select
-              value={filialeReglee ?? ''}
-              onChange={(e) => setChoisie(e.target.value)}
-              className="border-0 bg-transparent text-sm font-medium text-neutral-800 focus:outline-none focus:ring-0"
-              data-testid="filiale-reglee"
-            >
-              {filiales.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
-            </select>
-          </label>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void synchroniser()}
+            disabled={synchronisationEnCours}
+            className="inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-white px-3 py-2 text-sm font-medium text-primary-700 shadow-sm transition-colors hover:bg-primary-50 disabled:cursor-wait disabled:opacity-60"
+            data-testid="synchroniser-maintenant"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${synchronisationEnCours ? 'animate-spin' : ''}`} />
+            {synchronisationEnCours ? 'Relance…' : 'Synchroniser maintenant'}
+          </button>
+          {surLaFiliale && estDirecteur && filiales.length > 1 && (
+            <label className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-sm">
+              <BuildingOffice2Icon className="h-4 w-4 text-neutral-400" />
+              <span className="sr-only">Filiale réglée</span>
+              <select
+                value={filialeReglee ?? ''}
+                onChange={(e) => setChoisie(e.target.value)}
+                className="border-0 bg-transparent text-sm font-medium text-neutral-800 focus:outline-none focus:ring-0"
+                data-testid="filiale-reglee"
+              >
+                {filiales.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">

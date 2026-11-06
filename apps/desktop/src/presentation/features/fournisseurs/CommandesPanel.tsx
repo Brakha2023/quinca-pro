@@ -277,7 +277,7 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
         <FormField label="Recherche"><input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N° ou fournisseur…" className={inputClass} /></FormField>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={ouvertes} onChange={(e) => setOuvertes(e.target.checked)} className="rounded" /> En attente de livraison</label>
         <span className="text-sm text-neutral-600 ml-auto">Reste à livrer : <strong className="font-mono">{formaterFcfa(totalOuvert)}</strong></span>
-        <button type="button" onClick={() => setModal({ type: 'nouveau' })} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle commande</button>
+        <button type="button" onClick={() => setModal({ type: 'nouveau' })} className="flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle commande</button>
       </div>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
         <table className="tableau">

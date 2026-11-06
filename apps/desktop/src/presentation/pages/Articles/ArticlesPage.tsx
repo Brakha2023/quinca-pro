@@ -49,7 +49,7 @@ export default function ArticlesPage() {
                 onClick={() => setOnglet(o.id)}
                 className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                   onglet === o.id
-                    ? 'border-primary-600 text-primary-700 bg-white'
+                    ? 'border-accent-500 text-accent-600 bg-white'
                     : 'border-transparent text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
                 }`}
               >
