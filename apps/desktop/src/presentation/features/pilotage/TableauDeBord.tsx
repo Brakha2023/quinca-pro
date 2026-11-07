@@ -9,7 +9,7 @@ import AncienneteCreances from './AncienneteCreances';
 import BarresClassement from './BarresClassement';
 import EtatStock from './EtatStock';
 import HistogrammeCaMarge from './HistogrammeCaMarge';
-import Indicateur from './Indicateur';
+import Indicateur from '../../components/ui/Indicateur';
 import { usePerimetre, type LecturePilotage } from './hooks';
 
 /**

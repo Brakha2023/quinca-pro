@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BanknotesIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, PrinterIcon, ScaleIcon } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_PERIODE_REGLEMENT, construireReleve } from '../../../core/fournisseurs';
@@ -73,13 +75,29 @@ export default function CompteFournisseurPanel({ filialeId, filiale }: Props) {
       {fournisseur ? (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="compte-indicateurs">
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Solde initial{fournisseur.date_effet_solde ? ` au ${formaterDate(fournisseur.date_effet_solde)}` : ''}</p><p className="text-xl font-bold font-mono mt-1">{formaterFcfa(fournisseur.solde_initial)}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Débit (factures)</p><p className="text-xl font-bold font-mono text-red-600 mt-1">{formaterFcfa(fournisseur.cumul_factures)}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Crédit (règlements)</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(fournisseur.cumul_reglements)}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Solde actuel</p><p className={`text-xl font-bold font-mono mt-1 ${fournisseur.solde_actuel > 0 ? 'text-red-600' : fournisseur.solde_actuel < 0 ? 'text-blue-700' : 'text-green-700'}`}>{formaterFcfa(fournisseur.solde_actuel)}</p><p className="text-xs text-neutral-500">{fournisseur.solde_actuel > 0 ? 'Nous devons' : fournisseur.solde_actuel < 0 ? 'Avoir en notre faveur' : 'Compte soldé'}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Conditions</p><p className="text-sm font-medium mt-1">{fournisseur.periode_reglement ? LIBELLES_PERIODE_REGLEMENT[fournisseur.periode_reglement] : '—'}</p><p className="text-xs text-neutral-500">Plafond {formaterFcfa(fournisseur.plafond_credit)}{fournisseur.delai_echeance_jours ? ` · échéance ${fournisseur.delai_echeance_jours} j` : ''}</p></div>
+            {/* Cinq tuiles : la teinte sans la pastille, faute de largeur. */}
+            <Indicateur
+              label={`Solde initial${fournisseur.date_effet_solde ? ` au ${formaterDate(fournisseur.date_effet_solde)}` : ''}`}
+              valeur={formaterFcfa(fournisseur.solde_initial)} couleur="nuit"
+            />
+            <Indicateur label="Débit (factures)" valeur={formaterFcfa(fournisseur.cumul_factures)} ton="text-red-600" couleur="violet" />
+            <Indicateur label="Crédit (règlements)" valeur={formaterFcfa(fournisseur.cumul_reglements)} ton="text-green-700" couleur="vert" />
+            <Indicateur
+              label="Solde actuel" valeur={formaterFcfa(fournisseur.solde_actuel)}
+              ton={fournisseur.solde_actuel > 0 ? 'text-red-600' : fournisseur.solde_actuel < 0 ? 'text-blue-700' : 'text-green-700'}
+              couleur="ambre"
+              sous={fournisseur.solde_actuel > 0 ? 'Nous devons' : fournisseur.solde_actuel < 0 ? 'Avoir en notre faveur' : 'Compte soldé'}
+            />
+            <Indicateur
+              label="Conditions"
+              valeur={fournisseur.periode_reglement ? LIBELLES_PERIODE_REGLEMENT[fournisseur.periode_reglement] : '—'}
+              couleur="bleu"
+              sous={`Plafond ${formaterFcfa(fournisseur.plafond_credit)}${fournisseur.delai_echeance_jours ? ` · échéance ${fournisseur.delai_echeance_jours} j` : ''}`}
+            />
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">{tableau}</div>
+          <Carte titre="Relevé du compte" icone={ScaleIcon} sous={fournisseur.raison_sociale} nu>
+            <div className="overflow-x-auto">{tableau}</div>
+          </Carte>
           <Pagination etat={pages} nom="ligne" data-testid="pagination-compte-fournisseur" />
         </>
       ) : (

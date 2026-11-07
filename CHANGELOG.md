@@ -13,6 +13,77 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
+## Non publié
+
+Pas encore d'installeur : cette section attend la prochaine version.
+
+L'habillage bleu nuit / orange, commencé au tableau de bord en 0.4.0, couvre maintenant
+**toute l'application**. Les écrans gardaient des cartes blanches qui se fondaient les unes dans
+les autres ; leurs blocs portent le même bandeau à icône, et leurs chiffres les mêmes tuiles
+teintées que le tableau de bord.
+
+### Modifié
+
+- **Les blocs ont un entête.** Une quarantaine de tableaux, listes et formulaires de saisie —
+  l'état des caisses, le journal de caisse, les comptes clients et fournisseurs, les proformas,
+  les bons de commande, les alertes de stock, les mouvements, le catalogue, les sept historiques,
+  le rapport des marges, l'effectif et les paies, les comptes et les rôles, la journée de caisse,
+  les bons de livraison, le journal d'audit — étaient des rectangles blancs qu'il fallait lire
+  pour savoir où l'on était. Chacun porte désormais son bandeau bleu nuit, son icône et, pour les
+  listes filtrées, **le périmètre en clair** : qui, quand, et quel filtre. C'est la même phrase
+  que celle imprimée en bas de la feuille — l'écran et le papier disent la même chose.
+- **Chaque historique porte l'icône de son onglet** : on retrouve l'écran à son signe, qu'on
+  regarde le sous-menu ou le bandeau de la liste.
+- **L'entête du ticket de caisse passe au même bleu nuit** que les autres (il était le seul
+  `primary-700` de l'application). Sa structure ne bouge pas : il doit tenir la hauteur de
+  l'écran, avec une liste qui défile entre un entête et un pied figés.
+- **Les écrans de saisie se distinguent de leur historique.** Versement, retrait, entrée en caisse,
+  dépense, transferts : le formulaire et la liste du dessous étaient deux blocs blancs collés l'un
+  à l'autre. Ils sont maintenant deux cartes nommées.
+- **Les chiffres prennent les teintes de la maison.** Les tuiles passent au composant
+  `Indicateur` du tableau de bord : la teinte dit la **nature** du chiffre — l'argent qui entre,
+  ce qu'on doit, ce qu'on détient —, jamais s'il est bon. Le rapport des marges reprend les
+  teintes exactes du tableau de bord pour les mêmes grandeurs : les deux écrans affichent le même
+  total, autant qu'ils se ressemblent.
+- **Les quatre aplats dégradés de l'écran *Alertes* disparaissent.** Ils étaient les seuls de ce
+  style dans l'application, et leur orange était décoratif alors que l'orange de la maison ne porte
+  que ce sur quoi on agit. Chaque tuile reprend l'icône de la liste qu'elle annonce.
+- **Les listes *Ruptures* et *Stocks faibles*** se distinguaient par la couleur de leur titre ; un
+  bandeau de carte ne se teinte pas, c'est l'icône qui porte la distinction — et elle se lit avant
+  le titre.
+- `Indicateur` quitte `features/pilotage/` pour `components/ui/` : cinq modules s'en servent, ce
+  n'est plus une pièce du tableau de bord.
+
+### Corrigé
+
+- **Le journal de caisse laissait sa colonne « Solde » hors de l'écran.** La carte rognait ce qui
+  dépassait et le tableau n'avait pas de défilement horizontal : en dessous de 1500 px de large, le
+  solde courant après chaque opération — ce pour quoi on ouvre un journal — était inatteignable.
+  La liste des caisses, juste au-dessus, défilait pourtant depuis toujours. Les listes des
+  **familles** et des **dépôts** avaient le même défaut, corrigé au passage.
+
+### Laissé tel quel, volontairement
+
+- **Les groupes de champs des Paramètres** (identité de l'entreprise, fiscalité, numérotation…)
+  gardent leur petit titre en capitales grises : ce sont des sections d'un formulaire, pas des
+  blocs de contenu, et un bandeau bleu nuit sur chacune ferait d'un écran de réglages un tableau
+  de bord. Seules les deux vraies listes du module — les comptes et les rôles — ont reçu le leur.
+- **Les barres de filtres** et les écrans d'attente (« Choisissez un client… ») restent blancs :
+  un outil n'est pas un bloc de contenu, et une absence de contenu n'a pas de titre à porter.
+- **Les cartes d'article du point de vente** et les **compteurs de statut des livraisons** restent
+  des boutons : on clique dessus pour vendre, ou pour filtrer.
+- **Les coques de page** (le cadre blanc qui porte la barre d'onglets d'un module) restent
+  blanches : ce sont des cadres, et les cartes vivent dedans.
+
+### Tests
+
+- **`verrou.e2e.cjs` lisait le nom de la filiale sans l'avoir attendu.** L'écran verrouillé le
+  reçoit d'une requête vivante distincte, qui arrive après « Poste verrouillé » et après le
+  dernier utilisateur : l'assertion passait presque toujours et échouait de loin en loin — une
+  fois dans la chaîne complète, jamais en lançant le scénario seul. Elle attend désormais.
+
+---
+
 ## 0.4.0 — 3 novembre 2026
 
 Le comptoir, revu là où il coûtait du temps : la remise, la saisie des montants, et les clients

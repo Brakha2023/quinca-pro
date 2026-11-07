@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { PrinterIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentListIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { TYPES_MOUVEMENT_STOCK, type TypeMouvementStock } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_MOUVEMENT, SENS_MOUVEMENT } from '../../../core/stock';
@@ -53,7 +54,15 @@ export default function MouvementsPanel({ filialeId, filiale }: { filialeId: str
         <span className="ml-auto text-sm text-neutral-600">{mouvements.length} mouvement(s)</span>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+      <Carte titre="Journal des mouvements" icone={ClipboardDocumentListIcon} sousEntier nu
+        sous={[
+          `${mouvements.length} mouvement(s)`,
+          depots.find((d) => d.id === depotId)?.nom ?? 'tous les dépôts',
+          type ? LIBELLES_MOUVEMENT[type] : null,
+          fournisseurs.find((f) => f.id === fournisseurId)?.raison_sociale ?? null,
+          reference.trim() ? `référence « ${reference.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -103,7 +112,7 @@ export default function MouvementsPanel({ filialeId, filiale }: { filialeId: str
         </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && mouvements.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun mouvement.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="mouvement" data-testid="pagination-mouvements" />
 

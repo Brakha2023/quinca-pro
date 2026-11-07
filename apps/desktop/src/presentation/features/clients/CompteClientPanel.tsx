@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BanknotesIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, PrinterIcon, ScaleIcon } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_PERIODE_REGLEMENT_CLIENT, construireReleveClient, disponibiliteCredit } from '../../../core/clients';
@@ -68,14 +70,40 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
       {client ? (
         <>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4" data-testid="compte-client-indicateurs">
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Solde initial{client.date_effet_solde ? ` au ${formaterDate(client.date_effet_solde)}` : ''}</p><p className="text-xl font-bold font-mono mt-1">{formaterFcfa(client.solde_initial)}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Facture (débit)</p><p className="text-xl font-bold font-mono text-red-600 mt-1">{formaterFcfa(client.cumul_factures)}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Règlement (crédit)</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(client.cumul_reglements)}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Solde en cours</p><p className={`text-xl font-bold font-mono mt-1 ${client.solde_actuel > 0 ? 'text-red-600' : client.solde_actuel < 0 ? 'text-blue-700' : 'text-green-700'}`}>{formaterFcfa(client.solde_actuel)}</p><p className="text-xs text-neutral-500">{client.solde_actuel > 0 ? 'Le client doit' : client.solde_actuel < 0 ? 'Avance disponible' : 'Compte soldé'}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Disponibilité (crédit)</p><p className="text-xl font-bold font-mono text-blue-700 mt-1">{formaterFcfa(disponibiliteCredit(client))}</p><p className="text-xs text-neutral-500">Plafond {formaterFcfa(client.plafond_credit)}</p></div>
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Conditions</p><p className="text-sm font-medium mt-1">{client.periode_reglement ? LIBELLES_PERIODE_REGLEMENT_CLIENT[client.periode_reglement] : '—'}</p><p className="text-xs text-neutral-500">Remise {client.remise_percent} %</p></div>
+            {/* Six tuiles sur une rangée : la teinte, mais pas la pastille — une
+                icône de 40 px prendrait le quart de la largeur et renverrait
+                « Règlement (crédit) » à la ligne trois fois. */}
+            <Indicateur
+              label={`Solde initial${client.date_effet_solde ? ` au ${formaterDate(client.date_effet_solde)}` : ''}`}
+              valeur={formaterFcfa(client.solde_initial)} couleur="nuit"
+            />
+            <Indicateur label="Facture (débit)" valeur={formaterFcfa(client.cumul_factures)} ton="text-red-600" couleur="rouge" />
+            <Indicateur label="Règlement (crédit)" valeur={formaterFcfa(client.cumul_reglements)} ton="text-green-700" couleur="vert" />
+            <Indicateur
+              label="Solde en cours" valeur={formaterFcfa(client.solde_actuel)}
+              ton={client.solde_actuel > 0 ? 'text-red-600' : client.solde_actuel < 0 ? 'text-blue-700' : 'text-green-700'}
+              couleur="ambre"
+              sous={client.solde_actuel > 0 ? 'Le client doit' : client.solde_actuel < 0 ? 'Avance disponible' : 'Compte soldé'}
+            />
+            <Indicateur
+              label="Disponibilité (crédit)" valeur={formaterFcfa(disponibiliteCredit(client))}
+              ton="text-blue-700" couleur="bleu" sous={`Plafond ${formaterFcfa(client.plafond_credit)}`}
+            />
+            <Indicateur
+              label="Conditions"
+              valeur={client.periode_reglement ? LIBELLES_PERIODE_REGLEMENT_CLIENT[client.periode_reglement] : '—'}
+              couleur="violet" sous={`Remise ${client.remise_percent} %`}
+            />
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+          {/* Les deux bornes partent vides : le relevé est alors arrêté au jour
+              dit, comme l'annonce déjà le document imprimé plus bas. Sans ce
+              repli, le bandeau affichait « du au ». */}
+          <Carte titre="Relevé du compte" icone={ScaleIcon} sousEntier nu
+            sous={`${client.raison_sociale} · ${dateDebut || dateFin
+              ? `période du ${dateDebut ? formaterDate(dateDebut) : '…'} au ${dateFin ? formaterDate(dateFin) : '…'}`
+              : `arrêté au ${new Date().toLocaleDateString('fr-FR')}`}`}
+          >
+            <div className="overflow-x-auto">
             <table className="tableau">
               <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
                 <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° pièce</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right">Facture</th><th className="px-3 py-2 text-right">Règlement</th><th className="px-3 py-2 text-right">Disponibilité</th><th className="px-3 py-2 text-right">Solde</th></tr>
@@ -85,7 +113,8 @@ export default function CompteClientPanel({ filialeId, filiale }: Props) {
                 <tr><td colSpan={3} className="px-3 py-2 text-right">Total</td><td className="px-3 py-2 text-right font-mono text-red-600">{formaterFcfa(totalFacture)}</td><td className="px-3 py-2 text-right font-mono text-green-700">{formaterFcfa(totalReglement)}</td><td className="px-3 py-2 text-right font-mono text-blue-700">{formaterFcfa(Math.max(-client.solde_actuel, 0))}</td><td className="px-3 py-2 text-right font-mono">{formaterFcfa(client.solde_actuel)}</td></tr>
               </tfoot>
             </table>
-          </div>
+            </div>
+          </Carte>
 
           <Pagination etat={pages} nom="ligne" data-testid="pagination-compte-client" />
         </>

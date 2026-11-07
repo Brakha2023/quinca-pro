@@ -9,6 +9,26 @@
 #   * directeur → toutes les filiales actives (consolidation).
 # Toutes les tables métier portent `filiale_id`, y compris `lignes_vente`
 # et `stocks` (dénormalisé exprès : pas de jointure nécessaire).
+#
+# ------------------------------------------------------------
+# HISTORIQUE BORNÉ — la colonne `dans_fenetre`
+# ------------------------------------------------------------
+# Ces règles ne savent pas comparer une date à « il y a douze mois » : elles
+# doivent être déterministes (pas de `now()`), et un paramètre envoyé par le
+# poste ne supporte que l'**égalité** — ni `>=`, ni fonction autour. Une ligne
+# ne peut donc pas quitter un flux en vieillissant toute seule.
+#
+# C'est donc le serveur qui marque les lignes, et le flux se contente d'une
+# égalité. `rafraichir_fenetre_historique()` (migration 20260924000000) tourne
+# une fois par jour : elle garde les douze derniers mois **et** tout ce qui
+# n'est pas soldé — une créance se relance et une commande ouverte se
+# réceptionne, même deux ans après.
+#
+#   https://docs.powersync.com/sync/advanced/sync-data-by-time
+#
+# `audit_log` n'est plus synchronisé : c'est un journal de surveillance, il se
+# consulte sur le serveur (page Audit, en ligne). Il représentait à lui seul
+# une bonne part du volume, chaque écriture métier y recopiant la ligne entière.
 # ============================================================
 config:
   edition: 3
@@ -18,6 +38,7 @@ with:
 
 streams:
   # Ce qu'il faut pour démarrer l'app : profil, filiales, référentiel.
+  # Rien ici n'est borné dans le temps : le référentiel ne grossit pas avec les années.
   referentiel:
     auto_subscribe: true
     priority: 1
@@ -29,7 +50,7 @@ streams:
       # et la table ne contient rien de confidentiel (RLS : lecture ouverte aux
       # utilisateurs authentifiés). Le sélecteur de périmètre reste, lui,
       # réservé au directeur.
-      - SELECT * FROM filiales WHERE id IN mes_filiales
+      - SELECT * FROM filiales WHERE est_active = true
       - SELECT * FROM depots WHERE filiale_id IN mes_filiales
       - SELECT * FROM caisses WHERE filiale_id IN mes_filiales
       - SELECT * FROM familles_articles WHERE filiale_id IN mes_filiales
@@ -37,36 +58,38 @@ streams:
       - SELECT * FROM stocks WHERE filiale_id IN mes_filiales
       - SELECT * FROM clients WHERE filiale_id IN mes_filiales
       - SELECT * FROM fournisseurs WHERE filiale_id IN mes_filiales
+      - SELECT * FROM employes WHERE filiale_id IN mes_filiales
 
-  # Activité (ventes, mouvements, règlements…) : volumineuse, après le référentiel.
+  # Activité : volumineuse, après le référentiel, et bornée (voir l'en-tête).
   activite:
     auto_subscribe: true
     priority: 2
     queries:
-      - SELECT * FROM ventes WHERE filiale_id IN mes_filiales
-      - SELECT * FROM lignes_vente WHERE filiale_id IN mes_filiales
-      - SELECT * FROM reglements_clients WHERE filiale_id IN mes_filiales
-      - SELECT * FROM livraisons WHERE filiale_id IN mes_filiales
-      - SELECT * FROM mouvements_stock WHERE filiale_id IN mes_filiales
-      - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales
-      - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales
-      - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales
-      - SELECT * FROM productions WHERE filiale_id IN mes_filiales
-      - SELECT * FROM lignes_production WHERE filiale_id IN mes_filiales
-      - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales
-      - SELECT * FROM proformas WHERE filiale_id IN mes_filiales
-      - SELECT * FROM lignes_proforma WHERE filiale_id IN mes_filiales
+      - SELECT * FROM ventes WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_vente WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM reglements_clients WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM proformas WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_proforma WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM livraisons WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM mouvements_stock WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM productions WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_production WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM commandes_fournisseurs WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       # Transfert inter-filiale : visible des deux côtés (l'expéditeur suit son
       # envoi, le destinataire encaisse à l'arrivée).
-      - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales
-      - SELECT * FROM transferts_filiales WHERE filiale_destination_id IN mes_filiales
-      - SELECT * FROM employes WHERE filiale_id IN mes_filiales
-      - SELECT * FROM pointages WHERE filiale_id IN mes_filiales
-      - SELECT * FROM avances_salaire WHERE filiale_id IN mes_filiales
-      - SELECT * FROM paies WHERE filiale_id IN mes_filiales
-
-  # Journal d'audit : en dernier.
-  audit:
-    auto_subscribe: true
-    priority: 3
-    query: SELECT * FROM audit_log WHERE filiale_id IN mes_filiales
+      - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM transferts_filiales WHERE filiale_destination_id IN mes_filiales AND dans_fenetre = true
+      # Transfert de stock entre filiales : même principe, la marchandise part
+      # d'un côté et entre de l'autre ; le bon et ses lignes doivent être
+      # lisibles des deux, sinon le destinataire reçoit une pièce vide.
+      - SELECT * FROM transferts_stock WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM transferts_stock WHERE filiale_destination_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_transfert_stock WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM lignes_transfert_stock WHERE filiale_destination_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM pointages WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM avances_salaire WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      - SELECT * FROM paies WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      

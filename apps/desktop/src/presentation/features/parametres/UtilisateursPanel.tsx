@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ArrowDownTrayIcon, KeyIcon, LockClosedIcon, LockOpenIcon, MagnifyingGlassIcon, PrinterIcon, UserCircleIcon,
 } from '@heroicons/react/24/outline';
+import Carte from '../../components/ui/Carte';
 import {
   filtrerUtilisateurs, libellePortee, nomComplet, recapUtilisateurs,
   type EtatCompteRetenu, type UtilisateurAdministre,
@@ -160,7 +161,8 @@ export default function UtilisateursPanel({ filiale, filiales, utilisateurCouran
         </label>
       </div>
 
-      <div className="overflow-x-auto border border-neutral-200 rounded-xl">
+      <Carte titre="Comptes utilisateurs" icone={UserCircleIcon} sous={`${utilisateurs.length} compte(s)`} nu>
+        <div className="overflow-x-auto">
         <table className="tableau divide-y divide-neutral-200">
           <thead className="bg-neutral-50">
             <tr className="text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
@@ -224,7 +226,8 @@ export default function UtilisateursPanel({ filiale, filiales, utilisateurCouran
             )}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Carte>
 
       {modal?.type === 'affectation' && (
         <AffectationModal

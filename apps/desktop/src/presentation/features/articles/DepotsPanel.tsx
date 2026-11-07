@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PencilSquareIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { BuildingStorefrontIcon, PencilSquareIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { depotFormSchema, type Depot, type DepotForm, type DepotFormInput } from '../../../core/articles';
 import { DepotsRepository } from '../../../infrastructure/powersync/repositories/DepotsRepository';
+import Carte from '../../components/ui/Carte';
 import Modal from '../../components/ui/Modal';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
 import { useRepository } from '../../hooks/useRepository';
@@ -106,7 +107,8 @@ export default function DepotsPanel({ filialeId }: Props) {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte titre="Dépôts" icone={BuildingStorefrontIcon} sous={`${depots.length} dépôt(s)`} nu>
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200">
             <tr>
@@ -144,9 +146,10 @@ export default function DepotsPanel({ filialeId }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && depots.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun dépôt</div>}
-      </div>
+      </Carte>
 
       {modal && <DepotFormModal filialeId={filialeId} depot={modal.depot} onClose={() => setModal(null)} />}
     </div>

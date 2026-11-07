@@ -1,10 +1,15 @@
 import { useMemo, useState } from 'react';
-import { ArrowDownTrayIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowDownTrayIcon, ArrowUpTrayIcon, ClipboardDocumentListIcon, FlagIcon, MagnifyingGlassIcon,
+  PencilSquareIcon, PlusIcon, PrinterIcon, ScaleIcon, WalletIcon,
+} from '@heroicons/react/24/outline';
 import {
   ETATS_CAISSE, construireJournalCaisse, filtrerCaisses, perimetreCaisses, recapEtatCaisses,
   type Caisse, type EtatCaisseRetenu, type LigneEtatCaisse,
 } from '../../../core/tresorerie';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -174,10 +179,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <p className="px-4 py-3 text-sm font-semibold text-neutral-700 border-b border-neutral-200 bg-neutral-50">
-          Liste des caisses <span className="font-normal text-neutral-500">· {perimetreCaisses(filtresEtat)}</span>
-        </p>
+      <Carte titre="Liste des caisses" icone={WalletIcon} sous={perimetreCaisses(filtresEtat)} sousEntier nu>
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -234,7 +236,7 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
           </table>
         </div>
         {lignes.length === 0 && <div className="text-center py-10 text-neutral-400 text-sm">Aucune caisse dans ce périmètre.</div>}
-      </div>
+      </Carte>
 
       <div className="flex flex-wrap items-end gap-3 print:hidden">
         <label className="text-sm">
@@ -250,49 +252,80 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <Carte libelle="Solde d'ouverture" valeur={journal.ouverture} testId="solde-ouverture" />
-        <Carte libelle="Recettes" valeur={journal.totalRecettes} couleur="text-green-700" />
-        <Carte libelle="Dépenses" valeur={journal.totalDepenses} couleur="text-orange-700" />
-        <Carte libelle="Solde de clôture" valeur={journal.cloture} testId="solde-cloture" />
-        <Carte libelle="Solde actuel" valeur={soldeActuel} testId="solde-actuel" />
+      {/*
+        Cinq chiffres, deux natures : les trois **soldes** disent où en est la
+        caisse, les deux **flux** ce qui l'a traversée. Les soldes des deux bouts
+        de la période restent sobres (`nuit`) et le solde du jour prend le bleu,
+        parce que c'est celui qu'on vient lire ; les flux gardent le vert et
+        l'orange de leurs colonnes dans le tableau juste en dessous — une tuile
+        qui ne serait pas de la couleur de sa colonne obligerait à relire les
+        deux pour les rapprocher.
+
+        Aucune ne porte de ligne `sous` : la chaîne e2e lit le texte entier de
+        la tuile et en retire les non-chiffres pour comparer clôture et solde
+        actuel (`tresorerie.e2e.cjs`). Un sous-titre chiffré y ajouterait ses
+        propres chiffres et l'égalité comparerait deux bouillies.
+      */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+        <Indicateur
+          label="Solde d'ouverture" valeur={formaterFcfa(journal.ouverture)}
+          ton={journal.ouverture < 0 ? 'text-red-600' : undefined}
+          couleur="nuit" icone={FlagIcon} testId="solde-ouverture"
+        />
+        <Indicateur label="Recettes" valeur={formaterFcfa(journal.totalRecettes)} ton="text-green-700" couleur="vert" icone={ArrowDownTrayIcon} />
+        <Indicateur label="Dépenses" valeur={formaterFcfa(journal.totalDepenses)} ton="text-orange-700" couleur="orange" icone={ArrowUpTrayIcon} />
+        <Indicateur
+          label="Solde de clôture" valeur={formaterFcfa(journal.cloture)}
+          ton={journal.cloture < 0 ? 'text-red-600' : undefined}
+          couleur="nuit" icone={ScaleIcon} testId="solde-cloture"
+        />
+        <Indicateur
+          label="Solde actuel" valeur={formaterFcfa(soldeActuel)}
+          ton={soldeActuel < 0 ? 'text-red-600' : undefined}
+          couleur="bleu" icone={WalletIcon} testId="solde-actuel"
+        />
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <table className="tableau">
-          <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
-            <th className="px-3 py-3 text-left">Date</th><th className="px-3 py-3 text-left">Caisse</th><th className="px-3 py-3 text-left">Catégorie</th><th className="px-3 py-3 text-left">Description</th><th className="px-3 py-3 text-left">Pièce</th><th className="px-3 py-3 text-right">Recette</th><th className="px-3 py-3 text-right">Dépense</th><th className="px-3 py-3 text-right">Solde</th>
-          </tr></thead>
-          <tbody className="divide-y divide-neutral-100">
-            <tr className="bg-neutral-50/60"><td className="px-3 py-2 text-sm text-neutral-600" colSpan={5}>Solde d'ouverture au {enJour(dateDebut)} — {intitule}</td><td /><td /><td className="px-3 py-2 text-sm text-right font-mono font-semibold">{formaterFcfa(journal.ouverture)}</td></tr>
-            {journal.lignes.map((l) => {
-              const mouvement = mouvements.find((m) => m.id === l.id);
-              return (
-                <tr key={l.id} className="hover:bg-neutral-50" data-testid="ligne-journal">
-                  <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(l.date)}</td>
-                  <td className="px-3 py-2 text-sm">{mouvement?.caisse_nom ?? nomCaisse(mouvement?.caisse_id ?? null)}</td>
-                  <td className="px-3 py-2 text-sm"><span className="px-2 py-0.5 rounded-full text-xs bg-neutral-100">{libelles[l.categorie] ?? l.categorie}</span></td>
-                  <td className="px-3 py-2 text-sm text-neutral-600 max-w-xs truncate" title={l.description}>{l.description || '—'}</td>
-                  <td className="px-3 py-2 text-sm font-mono text-neutral-600">{l.piece || '—'}</td>
-                  <td className="px-3 py-2 text-sm text-right font-mono text-green-700">{l.recette ? formaterFcfa(l.recette) : ''}</td>
-                  <td className="px-3 py-2 text-sm text-right font-mono text-orange-700">{l.depense ? formaterFcfa(l.depense) : ''}</td>
-                  <td className={montant(l.solde)}>{formaterFcfa(l.solde)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          {journal.lignes.length > 0 && (
-            <tfoot className="bg-neutral-50 border-t-2 border-neutral-300 text-sm font-semibold"><tr>
-              <td className="px-3 py-2" colSpan={5}>Totaux de la période</td>
-              <td className="px-3 py-2 text-right font-mono text-green-700">{formaterFcfa(journal.totalRecettes)}</td>
-              <td className="px-3 py-2 text-right font-mono text-orange-700">{formaterFcfa(journal.totalDepenses)}</td>
-              <td className="px-3 py-2 text-right font-mono">{formaterFcfa(journal.cloture)}</td>
-            </tr></tfoot>
-          )}
-        </table>
+      <Carte titre="Journal de caisse" icone={ClipboardDocumentListIcon} sous={`${intitule} · du ${enJour(dateDebut)} au ${enJour(dateFin)}`} sousEntier nu>
+        {/* La carte rogne ce qui dépasse : sans ce défilement, la colonne
+            « Solde » — la raison d'être d'un journal — restait hors de l'écran
+            dès que la fenêtre descendait sous 1500 px, sans aucun moyen de l'atteindre. */}
+        <div className="overflow-x-auto">
+          <table className="tableau">
+            <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
+              <th className="px-3 py-3 text-left">Date</th><th className="px-3 py-3 text-left">Caisse</th><th className="px-3 py-3 text-left">Catégorie</th><th className="px-3 py-3 text-left">Description</th><th className="px-3 py-3 text-left">Pièce</th><th className="px-3 py-3 text-right">Recette</th><th className="px-3 py-3 text-right">Dépense</th><th className="px-3 py-3 text-right">Solde</th>
+            </tr></thead>
+            <tbody className="divide-y divide-neutral-100">
+              <tr className="bg-neutral-50/60"><td className="px-3 py-2 text-sm text-neutral-600" colSpan={5}>Solde d'ouverture au {enJour(dateDebut)} — {intitule}</td><td /><td /><td className="px-3 py-2 text-sm text-right font-mono font-semibold">{formaterFcfa(journal.ouverture)}</td></tr>
+              {journal.lignes.map((l) => {
+                const mouvement = mouvements.find((m) => m.id === l.id);
+                return (
+                  <tr key={l.id} className="hover:bg-neutral-50" data-testid="ligne-journal">
+                    <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(l.date)}</td>
+                    <td className="px-3 py-2 text-sm">{mouvement?.caisse_nom ?? nomCaisse(mouvement?.caisse_id ?? null)}</td>
+                    <td className="px-3 py-2 text-sm"><span className="px-2 py-0.5 rounded-full text-xs bg-neutral-100">{libelles[l.categorie] ?? l.categorie}</span></td>
+                    <td className="px-3 py-2 text-sm text-neutral-600 max-w-xs truncate" title={l.description}>{l.description || '—'}</td>
+                    <td className="px-3 py-2 text-sm font-mono text-neutral-600">{l.piece || '—'}</td>
+                    <td className="px-3 py-2 text-sm text-right font-mono text-green-700">{l.recette ? formaterFcfa(l.recette) : ''}</td>
+                    <td className="px-3 py-2 text-sm text-right font-mono text-orange-700">{l.depense ? formaterFcfa(l.depense) : ''}</td>
+                    <td className={montant(l.solde)}>{formaterFcfa(l.solde)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {journal.lignes.length > 0 && (
+              <tfoot className="bg-neutral-50 border-t-2 border-neutral-300 text-sm font-semibold"><tr>
+                <td className="px-3 py-2" colSpan={5}>Totaux de la période</td>
+                <td className="px-3 py-2 text-right font-mono text-green-700">{formaterFcfa(journal.totalRecettes)}</td>
+                <td className="px-3 py-2 text-right font-mono text-orange-700">{formaterFcfa(journal.totalDepenses)}</td>
+                <td className="px-3 py-2 text-right font-mono">{formaterFcfa(journal.cloture)}</td>
+              </tr></tfoot>
+            )}
+          </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && journal.lignes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun mouvement sur la période.</div>}
-      </div>
+      </Carte>
 
       {modal?.type === 'caisse' && <CaisseFormModal filialeId={filialeId} caisse={modal.caisse} onClose={() => setModal(null)} />}
       {modal?.type === 'etat' && <EtatCaissesDocument lignes={lignes} filiale={filiale} filtres={filtresEtat} onClose={() => setModal(null)} />}
@@ -331,15 +364,6 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
           <div className="recu-signatures"><span>Le caissier</span><span>Le gérant</span></div>
         </DocumentImprimable>
       )}
-    </div>
-  );
-}
-
-function Carte({ libelle, valeur, couleur = 'text-neutral-900', testId }: { libelle: string; valeur: number; couleur?: string; testId?: string }) {
-  return (
-    <div className="bg-white rounded-xl border border-neutral-200 p-4" data-testid={testId}>
-      <p className="text-xs uppercase tracking-wide text-neutral-500">{libelle}</p>
-      <p className={`text-xl font-bold font-mono mt-1 ${valeur < 0 ? 'text-red-600' : couleur}`}>{formaterFcfa(valeur)}</p>
     </div>
   );
 }

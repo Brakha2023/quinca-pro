@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
 import { MagnifyingGlassIcon, PencilSquareIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { STATUTS_LIVRAISON, type StatutLivraison } from '@quinca/shared-types';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { livraisonDemandeSchema, type LivraisonDemande } from '../../../core/ventes';
@@ -82,7 +83,14 @@ export default function LivraisonsPage() {
         <div className="relative flex-1 min-w-[16rem] max-w-md"><MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" /><input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N° livraison, client, adresse, chauffeur…" className={`${inputClass} pl-10`} /></div>
         <select value={statut} onChange={(e) => setStatut(e.target.value as StatutLivraison | '')} className={controleInlineClass}><option value="">Tous les statuts</option>{STATUTS_LIVRAISON.map((s) => <option key={s} value={s}>{LIBELLES[s]}</option>)}</select>
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte titre="Bons de livraison" icone={TruckIcon} sousEntier nu
+        sous={[
+          `${livraisons.length} livraison(s)`,
+          statut ? LIBELLES[statut] : 'tous les statuts',
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+      >
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr>
             <th className="px-3 py-3 text-left">Numéro</th><th className="px-3 py-3 text-left">Prévue</th><th className="px-3 py-3 text-left">Client</th><th className="px-3 py-3 text-left">Adresse</th><th className="px-3 py-3 text-left">Chauffeur / véhicule</th><th className="px-3 py-3 text-left">Ticket</th><th className="px-3 py-3 text-right">Montant</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center print:hidden">Actions</th>
@@ -113,9 +121,10 @@ export default function LivraisonsPage() {
             })}
           </tbody>
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && livraisons.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune livraison.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="livraison" plafond={500} data-testid="pagination-livraisons" />
       {edition && <EditionModal livraison={edition} onClose={() => setEdition(null)} />}

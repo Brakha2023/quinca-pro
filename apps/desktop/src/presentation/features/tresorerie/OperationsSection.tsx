@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ArrowDownTrayIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, ClipboardDocumentListIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { filtrerOperations, perimetreOperations, recapOperations, type LigneOperation } from '../../../core/tresorerie';
@@ -146,10 +147,7 @@ export default function OperationsSection({ filialeId, filiale, codes, libelles,
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <p className="px-4 py-3 text-sm font-semibold text-neutral-700 border-b border-neutral-200 bg-neutral-50">
-          {titre} <span className="font-normal text-neutral-500">· {perimetreOperations(filtres)}</span>
-        </p>
+      <Carte titre={titre} icone={ClipboardDocumentListIcon} sous={perimetreOperations(filtres)} sousEntier nu>
         <div className="overflow-x-auto">
           {/* Le titre reste en place : seul le tableau glisse. */}
           <table className="tableau">
@@ -179,7 +177,7 @@ export default function OperationsSection({ filialeId, filiale, codes, libelles,
         </div>
         {isLoading && <div className="text-center py-8 text-neutral-400 text-sm">Chargement…</div>}
         {!isLoading && retenues.length === 0 && <div className="text-center py-8 text-neutral-400 text-sm">Aucune opération dans ce périmètre.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="opération" data-testid="pagination-operations" />
 

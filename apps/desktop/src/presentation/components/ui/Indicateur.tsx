@@ -22,6 +22,12 @@ import { ArrowDownRightIcon, ArrowRightIcon, ArrowUpRightIcon } from '@heroicons
  *
  * Sans `couleur`, la tuile reste blanche : les écrans qui ne les ont pas
  * encore habillées ne changent pas d'allure.
+ *
+ * `nuit` est la seule teinte qui laisse la tuile blanche, avec une pastille
+ * sombre. Au milieu d'une rangée teintée elle ressort comme si elle était
+ * sélectionnée — elle est donc réservée aux chiffres de **référence** placés
+ * en tête ou en queue de série : un solde d'ouverture, un solde de clôture.
+ * Un chiffre ordinaire au milieu d'une rangée prend une vraie teinte.
  */
 
 /** Teintes disponibles : une par nature de chiffre, pas une par humeur. */

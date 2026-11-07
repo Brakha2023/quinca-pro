@@ -100,7 +100,15 @@ export default function TicketPanel({ ctx, depot, format, peutForcerStock }: Pro
   return (
     <>
       <div className="bg-white rounded-xl border border-neutral-200 shadow-sm flex flex-col h-full min-h-0">
-        <div className="bg-primary-700 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
+        {/*
+          Le ticket garde son entête à lui, et ne passe pas par `Carte` : il
+          doit tenir la hauteur de l'écran (`h-full min-h-0`) avec une liste qui
+          défile entre un entête et un pied figés, ce qu'une carte ordinaire ne
+          fait pas. Seule la teinte est alignée — `primary-900`, comme tous les
+          autres bandeaux et comme la barre latérale ; le `primary-700` d'avant
+          était le seul bleu de cette nuance dans l'application.
+        */}
+        <div className="bg-primary-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div>
             <p className="text-xs text-primary-200 uppercase tracking-wide">Ticket en cours</p>
             <p className="text-sm font-mono">{ctx.caisseCode} · {totaux.nombre_articles} article(s)</p>

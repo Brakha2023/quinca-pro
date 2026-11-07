@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BanknotesIcon, DocumentDuplicateIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, ScaleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import {
+  BanknotesIcon, BookOpenIcon, DocumentDuplicateIcon, DocumentTextIcon, EnvelopeIcon, ExclamationTriangleIcon,
+  EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, ScaleIcon, TrashIcon, WalletIcon,
+} from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { disponibiliteCredit, statutCredit, type Client } from '../../../core/clients';
@@ -101,10 +106,15 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Créances clients</p><p className="text-2xl font-bold font-mono text-red-600 mt-1">{formaterFcfa(totaux.creances)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Avoirs (avances disponibles)</p><p className="text-2xl font-bold font-mono text-blue-700 mt-1">{formaterFcfa(totaux.avoirs)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Cumul des factures</p><p className="text-2xl font-bold font-mono mt-1">{formaterFcfa(totaux.factures)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Plafonds dépassés</p><p className={`text-2xl font-bold mt-1 ${depassements > 0 ? 'text-red-600' : ''}`}>{depassements}</p></div>
+        <Indicateur label="Créances clients" valeur={formaterFcfa(totaux.creances)} ton="text-red-600" couleur="rouge" icone={BanknotesIcon} sous="ce que les clients doivent" />
+        <Indicateur label="Avoirs (avances disponibles)" valeur={formaterFcfa(totaux.avoirs)} ton="text-blue-700" couleur="bleu" icone={WalletIcon} sous="ce qui est payé d'avance" />
+        <Indicateur label="Cumul des factures" valeur={formaterFcfa(totaux.factures)} couleur="violet" icone={DocumentTextIcon} />
+        <Indicateur
+          label="Plafonds dépassés" valeur={`${depassements}`}
+          ton={depassements > 0 ? 'text-red-600' : undefined}
+          couleur="ambre" icone={ExclamationTriangleIcon}
+          sous={`sur ${clients.length} compte(s) au répertoire`}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -115,7 +125,19 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         <Bouton onClick={() => setModal({ type: 'tableau' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer le tableau</Bouton>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte
+        titre="Situation des comptes clients"
+        icone={BookOpenIcon}
+        sous={[
+          `${clients.length} client(s)`,
+          groupe ? `groupe ${groupe}` : null,
+          avecCreance ? 'avec créance' : null,
+          inclureInactifs ? 'en sommeil compris' : null,
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+        sousEntier
+        nu
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -178,7 +200,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && clients.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun client.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="client" data-testid="pagination-clients" />
       {modal?.type === 'details' && <ClientDetailsModal filialeId={filialeId} clientId={modal.id} onClose={() => setModal(null)} />}

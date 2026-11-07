@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import { CATEGORIE_RETRAIT, retraitSchema, type Caisse, type RetraitForm, type RetraitFormInput } from '../../../core/tresorerie';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
+import Carte from '../../components/ui/Carte';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useConfirmation } from '../../confirmation/useConfirmation';
@@ -84,21 +85,23 @@ function Formulaire({ filialeId, filiale, caisses }: Props & { caisses: Caisse[]
 
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-neutral-200 shadow-sm p-5 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SelectCaisse caisses={caisses} value={watch('caisse_id')} onChange={(id) => setValue('caisse_id', id)} erreur={errors.caisse_id?.message} />
-          <FormField label="Bénéficiaire" obligatoire erreur={errors.beneficiaire?.message}><input {...register('beneficiaire')} className={cls('beneficiaire')} placeholder="Nom et prénom(s)" data-testid="retrait-beneficiaire" /></FormField>
-          <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${cls('montant')} text-right font-mono text-lg`} data-testid="retrait-montant" /></FormField>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Motif" erreur={errors.motif?.message}><input {...register('motif')} className={cls('motif')} placeholder="Dépôt en banque, remise au gérant…" /></FormField>
-          <FormField label="Référence" erreur={errors.reference?.message}><input {...register('reference')} className={cls('reference')} /></FormField>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-neutral-600">Solde de {caisse?.nom ?? '—'} : <strong className={`font-mono ${(caisse?.solde_actuel ?? 0) < 0 ? 'text-red-600' : ''}`}>{formaterFcfa(caisse?.solde_actuel ?? 0)}</strong></p>
-          <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><ArrowUpTrayIcon className="w-5 h-5" /> Retirer et imprimer le reçu</button>
-        </div>
-      </form>
+      <Carte titre="Retrait d'espèces" icone={ArrowUpTrayIcon} sous="Sortie de caisse remise à un bénéficiaire, contre reçu signé">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SelectCaisse caisses={caisses} value={watch('caisse_id')} onChange={(id) => setValue('caisse_id', id)} erreur={errors.caisse_id?.message} />
+            <FormField label="Bénéficiaire" obligatoire erreur={errors.beneficiaire?.message}><input {...register('beneficiaire')} className={cls('beneficiaire')} placeholder="Nom et prénom(s)" data-testid="retrait-beneficiaire" /></FormField>
+            <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${cls('montant')} text-right font-mono text-lg`} data-testid="retrait-montant" /></FormField>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Motif" erreur={errors.motif?.message}><input {...register('motif')} className={cls('motif')} placeholder="Dépôt en banque, remise au gérant…" /></FormField>
+            <FormField label="Référence" erreur={errors.reference?.message}><input {...register('reference')} className={cls('reference')} /></FormField>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-neutral-600">Solde de {caisse?.nom ?? '—'} : <strong className={`font-mono ${(caisse?.solde_actuel ?? 0) < 0 ? 'text-red-600' : ''}`}>{formaterFcfa(caisse?.solde_actuel ?? 0)}</strong></p>
+            <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><ArrowUpTrayIcon className="w-5 h-5" /> Retirer et imprimer le reçu</button>
+          </div>
+        </form>
+      </Carte>
 
       {recu && <RecuOperation recu={recu} filiale={filiale} onClose={() => setRecu(null)} />}
     </>

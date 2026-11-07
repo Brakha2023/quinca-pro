@@ -7,6 +7,7 @@ import {
   type Caisse, type TransfertFilialeForm, type TransfertFilialeFormInput,
 } from '../../../core/tresorerie';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
 import Modal from '../../components/ui/Modal';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
@@ -74,8 +75,7 @@ export default function TransfertFilialePanel({ filialeId, filiale, filiales }: 
         <Formulaire key={caisses[0]!.id} filialeId={filialeId} caisses={caisses} filiales={autresFiliales} />
       )}
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <p className="px-4 py-3 text-sm font-semibold text-neutral-700 border-b border-neutral-200 bg-neutral-50">Transferts envoyés et reçus</p>
+      <Carte titre="Transferts envoyés et reçus" icone={BuildingOffice2Icon} sous={`Vus de ${filiale.nom} : ce qui part et ce qui arrive`} nu>
         <div className="overflow-x-auto">
           {/* Le titre reste en place : seul le tableau glisse. */}
           <table className="tableau">
@@ -113,7 +113,7 @@ export default function TransfertFilialePanel({ filialeId, filiale, filiales }: 
           </table>
         </div>
         {transferts.length === 0 && <div className="text-center py-8 text-neutral-400 text-sm">Aucun transfert entre filiales.</div>}
-      </div>
+      </Carte>
 
       {apercu && (
         <BordereauFondsDocument
@@ -173,22 +173,24 @@ function Formulaire({ filialeId, caisses, filiales }: { filialeId: string; caiss
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-neutral-200 shadow-sm p-5 space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SelectCaisse caisses={caisses} value={watch('caisse_source_id')} onChange={(id) => setValue('caisse_source_id', id)} label="Caisse de départ" erreur={errors.caisse_source_id?.message} testId="transfert-filiale-caisse" />
-        <FormField label="Filiale destinataire" obligatoire erreur={errors.filiale_destination_id?.message}>
-          <select {...register('filiale_destination_id')} className={`${inputClass} ${errors.filiale_destination_id ? inputErrorClass : ''}`} data-testid="transfert-filiale-destination">
-            {filiales.map((f) => <option key={f.id} value={f.id}>{f.nom ?? f.id}</option>)}
-          </select>
-        </FormField>
-        <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${inputClass} ${errors.montant ? inputErrorClass : ''} text-right font-mono text-lg`} data-testid="transfert-filiale-montant" /></FormField>
-      </div>
-      <FormField label="Motif" erreur={errors.motif?.message}><input {...register('motif')} className={inputClass} placeholder="Appro. caisse, remontée de recettes…" /></FormField>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-600">Solde de {source?.nom ?? '—'} : <strong className={`font-mono ${(source?.solde_actuel ?? 0) < 0 ? 'text-red-600' : ''}`}>{formaterFcfa(source?.solde_actuel ?? 0)}</strong></p>
-        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><PaperAirplaneIcon className="w-5 h-5" /> Envoyer les fonds</button>
-      </div>
-    </form>
+    <Carte titre="Envoi de fonds vers une filiale" icone={PaperAirplaneIcon} sous="Les fonds sortent de la caisse dès l'envoi et restent en transit jusqu'à l'encaissement">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SelectCaisse caisses={caisses} value={watch('caisse_source_id')} onChange={(id) => setValue('caisse_source_id', id)} label="Caisse de départ" erreur={errors.caisse_source_id?.message} testId="transfert-filiale-caisse" />
+          <FormField label="Filiale destinataire" obligatoire erreur={errors.filiale_destination_id?.message}>
+            <select {...register('filiale_destination_id')} className={`${inputClass} ${errors.filiale_destination_id ? inputErrorClass : ''}`} data-testid="transfert-filiale-destination">
+              {filiales.map((f) => <option key={f.id} value={f.id}>{f.nom ?? f.id}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${inputClass} ${errors.montant ? inputErrorClass : ''} text-right font-mono text-lg`} data-testid="transfert-filiale-montant" /></FormField>
+        </div>
+        <FormField label="Motif" erreur={errors.motif?.message}><input {...register('motif')} className={inputClass} placeholder="Appro. caisse, remontée de recettes…" /></FormField>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-neutral-600">Solde de {source?.nom ?? '—'} : <strong className={`font-mono ${(source?.solde_actuel ?? 0) < 0 ? 'text-red-600' : ''}`}>{formaterFcfa(source?.solde_actuel ?? 0)}</strong></p>
+          <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><PaperAirplaneIcon className="w-5 h-5" /> Envoyer les fonds</button>
+        </div>
+      </form>
+    </Carte>
   );
 }
 

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PencilSquareIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, PlusIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
 import { familleFormSchema, type FamilleArticle, type FamilleForm, type FamilleFormInput } from '../../../core/articles';
 import { FamillesRepository } from '../../../infrastructure/powersync/repositories/FamillesRepository';
+import Carte from '../../components/ui/Carte';
 import Modal from '../../components/ui/Modal';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
 import { useRepository } from '../../hooks/useRepository';
@@ -103,7 +104,8 @@ export default function FamillesPanel({ filialeId }: Props) {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte titre="Familles d'articles" icone={Squares2X2Icon} sous={`${familles.length} famille(s)`} nu>
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200">
             <tr>
@@ -139,9 +141,10 @@ export default function FamillesPanel({ filialeId }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && familles.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune famille</div>}
-      </div>
+      </Carte>
 
       {modal && <FamilleFormModal filialeId={filialeId} famille={modal.famille} onClose={() => setModal(null)} />}
     </div>

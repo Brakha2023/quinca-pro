@@ -7,6 +7,7 @@ import { TYPES_REGLEMENT } from '@quinca/shared-types';
 import { LIBELLES_TYPE_REGLEMENT } from '../../../core/clients';
 import { CATEGORIE_VERSEMENT, versementSchema, type Caisse, type VersementForm, type VersementFormInput } from '../../../core/tresorerie';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
+import Carte from '../../components/ui/Carte';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useRepository } from '../../hooks/useRepository';
@@ -96,29 +97,31 @@ function Formulaire({ filialeId, filiale, caisses }: Props & { caisses: Caisse[]
 
   return (
     <>
-      <form id="versement-form" onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-neutral-200 shadow-sm p-5 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SelectCaisse caisses={caisses} value={watch('caisse_id')} onChange={(id) => setValue('caisse_id', id)} erreur={errors.caisse_id?.message} />
-          <FormField label="Nom du remettant" obligatoire erreur={errors.remettant?.message}>
-            <input {...register('remettant')} className={cls('remettant')} placeholder="Nom et prénom(s)" data-testid="versement-remettant" />
-          </FormField>
-          <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${cls('montant')} text-right font-mono text-lg`} data-testid="versement-montant" /></FormField>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormField label="Mode" obligatoire erreur={errors.type_reglement?.message}><select {...register('type_reglement')} className={cls('type_reglement')}>{TYPES_REGLEMENT.map((t) => <option key={t} value={t}>{LIBELLES_TYPE_REGLEMENT[t]}</option>)}</select></FormField>
-          <FormField label="Désignation" erreur={errors.designation?.message}><input {...register('designation')} className={cls('designation')} placeholder="Bon payé, avance…" /></FormField>
-          <FormField label="Référence (bon, facture…)" erreur={errors.reference?.message}><input {...register('reference')} className={cls('reference')} /></FormField>
-        </div>
-        <FormField label="Observation" erreur={errors.observation?.message}><input {...register('observation')} className={cls('observation')} /></FormField>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Le guichet n'impute rien à un compte : on renvoie là où le compte se tient. */}
-          <p className="text-sm text-neutral-500">
-            Un client en compte règle sa créance dans{' '}
-            <Link to="/clients/compte" className="text-primary-700 hover:underline font-medium">Clients → Compte client</Link>, où ses factures sont sous les yeux.
-          </p>
-          <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><BanknotesIcon className="w-5 h-5" /> Encaisser et imprimer le reçu</button>
-        </div>
-      </form>
+      <Carte titre="Versement au guichet" icone={BanknotesIcon} sous="De l'argent qui entre en caisse, au nom de celui qui l'apporte">
+        <form id="versement-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SelectCaisse caisses={caisses} value={watch('caisse_id')} onChange={(id) => setValue('caisse_id', id)} erreur={errors.caisse_id?.message} />
+            <FormField label="Nom du remettant" obligatoire erreur={errors.remettant?.message}>
+              <input {...register('remettant')} className={cls('remettant')} placeholder="Nom et prénom(s)" data-testid="versement-remettant" />
+            </FormField>
+            <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${cls('montant')} text-right font-mono text-lg`} data-testid="versement-montant" /></FormField>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField label="Mode" obligatoire erreur={errors.type_reglement?.message}><select {...register('type_reglement')} className={cls('type_reglement')}>{TYPES_REGLEMENT.map((t) => <option key={t} value={t}>{LIBELLES_TYPE_REGLEMENT[t]}</option>)}</select></FormField>
+            <FormField label="Désignation" erreur={errors.designation?.message}><input {...register('designation')} className={cls('designation')} placeholder="Bon payé, avance…" /></FormField>
+            <FormField label="Référence (bon, facture…)" erreur={errors.reference?.message}><input {...register('reference')} className={cls('reference')} /></FormField>
+          </div>
+          <FormField label="Observation" erreur={errors.observation?.message}><input {...register('observation')} className={cls('observation')} /></FormField>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Le guichet n'impute rien à un compte : on renvoie là où le compte se tient. */}
+            <p className="text-sm text-neutral-500">
+              Un client en compte règle sa créance dans{' '}
+              <Link to="/clients/compte" className="text-primary-700 hover:underline font-medium">Clients → Compte client</Link>, où ses factures sont sous les yeux.
+            </p>
+            <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><BanknotesIcon className="w-5 h-5" /> Encaisser et imprimer le reçu</button>
+          </div>
+        </form>
+      </Carte>
 
       {recu && <RecuOperation recu={recu} filiale={filiale} onClose={() => setRecu(null)} />}
     </>

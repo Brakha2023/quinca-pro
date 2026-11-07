@@ -38,7 +38,12 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.getByRole('dialog', { name: 'Verrouiller le poste' }).getByRole('button', { name: 'Verrouiller' }).click();
   await page.locator('text=Poste verrouillé').waitFor();
   await page.locator('text=/Dernier utilisateur : Awa Koné/').waitFor();
-  verifier((await page.textContent('body')).includes('Filiale Abidjan'), 'écran verrouillé : filiale et dernier utilisateur affichés');
+  // Le nom de la filiale vient d'une requête vivante distincte : il arrive
+  // après « Poste verrouillé » et après le dernier utilisateur. Lire le `body`
+  // sans l'attendre passait la plupart du temps et échouait de loin en loin —
+  // vu une fois dans la chaîne complète, jamais en lançant ce scénario seul.
+  await page.locator('text=Filiale Abidjan').first().waitFor();
+  verifier(true, 'écran verrouillé : filiale et dernier utilisateur affichés');
   await page.locator(`text=/${enAttenteAvant} opération\\(s\\) en attente/`).waitFor();
   verifier(true, `file d’envoi affichée sur l’écran verrouillé (${enAttenteAvant} en attente)`);
 

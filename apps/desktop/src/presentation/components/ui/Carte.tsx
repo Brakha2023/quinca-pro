@@ -24,6 +24,21 @@ interface Props {
   action?: ReactNode;
   /** Une ligne sous le titre, dans le bandeau, en plus clair. */
   sous?: ReactNode;
+  /**
+   * Laisse `sous` passer à la ligne au lieu d'être coupé.
+   *
+   * Par défaut la ligne est tronquée, et il faut qu'elle le reste : dans une
+   * grille, les cartes d'une même rangée s'étirent à la plus haute, et un
+   * bandeau de deux lignes à côté d'un bandeau d'une seule décale le repère
+   * sur lequel l'œil s'aligne.
+   *
+   * Mais le périmètre d'une liste filtrée — « du 1er au 6 novembre · caisse
+   * « Coffre » · recherche « carburant » » — est exactement ce qui part sur le
+   * papier et dans l'export : coupé, il ne dit plus ce qu'on imprime. Les
+   * cartes qui le portent sont pleine largeur et seules sur leur rangée, donc
+   * rien ne s'y désaligne.
+   */
+  sousEntier?: boolean;
   className?: string;
   /** Sans rembourrage : pour un tableau qui doit toucher les bords de la carte. */
   nu?: boolean;
@@ -32,7 +47,7 @@ interface Props {
 }
 
 export default function Carte({
-  titre, icone: Icone, action, sous, className = '', nu, children, 'data-testid': testid,
+  titre, icone: Icone, action, sous, sousEntier, className = '', nu, children, 'data-testid': testid,
 }: Props) {
   return (
     <div
@@ -43,7 +58,7 @@ export default function Carte({
         {Icone && <Icone className="h-5 w-5 flex-shrink-0 text-primary-200" />}
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-bold tracking-tight">{titre}</h2>
-          {sous && <p className="truncate text-xs text-primary-200">{sous}</p>}
+          {sous && <p className={`text-xs text-primary-200 ${sousEntier ? '' : 'truncate'}`}>{sous}</p>}
         </div>
         {action && <div className="flex flex-shrink-0 items-center gap-2">{action}</div>}
       </div>

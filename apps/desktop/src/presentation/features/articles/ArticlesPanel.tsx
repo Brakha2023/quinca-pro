@@ -1,7 +1,8 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { ArrowUpTrayIcon, DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { ArrowUpTrayIcon, CubeIcon, DocumentMagnifyingGlassIcon, MagnifyingGlassIcon, PencilSquareIcon, PlusIcon, PrinterIcon, TrashIcon } from '@heroicons/react/24/outline';
 import * as XLSX from 'xlsx';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import { lignesDepuisGrille, margeArticle, type Article, type Cellule, type LigneImportArticle } from '../../../core/articles';
 import { ArticlesRepository } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
 import { usePagination } from '../../hooks/usePagination';
@@ -174,8 +175,18 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
         </div>
       </div>
 
-      {/* Tableau */}
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte
+        titre="Articles"
+        icone={CubeIcon}
+        sous={[
+          `${articles.length} article(s)`,
+          famillesParId.get(familleId)?.nom ?? 'toutes les familles',
+          inclureInactifs ? 'inactifs compris' : null,
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+        sousEntier
+        nu
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200">
@@ -264,7 +275,7 @@ export default function ArticlesPanel({ filialeId, filiale }: Props) {
             </p>
           </div>
         )}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="article" data-testid="pagination-articles" />
 

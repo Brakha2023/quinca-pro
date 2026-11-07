@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ArrowDownTrayIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import {
+  ArchiveBoxIcon, ArrowDownTrayIcon, ArrowTrendingUpIcon, BanknotesIcon, ChartBarIcon,
+  ExclamationTriangleIcon, MagnifyingGlassIcon, PrinterIcon, ScaleIcon, Squares2X2Icon, TableCellsIcon,
+} from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { formaterPourcentage } from '../../../core/commun/prix';
@@ -12,7 +16,7 @@ import {
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import NoteHistorique from '../../components/ui/NoteHistorique';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
-import Indicateur from '../pilotage/Indicateur';
+import Indicateur from '../../components/ui/Indicateur';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import BarresMarge from './BarresMarge';
@@ -155,20 +159,33 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Indicateur label="Chiffre d'affaires HT" valeur={formaterFcfa(recap.ca_ht)} sous={`${recap.lignes} ligne(s) de vente · remises déduites`} testId="marges-ca" />
-        <Indicateur label="Coût d'achat" valeur={formaterFcfa(recap.cout)} sous="Ce que la marchandise vendue a coûté" testId="marges-cout" />
+        {/* Mêmes teintes qu'au tableau de bord pour les mêmes grandeurs : le
+            chiffre d'affaires en bleu, la marge en orange. Les deux écrans
+            doivent afficher le même total — qu'ils se ressemblent aussi. */}
+        <Indicateur
+          label="Chiffre d'affaires HT" valeur={formaterFcfa(recap.ca_ht)}
+          sous={`${recap.lignes} ligne(s) de vente · remises déduites`}
+          couleur="bleu" icone={BanknotesIcon} testId="marges-ca"
+        />
+        <Indicateur
+          label="Coût d'achat" valeur={formaterFcfa(recap.cout)}
+          sous="Ce que la marchandise vendue a coûté"
+          couleur="violet" icone={ArchiveBoxIcon} testId="marges-cout"
+        />
         <Indicateur
           label="Marge commerciale"
           valeur={formaterFcfa(recap.marge)}
-          ton={recap.marge < 0 ? 'text-red-600' : 'text-neutral-900'}
+          ton={recap.marge < 0 ? 'text-red-600' : undefined}
           sous="Chiffre d'affaires HT − coût d'achat"
+          couleur="orange" icone={ArrowTrendingUpIcon}
           testId="marges-marge"
         />
         <Indicateur
           label="Taux de marge"
           valeur={formaterPourcentage(recap.taux_marge)}
-          ton={recap.taux_marge < 0 ? 'text-red-600' : 'text-neutral-900'}
+          ton={recap.taux_marge < 0 ? 'text-red-600' : undefined}
           sous={`${recap.quantite.toLocaleString('fr-FR')} unité(s) vendue(s)`}
+          couleur="ambre" icone={ScaleIcon}
           testId="marges-taux"
         />
       </div>
@@ -184,20 +201,11 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
         </p>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <div className="border-b border-neutral-200 px-5 py-4">
-          <h3 className="text-base font-semibold text-neutral-800">Où se fait la marge</h3>
-          <p className="mt-0.5 text-sm text-neutral-500">{perimetreMarges(filtres)}</p>
-        </div>
-        <div className="p-5">
-          <BarresMarge lignes={categories} />
-        </div>
-      </div>
+      <Carte titre="Où se fait la marge" icone={ChartBarIcon} sous={perimetreMarges(filtres)} sousEntier>
+        <BarresMarge lignes={categories} />
+      </Carte>
 
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <p className="border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-700">
-          Marge par catégorie <span className="font-normal text-neutral-500">· {recap.categories} catégorie(s)</span>
-        </p>
+      <Carte titre="Marge par catégorie" icone={Squares2X2Icon} sous={`${recap.categories} catégorie(s)`} nu>
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-600"><tr>
@@ -240,12 +248,11 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
         </div>
         {isLoading && <div className="py-8 text-center text-sm text-neutral-400">Chargement…</div>}
         {!isLoading && categories.length === 0 && <div className="py-8 text-center text-sm text-neutral-400">Rien de vendu dans ce périmètre.</div>}
-      </div>
+      </Carte>
 
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <p className="border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-700">
-          Détail par article <span className="font-normal text-neutral-500">· classé par {TRIS_MARGES.find((t) => t.id === tri)!.label.toLowerCase()}</span>
-        </p>
+      <Carte titre="Détail par article" icone={TableCellsIcon}
+        sous={`classé par ${TRIS_MARGES.find((t) => t.id === tri)!.label.toLowerCase()}`} nu
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-600"><tr>
@@ -275,7 +282,7 @@ export default function MargesPanel({ filialeId, filiale }: Props) {
           </table>
         </div>
         {!isLoading && detail.length === 0 && <div className="py-8 text-center text-sm text-neutral-400">Aucun article dans ce périmètre.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="article" data-testid="pagination-marges" />
 

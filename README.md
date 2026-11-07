@@ -76,6 +76,7 @@ E2E_EMAIL=… E2E_PASSWORD=… pnpm --filter @quinca/desktop e2e:sync   # aller-
 pnpm check-types       # tsc sur tout le monorepo
 pnpm lint              # eslint
 pnpm build             # build web (dist/) ; `pnpm --filter @quinca/desktop tauri build` pour l'installeur
+pnpm build:windows     # installeur Windows x64 (NSIS) depuis macOS/Linux, via Docker
 apps/desktop/scripts/windows/build.sh   # installeur Windows (NSIS x64) depuis macOS/Linux, via Docker → apps/desktop/dist-windows/
 ```
 

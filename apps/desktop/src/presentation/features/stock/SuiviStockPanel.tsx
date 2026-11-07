@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { CubeIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_ETAT_STOCK, recapEtatStock, statutStock, valeurAchat, valeurVente, type StatutStock } from '../../../core/stock';
@@ -57,7 +58,14 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
         <Bouton onClick={() => setApercu(true)} icone={PrinterIcon} className="flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="imprimer-etat-stock">Imprimer</Bouton>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+      <Carte titre="État du stock" icone={CubeIcon} sousEntier nu
+        sous={[
+          `${stocks.length} ligne(s)`,
+          depots.find((d) => d.id === depotId)?.nom ?? 'tous les dépôts',
+          alertesSeulement ? 'alertes seulement' : null,
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -101,7 +109,7 @@ export default function SuiviStockPanel({ filialeId, filiale }: { filialeId: str
         </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && stocks.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune ligne de stock{alertesSeulement ? ' en alerte' : ''}.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="ligne de stock" data-testid="pagination-stocks" />
 

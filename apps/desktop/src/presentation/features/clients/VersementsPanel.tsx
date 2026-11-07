@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import { PlusIcon, PrinterIcon, ReceiptPercentIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, ClipboardDocumentListIcon, PlusIcon, PrinterIcon, ReceiptPercentIcon, ScaleIcon, WalletIcon } from '@heroicons/react/24/outline';
 import { useQuery } from '@powersync/react';
 import type { TypeReglement } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_NATURE_VERSEMENT, LIBELLES_TYPE_REGLEMENT, lettrerVersements, type FactureClient, type VersementLettre } from '../../../core/clients';
@@ -61,6 +63,11 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
   const total = versements.reduce((s, v) => s + (v.montant ?? 0), 0);
   const totalUtilise = clientId ? versements.reduce((s, v) => s + (lettre(v)?.utilise ?? 0), 0) : null;
   const totalDispo = clientId ? versements.reduce((s, v) => s + (lettre(v)?.disponibilite ?? 0), 0) : null;
+  // Les deux bornes sont facultatives — `dateFin` part vide : le périmètre se
+  // compose de ce qui est renseigné, sans quoi il annoncerait une date vide.
+  const clientNom = clientId ? clients.find((c) => c.id === clientId)?.raison_sociale ?? 'Client' : 'Tous les clients';
+  const periode = [dateDebut ? `du ${formaterDate(dateDebut)}` : null, dateFin ? `au ${formaterDate(dateFin)}` : null]
+    .filter(Boolean).join(' ') || 'sans borne de date';
 
   return (
     <div className="space-y-5">
@@ -74,11 +81,22 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
         </div>
       </div>
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Apports sur la période</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(total)}</p><p className="text-xs text-neutral-500">{versements.length} versement(s)</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Montant utilisé</p><p className="text-xl font-bold font-mono mt-1">{totalUtilise != null ? formaterFcfa(totalUtilise) : '—'}</p>{totalUtilise == null && <p className="text-xs text-neutral-500">Choisissez un client</p>}</div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Disponibilité (avances restantes)</p><p className="text-xl font-bold font-mono text-blue-700 mt-1">{totalDispo != null ? formaterFcfa(totalDispo) : '—'}</p></div>
+        <Indicateur
+          label="Apports sur la période" valeur={formaterFcfa(total)} ton="text-green-700"
+          couleur="vert" icone={ArrowDownTrayIcon} sous={`${versements.length} versement(s)`}
+        />
+        <Indicateur
+          label="Montant utilisé" valeur={totalUtilise != null ? formaterFcfa(totalUtilise) : '—'}
+          couleur="violet" icone={ScaleIcon}
+          sous={totalUtilise == null ? 'Choisissez un client' : undefined}
+        />
+        <Indicateur
+          label="Disponibilité (avances restantes)" valeur={totalDispo != null ? formaterFcfa(totalDispo) : '—'}
+          ton="text-blue-700" couleur="bleu" icone={WalletIcon}
+        />
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+      <Carte titre="Historique des versements" icone={ClipboardDocumentListIcon} sous={`${clientNom} · ${periode}`} sousEntier nu>
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N° règlement</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right">Apport</th><th className="px-3 py-2 text-right">Mt. utilisé</th><th className="px-3 py-2 text-right">Disponibilité</th><th className="px-3 py-2 text-left">Type</th><th className="px-3 py-2 text-left">N° chèque / réf.</th><th className="px-3 py-2 text-left">Client</th><th className="px-3 py-2 text-left">N° vente</th><th className="px-3 py-2 text-left">Utilisateur</th><th className="w-10" /></tr>
@@ -110,9 +128,10 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
             </tfoot>
           )}
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && versements.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun versement sur la période.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="versement" data-testid="pagination-versements" />
 

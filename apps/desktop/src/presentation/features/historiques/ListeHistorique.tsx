@@ -9,8 +9,10 @@ import {
   type SectionHistorique,
 } from '../../../core/historiques';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import Pagination from '../../components/ui/Pagination';
+import { ICONE_SECTION_HISTORIQUE } from '../../pages/Historiques/onglets';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { usePagination } from '../../hooks/usePagination';
 import { useNotifier } from '../../notifications/useNotifier';
@@ -81,10 +83,7 @@ export default function ListeHistorique({ section, pieces, isLoading, filiale, f
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <p className="px-4 py-3 text-sm font-semibold text-neutral-700 border-b border-neutral-200 bg-neutral-50">
-          {description.label} <span className="font-normal text-neutral-500">· {filtresEnClair(filtres)}</span>
-        </p>
+      <Carte titre={description.label} icone={ICONE_SECTION_HISTORIQUE[section]} sous={filtresEnClair(filtres)} sousEntier nu>
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -133,7 +132,7 @@ export default function ListeHistorique({ section, pieces, isLoading, filiale, f
         </div>
         {isLoading && <div className="text-center py-10 text-neutral-400 text-sm">Chargement…</div>}
         {!isLoading && pieces.length === 0 && <div className="text-center py-10 text-neutral-400 text-sm">Aucune pièce dans ce périmètre.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="pièce" data-testid="pagination-historique" />
 

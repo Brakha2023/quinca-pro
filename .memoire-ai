@@ -198,10 +198,10 @@ endroits** et ne doivent pas changer ; 800/900/950 sont la nuit.
 | Pièce | Rôle |
 |---|---|
 | `components/ui/Bouton` | Se désarme pendant son travail, montre un tourniquet, dit ce qu'il fait. Le travail part **après** un affichage (`peindre()`), sinon le tourniquet ne se voit pas. |
-| `components/ui/Carte` | Carte à bandeau bleu nuit + icône. |
+| `components/ui/Carte` | Carte à bandeau bleu nuit + icône. `nu` pour un tableau qui touche les bords ; `sousEntier` quand la ligne `sous` ne doit pas être coupée (le périmètre d'une liste filtrée, qui dit ce qui s'imprime). Un tableau posé dans une carte `nu` a besoin de son propre `overflow-x-auto` : la carte rogne ce qui dépasse. |
 | `components/ui/Pagination` + `hooks/usePagination` | Pages de 50 ; un filtre ramène en page 1, pas le total qui bouge. |
 | `components/print/DocumentImprimable` | Aperçu A4 ; l'orientation se mesure seule. |
-| `features/pilotage/Indicateur` | Tuile de chiffre, teinte + pastille d'icône. La teinte dit la **nature** du chiffre, jamais s'il est bon. |
+| `components/ui/Indicateur` | Tuile de chiffre, teinte + pastille d'icône. La teinte dit la **nature** du chiffre, jamais s'il est bon. `nuit` laisse la tuile blanche : réservée aux chiffres de référence en tête ou en queue de série, sinon elle ressort comme sélectionnée. |
 | `.tableau` (dans `index.css`) | Tous les tableaux d'écran : entête bleuté, zébrure, survol, ligne au clavier. Les teintes se superposent en `background-image` pour ne pas effacer une ligne d'alerte. |
 
 Un changement d'allure se fait **dans ces pièces ou dans `index.css`**, pas
@@ -258,9 +258,31 @@ reprise de bout en bout, polices embarquées, et l'habillage bleu nuit / orange.
 
 1. **L'impression sous WebView2** n'a jamais été vérifiée sur un vrai poste
    Windows. C'est le point le plus important.
-2. **L'habillage n'est fait qu'à moitié** : seuls les sept blocs du tableau de
-   bord ont leur bandeau `Carte`. Trésorerie, Clients, Fournisseurs et Stock
-   gardent leurs cartes blanches.
+2. **L'habillage est terminé** : tous les modules ont leur bandeau `Carte` et
+   leurs tuiles `Indicateur`.
+
+   Cinq cas restent **volontairement** blancs, et doivent le rester :
+   - les **barres de filtres** — un outil n'est pas un bloc de contenu, et
+     sept bandeaux bleu nuit sur un écran n'en distingueraient plus aucun ;
+   - les **écrans d'attente** « Choisissez un client… » — une absence de
+     contenu n'a pas de titre à porter ;
+   - les **groupes de champs des Paramètres** (`<section>` à titre en
+     capitales grises) — ce sont des sections d'un formulaire ; seules les
+     deux vraies listes du module, comptes et rôles, ont un bandeau ;
+   - ce qui **se clique** : cartes d'article du point de vente, compteurs de
+     statut des livraisons ;
+   - les **coques de page** (`pages/<Module>/<Module>Page.tsx`), le cadre qui
+     porte la barre d'onglets — les cartes vivent dedans.
+
+   Attention en recensant : tous les blocs blancs ne s'écrivent pas pareil.
+   `bg-white rounded-xl border…` **et** `bg-white p-4 rounded-xl border…`
+   (avec le `p-4` au milieu) existent tous les deux, et des tableaux vivent
+   dans `pages/` autant que dans `features/` — chercher les deux motifs dans
+   les deux dossiers, sinon le relevé est faux.
+
+   `TicketPanel` garde son entête à lui (teinte alignée sur `primary-900`) :
+   il tient la hauteur de l'écran avec une liste qui défile entre un entête et
+   un pied figés, ce que `Carte` ne fait pas.
 3. Listes converties récemment sans pied de page d'identification : aucune —
    les vingt-deux listes imprimables en ont un. Vérifier pour toute liste
    nouvelle.
@@ -284,6 +306,8 @@ Ne pas décider seul ; les reposer si le sujet revient.
 - Divergence **CHEQUE** : un déclencheur serveur bouge `caisses.solde_actuel`,
   le code local non.
 - `audit.e2e.cjs:71` et quatre attentes de `horloge.e2e.cjs` sont fragiles.
+  (`verrou.e2e.cjs` l'était aussi — l'assertion sur le nom de la filiale
+  attend désormais ce qu'elle lit.)
 - `supabase/sync-streams_old.yaml` traîne ; à supprimer ou renommer.
 
 ---

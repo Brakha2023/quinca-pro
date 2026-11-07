@@ -31,9 +31,11 @@ fi
 
 docker build -t "$IMAGE" "$RACINE/apps/desktop/scripts/windows"
 
-# Export du dépôt (HEAD) + fichier .env non versionné, dans le volume de travail.
+# Export du dépôt (HEAD), puis des modifications suivies du workspace, dans le volume de travail.
 docker run --rm -v quinca-work:/work "$IMAGE" bash -c 'find /work -mindepth 1 -maxdepth 1 ! -name apps -exec rm -rf {} + ; find /work/apps -mindepth 1 -maxdepth 1 ! -name desktop -exec rm -rf {} + 2>/dev/null; find /work/apps/desktop -mindepth 1 -maxdepth 1 ! -name src-tauri -exec rm -rf {} + 2>/dev/null; find /work/apps/desktop/src-tauri -mindepth 1 -maxdepth 1 ! -name target -exec rm -rf {} + 2>/dev/null; true'
 git -C "$RACINE" archive HEAD | docker run --rm -i -v quinca-work:/work "$IMAGE" tar -x -C /work
+# Le commit seul ignorerait les corrections en cours, notamment le code à compiler.
+git -C "$RACINE" diff HEAD --binary | docker run --rm -i -v quinca-work:/work "$IMAGE" bash -c 'cd /work && git apply --binary'
 docker run --rm -i -v quinca-work:/work "$IMAGE" bash -c 'cat > /work/apps/desktop/.env' < "$RACINE/apps/desktop/.env"
 
 if [[ "${1:-}" == "--shell" ]]; then

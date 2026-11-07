@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ArrowDownTrayIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, BuildingOffice2Icon, PrinterIcon } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import { formaterFcfa, formaterPourcentage } from '../../../core/commun/prix';
 import { consolider, fenetrePilotage, type Periode } from '../../../core/pilotage';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
@@ -113,17 +114,17 @@ export default function ConsolidationPage() {
 
       <TableauDeBord fenetre={fenetre} filialeId={filialeId} lecture={lecture} comparerFiliales={vueGroupe} />
 
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <div className="border-b border-neutral-200 px-6 py-4">
-          <h3 className="text-base font-semibold text-neutral-900">Le détail, filiale par filiale</h3>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            {!estDirecteur
-              ? 'Lecture seule.'
-              : vueGroupe
-                ? 'Cliquez une ligne pour n’afficher que cette filiale.'
-                : 'Cliquez une autre ligne pour changer de filiale, ou la ligne de total pour revenir au groupe.'}
-          </p>
-        </div>
+      <Carte
+        titre="Le détail, filiale par filiale"
+        icone={BuildingOffice2Icon}
+        sous={!estDirecteur
+          ? 'Lecture seule.'
+          : vueGroupe
+            ? 'Cliquez une ligne pour n’afficher que cette filiale.'
+            : 'Cliquez une autre ligne pour changer de filiale, ou la ligne de total pour revenir au groupe.'}
+        sousEntier
+        nu
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase text-neutral-600">
@@ -193,7 +194,7 @@ export default function ConsolidationPage() {
           </table>
         </div>
         {isLoading && <div className="py-12 text-center text-neutral-400">Chargement…</div>}
-      </div>
+      </Carte>
 
       {apercu && (
         <TableauDeBordDocument

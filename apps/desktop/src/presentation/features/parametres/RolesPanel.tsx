@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ArrowDownTrayIcon, KeyIcon, LockClosedIcon, PencilSquareIcon, PlusIcon, PrinterIcon, ShieldCheckIcon, TrashIcon,
 } from '@heroicons/react/24/outline';
+import Carte from '../../components/ui/Carte';
 import {
   CATALOGUE_PERMISSIONS, libellePortee, matricePermissions, motifNonSupprimable, permissionsModifiables,
   recapRoles, roleDesactivable,
@@ -184,7 +185,8 @@ export default function RolesPanel({ filiale, peutModifier }: Props) {
         </p>
       )}
 
-      <div className="overflow-x-auto border border-neutral-200 rounded-xl">
+      <Carte titre="Rôles" icone={ShieldCheckIcon} sous={`${roles.length} rôle(s)`} nu>
+        <div className="overflow-x-auto">
         <table className="tableau divide-y divide-neutral-200">
           <thead className="bg-neutral-50">
             <tr className="text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
@@ -259,7 +261,8 @@ export default function RolesPanel({ filiale, peutModifier }: Props) {
             )}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Carte>
 
       {!roleRetenu ? (
         <p className="text-sm text-neutral-500">Cliquez un rôle pour voir et ajuster ses permissions.</p>

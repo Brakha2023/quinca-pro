@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import { transfertCaisseSchema, type Caisse, type TransfertCaisseForm, type TransfertCaisseFormInput } from '../../../core/tresorerie';
 import { TresorerieRepository } from '../../../infrastructure/powersync/repositories/TresorerieRepository';
+import Carte from '../../components/ui/Carte';
 import FormField, { inputClass, inputErrorClass } from '../../components/ui/FormField';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { useRepository } from '../../hooks/useRepository';
@@ -57,17 +58,19 @@ function Formulaire({ filialeId, caisses }: Props & { caisses: Caisse[] }) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl border border-neutral-200 shadow-sm p-5 space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SelectCaisse caisses={caisses} value={watch('caisse_source_id')} onChange={(id) => setValue('caisse_source_id', id)} label="Depuis" erreur={errors.caisse_source_id?.message} testId="transfert-source" />
-        <SelectCaisse caisses={caisses} value={watch('caisse_destination_id')} onChange={(id) => setValue('caisse_destination_id', id)} label="Vers" erreur={errors.caisse_destination_id?.message} testId="transfert-destination" />
-        <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${inputClass} ${errors.montant ? inputErrorClass : ''} text-right font-mono text-lg`} data-testid="transfert-montant" /></FormField>
-      </div>
-      <FormField label="Motif" erreur={errors.motif?.message}><input {...register('motif')} className={inputClass} placeholder="Alimentation du coffre, appoint…" /></FormField>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-600">Solde de {source?.nom ?? '—'} : <strong className={`font-mono ${(source?.solde_actuel ?? 0) < 0 ? 'text-red-600' : ''}`}>{formaterFcfa(source?.solde_actuel ?? 0)}</strong></p>
-        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><ArrowsRightLeftIcon className="w-5 h-5" /> Transférer</button>
-      </div>
-    </form>
+    <Carte titre="Transfert entre deux caisses" icone={ArrowsRightLeftIcon} sous="Une sortie et une entrée, sous la même référence">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SelectCaisse caisses={caisses} value={watch('caisse_source_id')} onChange={(id) => setValue('caisse_source_id', id)} label="Depuis" erreur={errors.caisse_source_id?.message} testId="transfert-source" />
+          <SelectCaisse caisses={caisses} value={watch('caisse_destination_id')} onChange={(id) => setValue('caisse_destination_id', id)} label="Vers" erreur={errors.caisse_destination_id?.message} testId="transfert-destination" />
+          <FormField label="Montant" obligatoire erreur={errors.montant?.message}><input type="number" step="1" min="0" {...register('montant')} className={`${inputClass} ${errors.montant ? inputErrorClass : ''} text-right font-mono text-lg`} data-testid="transfert-montant" /></FormField>
+        </div>
+        <FormField label="Motif" erreur={errors.motif?.message}><input {...register('motif')} className={inputClass} placeholder="Alimentation du coffre, appoint…" /></FormField>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-neutral-600">Solde de {source?.nom ?? '—'} : <strong className={`font-mono ${(source?.solde_actuel ?? 0) < 0 ? 'text-red-600' : ''}`}>{formaterFcfa(source?.solde_actuel ?? 0)}</strong></p>
+          <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><ArrowsRightLeftIcon className="w-5 h-5" /> Transférer</button>
+        </div>
+      </form>
+    </Carte>
   );
 }

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ClipboardDocumentIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentIcon, EnvelopeIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { composerRelance, type Fournisseur } from '../../../core/fournisseurs';
 import { lienMailto, ouvrirLien } from '../../../infrastructure/desktop/ouvrirLien';
+import Carte from '../../components/ui/Carte';
 import FormField, { inputClass } from '../../components/ui/FormField';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
@@ -49,8 +50,8 @@ function RelanceEditeur({ filialeId, filiale, fournisseur }: Props & { fournisse
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 shadow-sm p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-800">Commandes en attente de livraison</h3>
+      <Carte titre="Commandes en attente de livraison" icone={TruckIcon} sous={`${commandes.length} bon(s) ouvert(s)`} className="lg:col-span-2">
+      <div className="space-y-3">
         {commandes.length === 0 && <p className="text-sm text-neutral-400">Aucune commande ouverte.</p>}
         {commandes.map((c) => (
           <label key={c.id} className="flex items-start gap-2 text-sm cursor-pointer">
@@ -60,7 +61,9 @@ function RelanceEditeur({ filialeId, filiale, fournisseur }: Props & { fournisse
         ))}
         {fournisseur.solde_actuel < 0 && <p className="text-sm text-blue-700 bg-blue-50 rounded-lg p-2">Avoir de {formaterFcfa(-fournisseur.solde_actuel)} en notre faveur : mentionné dans la relance.</p>}
       </div>
-      <div className="lg:col-span-3 bg-white rounded-xl border border-neutral-200 shadow-sm p-4 space-y-3">
+      </Carte>
+      <Carte titre="Message de relance" icone={EnvelopeIcon} sous={fournisseur.email ?? 'Ce fournisseur n’a pas d’adresse e-mail'} className="lg:col-span-3">
+      <div className="space-y-3">
         <FormField label="Objet"><input value={objet} onChange={(e) => setEdition({ objet: e.target.value, corps })} className={inputClass} /></FormField>
         <FormField label="Message"><textarea rows={12} value={corps} onChange={(e) => setEdition({ objet, corps: e.target.value })} className={`${inputClass} font-mono text-xs`} /></FormField>
         <div className="flex justify-end gap-2">
@@ -69,6 +72,7 @@ function RelanceEditeur({ filialeId, filiale, fournisseur }: Props & { fournisse
           <button type="button" onClick={envoyer} disabled={!fournisseur.email} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><EnvelopeIcon className="w-5 h-5" /> Envoyer par e-mail</button>
         </div>
       </div>
+      </Carte>
     </div>
   );
 }

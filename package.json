@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "build:windows": "apps/desktop/scripts/windows/build.sh",
     "dev": "turbo run dev",
     "desktop": "pnpm --filter @quinca/desktop tauri dev",
     "lint": "turbo run lint",

@@ -1,6 +1,11 @@
 import { useState } from 'react';
-import { DocumentTextIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import {
+  BanknotesIcon, CalendarDaysIcon, DocumentTextIcon, EyeIcon, MagnifyingGlassIcon,
+  PencilSquareIcon, PrinterIcon, UserCircleIcon, UserGroupIcon,
+} from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import { LIBELLES_SEXE, LIBELLES_TYPE_CONTRAT, nomComplet, type Employe } from '../../../core/employes';
 import { EmployesRepository } from '../../../infrastructure/powersync/repositories/EmployesRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -79,17 +84,24 @@ export default function EffectifPanel({ filialeId, filiale }: Props) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Effectif actif</p><p className="text-2xl font-bold mt-1">{employes.filter((e) => e.est_actif).length}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Masse salariale mensuelle (hors journaliers)</p><p className="text-2xl font-bold font-mono mt-1">{formaterFcfa(masseSalariale)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Journaliers</p><p className="text-2xl font-bold mt-1">{employes.filter((e) => e.est_actif && e.type_contrat === 'JOURNALIER').length}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Contrats joints</p><p className="text-2xl font-bold mt-1">{employes.filter((e) => e.contrat_nom).length} / {employes.length}</p></div>
+        <Indicateur label="Effectif actif" valeur={`${employes.filter((e) => e.est_actif).length}`} couleur="bleu" icone={UserGroupIcon} />
+        <Indicateur label="Masse salariale mensuelle" valeur={formaterFcfa(masseSalariale)} couleur="orange" icone={BanknotesIcon} sous="hors journaliers" />
+        <Indicateur label="Journaliers" valeur={`${employes.filter((e) => e.est_actif && e.type_contrat === 'JOURNALIER').length}`} couleur="violet" icone={CalendarDaysIcon} />
+        <Indicateur label="Contrats joints" valeur={`${employes.filter((e) => e.contrat_nom).length} / ${employes.length}`} couleur="ambre" icone={DocumentTextIcon} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[16rem] max-w-md"><MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" /><input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Matricule, nom, fonction, téléphone…" className={`${inputClass} pl-10`} /></div>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={inclureInactifs} onChange={(e) => setInclureInactifs(e.target.checked)} className="rounded" /> Inclure les inactifs</label>
         <Bouton onClick={() => setModal({ type: 'imprimer' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer l'effectif</Bouton>
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+      <Carte titre="Effectif" icone={UserGroupIcon} sousEntier nu
+        sous={[
+          `${employes.length} employé(s)`,
+          inclureInactifs ? 'inactifs compris' : 'actifs seulement',
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+      >
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-3 w-12" /><th className="px-3 py-3 text-left">Matricule</th><th className="px-3 py-3 text-left">Nom et prénom</th><th className="px-3 py-3 text-left">Sexe</th><th className="px-3 py-3 text-left">Téléphone</th><th className="px-3 py-3 text-left">Fonction</th><th className="px-3 py-3 text-left">Contrat</th><th className="px-3 py-3 text-left">Début</th><th className="px-3 py-3 text-right">Salaire de base</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center">Actions</th></tr>
@@ -118,9 +130,10 @@ export default function EffectifPanel({ filialeId, filiale }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && employes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun employé.</div>}
-      </div>
+      </Carte>
 
       {modal?.type === 'detail' && <DetailEmploye filialeId={filialeId} employeId={modal.id} onClose={() => setModal(null)} />}
       {modal?.type === 'modifier' && <EmployeFormModal filialeId={filialeId} employe={modal.e} onClose={() => setModal(null)} />}

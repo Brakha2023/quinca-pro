@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { ArrowDownTrayIcon, PaperAirplaneIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, BuildingOffice2Icon, PaperAirplaneIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import {
   LIBELLES_STATUT_TRANSFERT_STOCK,
   SENS_TRANSFERT,
@@ -15,6 +15,7 @@ import {
   type TransfertStockVue,
 } from '../../../core/stock';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import type { Depot } from '../../../core/articles';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
 import { TransfertsStockRepository } from '../../../infrastructure/powersync/repositories/TransfertsStockRepository';
@@ -172,10 +173,7 @@ export default function TransfertFilialeStockPanel({ filialeId, filiale, filiale
           <Bouton onClick={exporter} icone={ArrowDownTrayIcon} className="ml-auto flex items-center gap-2 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg text-sm" data-testid="exporter-transferts">Exporter Excel</Bouton>
         </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <p className="px-4 py-3 text-sm font-semibold text-neutral-700 border-b border-neutral-200 bg-neutral-50">
-            Historique des transferts inter-filiales <span className="font-normal text-neutral-500">· {perimetre}</span>
-          </p>
+        <Carte titre="Historique des transferts inter-filiales" icone={BuildingOffice2Icon} sous={perimetre} sousEntier nu>
           <div className="overflow-x-auto">
             <table className="tableau">
               <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -226,7 +224,7 @@ export default function TransfertFilialeStockPanel({ filialeId, filiale, filiale
             </table>
           </div>
           {transferts.length === 0 && <div className="text-center py-8 text-neutral-400 text-sm">Aucun transfert dans ce périmètre.</div>}
-        </div>
+        </Carte>
       </div>
 
       {apercu && <BonImprimable transfert={apercu} filiale={filiale} onClose={() => setApercu(null)} />}

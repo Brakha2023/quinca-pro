@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRightCircleIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { ArrowRightCircleIcon, DocumentDuplicateIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutProforma } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import type { Article } from '../../../core/articles';
@@ -236,7 +237,18 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={enCours} onChange={(e) => setEnCours(e.target.checked)} className="rounded" /> En cours seulement</label>
         <button type="button" onClick={() => setModal({ type: 'nouvelle' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle proforma</button>
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+      <Carte
+        titre="Proformas"
+        icone={DocumentDuplicateIcon}
+        sous={[
+          `${proformas.length} pièce(s)`,
+          enCours ? 'en cours seulement' : 'tous statuts',
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+        sousEntier
+        nu
+      >
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N°</th><th className="px-3 py-2 text-left">Client</th><th className="px-3 py-2 text-right">Lignes</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-left">Validité</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-left">Vente</th><th className="px-3 py-2 text-center">Actions</th></tr>
@@ -264,9 +276,10 @@ export default function ProformasPanel({ filialeId, filiale }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && proformas.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune proforma.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="proforma" data-testid="pagination-proformas" />
 

@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react';
-import { CheckIcon, EyeIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import {
+  BanknotesIcon, BuildingLibraryIcon, CheckIcon, ClockIcon, CreditCardIcon,
+  EyeIcon, PrinterIcon, ShoppingCartIcon, UserIcon,
+} from '@heroicons/react/24/outline';
 import { STATUTS_VENTE, type ModePaiement, type StatutVente } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, recapJournalVentes } from '../../../core/ventes';
@@ -16,7 +21,7 @@ import JournalVentesDocument from '../../features/ventes/JournalVentesDocument';
 import VenteDetailsModal, { STATUT_VENTE_STYLE, formaterDateHeure } from '../../features/ventes/VenteDetailsModal';
 import { useVentes } from '../../features/ventes/hooks';
 import { useRepository } from '../../hooks/useRepository';
-import { formaterFcfa } from '../../hooks/useFormatage';
+import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useConfirmation } from '../../confirmation/useConfirmation';
 
@@ -95,11 +100,20 @@ export default function VentesPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Chiffre d'affaires TTC</p><p className="text-xl font-bold font-mono text-primary-700 mt-1">{formaterFcfa(stats.chiffre_affaires)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Ventes</p><p className="text-xl font-bold mt-1">{stats.nombre}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Encaissé</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(stats.encaisse)}</p><p className="text-xs text-neutral-500 mt-1">{stats.par_mode.map((m) => `${LIBELLES_MODE_PAIEMENT[m.mode as ModePaiement] ?? m.mode} ${formaterFcfa(m.montant)}`).join(' · ')}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Vendu à crédit</p><p className="text-xl font-bold font-mono text-orange-700 mt-1">{formaterFcfa(stats.credit)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">En attente de validation</p><p className={`text-xl font-bold mt-1 ${stats.en_attente ? 'text-orange-700' : ''}`}>{stats.en_attente}</p></div>
+        {/* Mêmes teintes qu'au tableau de bord : le chiffre d'affaires en bleu,
+            la trésorerie encaissée en vert, ce qui reste dû en orange. */}
+        <Indicateur label="Chiffre d'affaires TTC" valeur={formaterFcfa(stats.chiffre_affaires)} ton="text-primary-700" couleur="bleu" icone={BanknotesIcon} />
+        <Indicateur label="Ventes" valeur={`${stats.nombre}`} couleur="violet" icone={ShoppingCartIcon} />
+        <Indicateur
+          label="Encaissé" valeur={formaterFcfa(stats.encaisse)} ton="text-green-700" couleur="vert" icone={BuildingLibraryIcon}
+          sous={stats.par_mode.map((m) => `${LIBELLES_MODE_PAIEMENT[m.mode as ModePaiement] ?? m.mode} ${formaterFcfa(m.montant)}`).join(' · ')}
+        />
+        <Indicateur label="Vendu à crédit" valeur={formaterFcfa(stats.credit)} ton="text-orange-700" couleur="orange" icone={UserIcon} />
+        <Indicateur
+          label="En attente de validation" valeur={`${stats.en_attente}`}
+          ton={stats.en_attente ? 'text-orange-700' : undefined}
+          couleur="ambre" icone={ClockIcon}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 print:hidden">
@@ -125,7 +139,13 @@ export default function VentesPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte titre="Journée de caisse" icone={CreditCardIcon} sousEntier nu
+        sous={[
+          `${ventes.length} vente(s)`,
+          `du ${formaterDate(dateDebut)} au ${formaterDate(dateFin)}`,
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -160,7 +180,7 @@ export default function VentesPage() {
         </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && ventes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune vente sur la période.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="vente" data-testid="pagination-ventes" />
 

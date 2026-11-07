@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { DocumentTextIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { BanknotesIcon, CheckCircleIcon, DocumentTextIcon, PrinterIcon, ScaleIcon } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import { LIBELLES_STATUT_PAIE, LIBELLES_TYPE_CONTRAT, libellePeriode, nomComplet, periodeCourante } from '../../../core/employes';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
@@ -56,11 +58,12 @@ export default function PaiementPanel({ filialeId, filiale }: Props) {
         </div>
       </div>
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Net total du mois</p><p className="text-xl font-bold font-mono mt-1">{formaterFcfa(total)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Payé</p><p className="text-xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(payees.reduce((s, p) => s + p.net_a_payer, 0))}</p><p className="text-xs text-neutral-500">{payees.length} / {paies.length} employé(s)</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Reste à payer</p><p className="text-xl font-bold font-mono text-red-600 mt-1">{formaterFcfa(total - payees.reduce((s, p) => s + p.net_a_payer, 0))}</p></div>
+        <Indicateur label="Net total du mois" valeur={formaterFcfa(total)} couleur="bleu" icone={BanknotesIcon} />
+        <Indicateur label="Payé" valeur={formaterFcfa(payees.reduce((s, p) => s + p.net_a_payer, 0))} ton="text-green-700" couleur="vert" icone={CheckCircleIcon} sous={`${payees.length} / ${paies.length} employé(s)`} />
+        <Indicateur label="Reste à payer" valeur={formaterFcfa(total - payees.reduce((s, p) => s + p.net_a_payer, 0))} ton="text-red-600" couleur="rouge" icone={ScaleIcon} />
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+      <Carte titre="Paiement des salaires" icone={BanknotesIcon} sous={libellePeriode(periode)} nu>
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-3 text-left">Matricule</th><th className="px-3 py-3 text-left">Employé</th><th className="px-3 py-3 text-left">Fonction</th><th className="px-3 py-3 text-right">Net à payer</th><th className="px-3 py-3 text-left">Statut</th><th className="px-3 py-3 text-left">Paiement</th><th className="px-3 py-3 text-center">Bulletin</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
@@ -77,8 +80,9 @@ export default function PaiementPanel({ filialeId, filiale }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
         {paies.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune paie pour {libellePeriode(periode)} : générez-la dans « Paie / salaire ».</div>}
-      </div>
+      </Carte>
 
       {document?.type === 'emargement' && (
         <DocumentImprimable titre={`Fiche d'émargement — ${libellePeriode(periode)}`} filiale={filiale} onClose={() => setDocument(null)}>

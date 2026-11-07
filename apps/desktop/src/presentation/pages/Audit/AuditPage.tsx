@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@powersync/react';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { differenceAudit, valeursAudit, type LigneAudit } from '../../../core/sync';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { controleInlineClass } from '../../components/ui/FormField';
+import { formaterDate } from '../../hooks/useFormatage';
 import Modal from '../../components/ui/Modal';
 import { useJournalAudit } from '../../features/audit/useJournalAudit';
 
@@ -58,7 +60,15 @@ export default function AuditPage() {
         </button>
         <span className="ml-auto text-sm text-neutral-600">{lignes.length} événement(s)</span>
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte titre="Journal d'audit" icone={ShieldCheckIcon} sousEntier nu
+        sous={[
+          `${lignes.length} événement(s)`,
+          `du ${formaterDate(dateDebut)} au ${formaterDate(dateFin)}`,
+          table || null,
+          action || null,
+        ].filter(Boolean).join(' · ')}
+      >
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-3 text-left">Date</th><th className="px-3 py-3 text-left">Utilisateur</th><th className="px-3 py-3 text-left">Action</th><th className="px-3 py-3 text-left">Table</th><th className="px-3 py-3 text-left">Enregistrement</th><th className="px-3 py-3 text-left">Changements</th></tr></thead>
           <tbody className="divide-y divide-neutral-100">
@@ -78,6 +88,7 @@ export default function AuditPage() {
             })}
           </tbody>
         </table>
+        </div>
         {etat === 'CHARGEMENT' && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {etat === 'HORS_LIGNE' && (
           <div className="text-center py-12 px-6 text-neutral-500" data-testid="audit-hors-ligne">
@@ -92,7 +103,7 @@ export default function AuditPage() {
           </div>
         )}
         {etat === 'PRET' && lignes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun événement sur la période.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="événement" data-testid="pagination-audit" />
       {detail && (

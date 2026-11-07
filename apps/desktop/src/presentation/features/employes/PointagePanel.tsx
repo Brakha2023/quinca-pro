@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { CheckIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, ClipboardDocumentCheckIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import { STATUTS_POINTAGE, type StatutPointage } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import { LIBELLES_STATUT_POINTAGE, libellePeriode, nomComplet } from '../../../core/employes';
 import { EmployesRepository } from '../../../infrastructure/powersync/repositories/EmployesRepository';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -62,7 +63,8 @@ export default function PointagePanel({ filialeId, filiale }: Props) {
           <button type="button" onClick={tousPresents} disabled={nonPointes === 0} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><CheckIcon className="w-5 h-5" /> Tous présents</button>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+      <Carte titre="Pointage du jour" icone={ClipboardDocumentCheckIcon} sous={`${formaterDate(jour)} · ${employes.length} employé(s) actif(s)`} nu>
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-3 text-left">Matricule</th><th className="px-3 py-3 text-left">Employé</th><th className="px-3 py-3 text-left">Fonction</th><th className="px-3 py-3 text-center">Pointage du {formaterDate(jour)}</th><th className="px-3 py-3 text-right">Présents</th><th className="px-3 py-3 text-right">Absents</th><th className="px-3 py-3 text-right">Justifiés</th></tr>
@@ -91,8 +93,9 @@ export default function PointagePanel({ filialeId, filiale }: Props) {
             })}
           </tbody>
         </table>
+        </div>
         {employes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun employé actif.</div>}
-      </div>
+      </Carte>
       <p className="text-xs text-neutral-500">Récapitulatif de {libellePeriode(periode)}. Les absences non justifiées sont retenues sur la paie du mois (1/26 du salaire par jour) ; les journaliers sont payés aux jours présents.</p>
 
       {imprimer && (

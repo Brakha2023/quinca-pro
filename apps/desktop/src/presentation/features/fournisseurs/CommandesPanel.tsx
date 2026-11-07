@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { DocumentTextIcon, EyeIcon, PlusIcon, PrinterIcon, TrashIcon, TruckIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import type { StatutCommandeFournisseur } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import type { Article } from '../../../core/articles';
@@ -279,7 +280,18 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
         <span className="text-sm text-neutral-600 ml-auto">Reste à livrer : <strong className="font-mono">{formaterFcfa(totalOuvert)}</strong></span>
         <button type="button" onClick={() => setModal({ type: 'nouveau' })} className="flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-lg"><PlusIcon className="w-5 h-5" /> Nouvelle commande</button>
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+      <Carte
+        titre="Bons de commande"
+        icone={DocumentTextIcon}
+        sous={[
+          `${commandes.length} bon(s)`,
+          ouvertes ? 'en attente de livraison' : 'tous statuts',
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+        sousEntier
+        nu
+      >
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">N°</th><th className="px-3 py-2 text-left">Fournisseur</th><th className="px-3 py-2 text-left">Type</th><th className="px-3 py-2 text-right">Lignes</th><th className="px-3 py-2 text-right">Total TTC</th><th className="px-3 py-2 text-right">Reçu</th><th className="px-3 py-2 text-right">Reste à payer</th><th className="px-3 py-2 text-left">Statut</th><th className="px-3 py-2 text-center">Actions</th></tr>
@@ -315,9 +327,10 @@ export default function CommandesPanel({ filialeId, filiale }: Props) {
             })}
           </tbody>
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && commandes.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune commande.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="commande" data-testid="pagination-commandes" />
 

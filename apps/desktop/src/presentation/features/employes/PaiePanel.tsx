@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowPathIcon, BanknotesIcon, PencilSquareIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, ArrowUpTrayIcon, BanknotesIcon, CheckCircleIcon, PencilSquareIcon, PlusIcon, ScaleIcon } from '@heroicons/react/24/outline';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import { LIBELLES_STATUT_PAIE, LIBELLES_TYPE_CONTRAT, avanceSalaireSchema, libellePeriode, nomComplet, periodeCourante, type AvanceSalaireForm, type AvanceSalaireFormInput } from '../../../core/employes';
 import { EmployesRepository } from '../../../infrastructure/powersync/repositories/EmployesRepository';
 import Modal from '../../components/ui/Modal';
@@ -108,12 +110,13 @@ export default function PaiePanel({ filialeId }: Props) {
         {totaux.aPayer > 0 && <button type="button" onClick={() => setModal({ type: 'payerTout' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg"><BanknotesIcon className="w-5 h-5" /> Payer tout ({formaterFcfa(totaux.aPayer)})</button>}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Brut du mois</p><p className="text-xl font-bold font-mono mt-1">{formaterFcfa(totaux.brut)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Avances versées</p><p className="text-xl font-bold font-mono text-orange-700 mt-1">{formaterFcfa(avances.reduce((s, a) => s + (a.montant ?? 0), 0))}</p><p className="text-xs text-neutral-500">{avances.length} avance(s)</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Net à payer</p><p className="text-xl font-bold font-mono text-red-600 mt-1">{formaterFcfa(totaux.aPayer)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-xs text-neutral-500">Paies payées</p><p className="text-xl font-bold mt-1">{totaux.payees} / {paies.length}</p></div>
+        <Indicateur label="Brut du mois" valeur={formaterFcfa(totaux.brut)} couleur="bleu" icone={BanknotesIcon} />
+        <Indicateur label="Avances versées" valeur={formaterFcfa(avances.reduce((s, a) => s + (a.montant ?? 0), 0))} ton="text-orange-700" couleur="orange" icone={ArrowUpTrayIcon} sous={`${avances.length} avance(s)`} />
+        <Indicateur label="Net à payer" valeur={formaterFcfa(totaux.aPayer)} ton="text-red-600" couleur="rouge" icone={ScaleIcon} />
+        <Indicateur label="Paies payées" valeur={`${totaux.payees} / ${paies.length}`} couleur="vert" icone={CheckCircleIcon} />
       </div>
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-x-auto">
+      <Carte titre="Paie du mois" icone={BanknotesIcon} sous={libellePeriode(periode)} nu>
+        <div className="overflow-x-auto">
         <table className="tableau">
           <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
             <tr><th className="px-3 py-3 text-left">Employé</th><th className="px-3 py-3 text-left">Contrat</th><th className="px-3 py-3 text-right">Base</th><th className="px-3 py-3 text-right">Prés.</th><th className="px-3 py-3 text-right">Abs.</th><th className="px-3 py-3 text-right">Ret. absences</th><th className="px-3 py-3 text-right">Brut</th><th className="px-3 py-3 text-right">Primes</th><th className="px-3 py-3 text-right">Retenues</th><th className="px-3 py-3 text-right">Avances</th><th className="px-3 py-3 text-right">Net à payer</th><th className="px-3 py-3 text-center">Statut</th><th className="px-3 py-3 text-center">Actions</th></tr>
@@ -146,9 +149,10 @@ export default function PaiePanel({ filialeId }: Props) {
           </tbody>
           {paies.length > 0 && <tfoot className="bg-neutral-50 border-t border-neutral-200 text-sm font-semibold"><tr><td colSpan={6} className="px-3 py-2 text-right">Totaux</td><td className="px-3 py-2 text-right font-mono">{formaterFcfa(totaux.brut)}</td><td colSpan={3} /><td className="px-3 py-2 text-right font-mono">{formaterFcfa(totaux.net)}</td><td colSpan={2} /></tr></tfoot>}
         </table>
+        </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && paies.length === 0 && <div className="text-center py-12 text-neutral-400">Aucune paie pour {libellePeriode(periode)} : générez-la depuis les pointages.</div>}
-      </div>
+      </Carte>
 
       {modal?.type === 'avance' && <AvanceModal filialeId={filialeId} periode={periode} onClose={() => setModal(null)} />}
       {modal?.type === 'ajuster' && <AjustementModal paie={modal.p} onClose={() => setModal(null)} />}

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ClipboardDocumentIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentIcon, DocumentTextIcon, EnvelopeIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { composerRelanceClient, echeanceFacture, type Client } from '../../../core/clients';
 import { lienMailto, ouvrirLien } from '../../../infrastructure/desktop/ouvrirLien';
+import Carte from '../../components/ui/Carte';
 import FormField, { inputClass } from '../../components/ui/FormField';
 import { useCurrentUtilisateur } from '../../auth/useCurrentUtilisateur';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
@@ -45,8 +46,13 @@ function RelanceEditeur({ filiale, client }: { filiale: Props['filiale']; client
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-      <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 shadow-sm p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-800">Factures impayées · solde {formaterFcfa(client.solde_actuel)}</h3>
+      <Carte
+        titre="Factures impayées"
+        icone={DocumentTextIcon}
+        sous={`Solde du compte : ${formaterFcfa(client.solde_actuel)}`}
+        className="lg:col-span-2"
+      >
+      <div className="space-y-3">
         {impayees.length === 0 && <p className="text-sm text-neutral-400">Aucune facture avec reste à payer (le solde vient du solde d'ouverture).</p>}
         {impayees.map((f) => {
           const retard = retards.get(f.id) ?? 0;
@@ -58,7 +64,9 @@ function RelanceEditeur({ filiale, client }: { filiale: Props['filiale']; client
           );
         })}
       </div>
-      <div className="lg:col-span-3 bg-white rounded-xl border border-neutral-200 shadow-sm p-4 space-y-3">
+      </Carte>
+      <Carte titre="Message de relance" icone={EnvelopeIcon} sous={client.email ?? 'Ce client n’a pas d’adresse e-mail'} className="lg:col-span-3">
+      <div className="space-y-3">
         <FormField label="Objet"><input value={objet} onChange={(e) => setEdition({ objet: e.target.value, corps })} className={inputClass} /></FormField>
         <FormField label="Message"><textarea rows={12} value={corps} onChange={(e) => setEdition({ objet, corps: e.target.value })} className={`${inputClass} font-mono text-xs`} /></FormField>
         <div className="flex justify-end gap-2">
@@ -67,6 +75,7 @@ function RelanceEditeur({ filiale, client }: { filiale: Props['filiale']; client
           <button type="button" onClick={envoyer} disabled={!client.email} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white font-medium rounded-lg"><EnvelopeIcon className="w-5 h-5" /> Envoyer par e-mail</button>
         </div>
       </div>
+      </Carte>
     </div>
   );
 }
@@ -81,8 +90,7 @@ export default function RelanceClientsPanel({ filialeId, filiale }: Props) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-neutral-200"><p className="text-sm font-semibold text-neutral-800">Clients en créance</p><p className="text-xs text-neutral-500">{debiteurs.length} client(s) · {formaterFcfa(totalCreances)}</p></div>
+      <Carte titre="Clients en créance" icone={UserGroupIcon} sous={`${debiteurs.length} client(s) · ${formaterFcfa(totalCreances)}`} nu>
         <ul className="divide-y divide-neutral-100 max-h-[32rem] overflow-y-auto" data-testid="liste-debiteurs">
           {debiteurs.map((c) => (
             <li key={c.id}>
@@ -94,7 +102,7 @@ export default function RelanceClientsPanel({ filialeId, filiale }: Props) {
           ))}
           {debiteurs.length === 0 && <li className="px-4 py-8 text-center text-sm text-neutral-400">Aucune créance en cours.</li>}
         </ul>
-      </div>
+      </Carte>
       <div className="lg:col-span-3">
         {client
           ? <RelanceEditeur key={client.id} filiale={filiale} client={client} />

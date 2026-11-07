@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { PrinterIcon } from '@heroicons/react/24/outline';
+import { CreditCardIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
 import { formaterFcfa } from '../../../core/commun/prix';
 import { fenetrePilotage, type Periode } from '../../../core/pilotage';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
@@ -91,10 +92,7 @@ export default function DashboardPage() {
 
       <TableauDeBord fenetre={fenetre} filialeId={filialeId} lecture={lecture} />
 
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <div className="border-b border-neutral-200 px-6 py-4">
-          <h3 className="text-base font-semibold text-neutral-800">Dernières ventes du jour</h3>
-        </div>
+      <Carte titre="Dernières ventes du jour" icone={CreditCardIcon} nu>
         {ventes.length === 0 ? (
           <p className="px-6 py-8 text-sm text-neutral-400">Aucune vente aujourd'hui.</p>
         ) : (
@@ -112,7 +110,7 @@ export default function DashboardPage() {
             </tbody>
           </table>
         )}
-      </div>
+      </Carte>
 
       {apercu && (
         <TableauDeBordDocument

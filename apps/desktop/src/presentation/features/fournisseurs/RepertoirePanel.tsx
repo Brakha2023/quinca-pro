@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BanknotesIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, ScaleIcon, TruckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import {
+  BanknotesIcon, BookOpenIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon,
+  PencilSquareIcon, ScaleIcon, TruckIcon, TrashIcon, UserGroupIcon,
+} from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import type { Fournisseur } from '../../../core/fournisseurs';
@@ -90,10 +95,13 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Dettes fournisseurs</p><p className="text-2xl font-bold font-mono text-red-600 mt-1">{formaterFcfa(totaux.dettes)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Cumul des factures</p><p className="text-2xl font-bold font-mono mt-1">{formaterFcfa(totaux.factures)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Cumul des règlements</p><p className="text-2xl font-bold font-mono text-green-700 mt-1">{formaterFcfa(totaux.reglements)}</p></div>
-        <div className="bg-white p-4 rounded-xl border border-neutral-200 shadow-sm"><p className="text-sm text-neutral-500">Fournisseurs à payer</p><p className="text-2xl font-bold mt-1">{fournisseurs.filter((f) => f.solde_actuel > 0).length}</p></div>
+        <Indicateur label="Dettes fournisseurs" valeur={formaterFcfa(totaux.dettes)} ton="text-red-600" couleur="orange" icone={TruckIcon} sous="ce qui reste à payer" />
+        <Indicateur label="Cumul des factures" valeur={formaterFcfa(totaux.factures)} couleur="violet" icone={DocumentTextIcon} sous="marchandise reçue" />
+        <Indicateur label="Cumul des règlements" valeur={formaterFcfa(totaux.reglements)} ton="text-green-700" couleur="vert" icone={BanknotesIcon} />
+        <Indicateur
+          label="Fournisseurs à payer" valeur={`${fournisseurs.filter((f) => f.solde_actuel > 0).length}`}
+          couleur="ambre" icone={UserGroupIcon} sous={`sur ${fournisseurs.length} compte(s) au répertoire`}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -103,7 +111,18 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         <button type="button" onClick={() => setModal({ type: 'balance' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><ScaleIcon className="w-5 h-5" /> Balance générale</button>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden">
+      <Carte
+        titre="Situation des comptes fournisseurs"
+        icone={BookOpenIcon}
+        sous={[
+          `${fournisseurs.length} fournisseur(s)`,
+          avecDette ? 'avec dette' : null,
+          inclureInactifs ? 'inactifs compris' : null,
+          recherche.trim() ? `recherche « ${recherche.trim()} »` : null,
+        ].filter(Boolean).join(' · ')}
+        sousEntier
+        nu
+      >
         <div className="overflow-x-auto">
           <table className="tableau">
             <thead className="bg-neutral-50 border-b border-neutral-200 text-xs uppercase text-neutral-600">
@@ -159,7 +178,7 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         </div>
         {isLoading && <div className="text-center py-12 text-neutral-400">Chargement…</div>}
         {!isLoading && fournisseurs.length === 0 && <div className="text-center py-12 text-neutral-400">Aucun fournisseur.</div>}
-      </div>
+      </Carte>
 
       <Pagination etat={pages} nom="fournisseur" data-testid="pagination-fournisseurs" />
 

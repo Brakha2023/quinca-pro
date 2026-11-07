@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react';
-import { ArrowDownTrayIcon, MagnifyingGlassIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { useMemo, useState, type ComponentType } from 'react';
+import {
+  ArchiveBoxIcon, ArrowDownTrayIcon, ArrowPathIcon, ArrowTrendingDownIcon, CubeIcon,
+  ExclamationTriangleIcon, MagnifyingGlassIcon, MoonIcon, PrinterIcon,
+} from '@heroicons/react/24/outline';
 import {
   NATURES_ALERTE,
   SEUILS_DORMANCE,
@@ -15,6 +18,8 @@ import {
   type NatureAlerte,
 } from '../../../core/stock';
 import Bouton from '../../components/ui/Bouton';
+import Carte from '../../components/ui/Carte';
+import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
@@ -27,13 +32,19 @@ import RotationStockDocument from './RotationStockDocument';
 import type { InfosFiliale } from './EnteteBon';
 import { useRotationStock, useStocksParArticle } from './hooks';
 
-function Tableau({ titre, lignes, vide, tone }: { titre: string; lignes: LigneAlerteStock[]; vide: string; tone: string }) {
+/**
+ * Les deux listes se distinguaient par la **couleur de leur titre** — rouge
+ * pour les ruptures, orange pour les stocks faibles. Le bandeau de `Carte` est
+ * bleu nuit et ne se teinte pas (la couleur, ici, c'est l'orange, et l'orange
+ * ne sert qu'à ce sur quoi on agit) : c'est donc l'**icône** qui porte
+ * désormais la distinction, et elle se lit avant le titre.
+ */
+function Tableau({ titre, lignes, vide, icone }: { titre: string; lignes: LigneAlerteStock[]; vide: string; icone: ComponentType<{ className?: string }> }) {
   // Ruptures et stocks faibles ont chacun leur pagination : ce sont deux
   // listes, on en parcourt une sans perdre sa place dans l'autre.
   const pages = usePagination(lignes.length, [titre]);
   return (
-    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-      <div className={`px-4 py-3 border-b border-neutral-200 font-semibold ${tone}`}>{titre} <span className="font-normal text-neutral-500">({lignes.length})</span></div>
+    <Carte titre={titre} icone={icone} sous={`${lignes.length} article(s)`} nu>
       {lignes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-neutral-400">{vide}</p>
       ) : (
@@ -61,7 +72,7 @@ function Tableau({ titre, lignes, vide, tone }: { titre: string; lignes: LigneAl
           <Pagination etat={pages} nom="article" data-testid={`pagination-${titre.toLowerCase().replace(/\s+/g, '-')}`} />
         </div>
       )}
-    </div>
+    </Carte>
   );
 }
 
@@ -73,14 +84,16 @@ const jourDe = (l: LigneRotation) => (l.derniere_sortie ? `il y a ${l.jours} j` 
  * La valeur figure en face de chaque ligne, et non la seule quantité : devant
  * un rayon, c'est la somme immobilisée qui décide de brader ou d'attendre.
  */
-function TableauRotation({ titre, lignes, vide, tone, colonne, testid }: { titre: string; lignes: LigneRotation[]; vide: string; tone: string; colonne: string; testid: string }) {
+function TableauRotation({ titre, lignes, vide, icone, colonne, testid }: { titre: string; lignes: LigneRotation[]; vide: string; icone: ComponentType<{ className?: string }>; colonne: string; testid: string }) {
   const total = lignes.reduce((s, l) => s + l.valeur, 0);
   return (
-    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-      <div className={`px-4 py-3 border-b border-neutral-200 font-semibold flex items-baseline gap-2 ${tone}`}>
-        {titre} <span className="font-normal text-neutral-500">({lignes.length})</span>
-        <span className="ml-auto font-mono text-sm">{formaterFcfa(total)}</span>
-      </div>
+    <Carte
+      titre={titre}
+      icone={icone}
+      sous={`${lignes.length} article(s)`}
+      action={<span className="font-mono text-sm">{formaterFcfa(total)}</span>}
+      nu
+    >
       {lignes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-neutral-400">{vide}</p>
       ) : (
@@ -108,7 +121,7 @@ function TableauRotation({ titre, lignes, vide, tone, colonne, testid }: { titre
           </table>
         </div>
       )}
-    </div>
+    </Carte>
   );
 }
 
@@ -197,10 +210,20 @@ export default function AlertesPanel({ filialeId, filiale }: { filialeId: string
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-5 rounded-xl text-white shadow"><p className="text-sm opacity-90">Valeur du stock (coût moyen)</p><p className="text-2xl font-bold font-mono mt-2">{formaterFcfa(valeur)}</p></div>
-        <div className="bg-gradient-to-br from-green-500 to-green-600 p-5 rounded-xl text-white shadow"><p className="text-sm opacity-90">Articles suivis</p><p className="text-2xl font-bold mt-2">{lignes.length}</p></div>
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-5 rounded-xl text-white shadow"><p className="text-sm opacity-90">Stock faible</p><p className="text-2xl font-bold mt-2">{faibles.length}</p></div>
-        <div className="bg-gradient-to-br from-red-500 to-red-600 p-5 rounded-xl text-white shadow"><p className="text-sm opacity-90">En rupture</p><p className="text-2xl font-bold mt-2">{ruptures.length}</p></div>
+        {/*
+          Ces quatre chiffres étaient en aplats dégradés pleine couleur — un
+          style qu'on ne trouvait nulle part ailleurs dans l'application, et
+          dont l'orange était purement décoratif, alors que l'orange de la
+          maison ne porte que ce sur quoi on agit. Ce sont des tuiles de
+          chiffres comme les autres.
+
+          Chacune prend l'icône de la carte qu'elle résume, plus bas : on
+          retrouve la liste à l'icône du chiffre qui l'annonce.
+        */}
+        <Indicateur label="Valeur du stock (coût moyen)" valeur={formaterFcfa(valeur)} couleur="bleu" icone={CubeIcon} />
+        <Indicateur label="Articles suivis" valeur={`${lignes.length}`} couleur="violet" icone={ArchiveBoxIcon} />
+        <Indicateur label="Stock faible" valeur={`${faibles.length}`} couleur="ambre" icone={ArrowTrendingDownIcon} sous="sous le minimum" />
+        <Indicateur label="En rupture" valeur={`${ruptures.length}`} couleur="rouge" icone={ExclamationTriangleIcon} sous="quantité nulle" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 print:hidden">
@@ -229,8 +252,8 @@ export default function AlertesPanel({ filialeId, filiale }: { filialeId: string
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {nature !== 'FAIBLE' && <Tableau titre="Ruptures" lignes={ruptures} vide="Aucune rupture." tone="text-red-700" />}
-        {nature !== 'RUPTURE' && <Tableau titre="Stocks faibles" lignes={faibles} vide="Aucun stock sous le minimum." tone="text-orange-700" />}
+        {nature !== 'FAIBLE' && <Tableau titre="Ruptures" lignes={ruptures} vide="Aucune rupture." icone={ExclamationTriangleIcon} />}
+        {nature !== 'RUPTURE' && <Tableau titre="Stocks faibles" lignes={faibles} vide="Aucun stock sous le minimum." icone={ArrowTrendingDownIcon} />}
       </div>
 
       <section className="space-y-4">
@@ -253,8 +276,8 @@ export default function AlertesPanel({ filialeId, filiale }: { filialeId: string
           soit <strong>{recapR.part_dormante} %</strong> de la valeur du stock · {recapR.articles_actifs} en mouvement
         </p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TableauRotation titre="Stock dormant" lignes={dormants} vide="Rien ne dort : tout a bougé sur la période." tone="text-amber-700" colonne="Dernière sortie" testid="dormant" />
-          <TableauRotation titre="Stock actif" lignes={actifs} vide="Aucune sortie sur la période." tone="text-green-700" colonne="Sorti" testid="actif" />
+          <TableauRotation titre="Stock dormant" lignes={dormants} vide="Rien ne dort : tout a bougé sur la période." icone={MoonIcon} colonne="Dernière sortie" testid="dormant" />
+          <TableauRotation titre="Stock actif" lignes={actifs} vide="Aucune sortie sur la période." icone={ArrowPathIcon} colonne="Sorti" testid="actif" />
         </div>
       </section>
 
