@@ -34,8 +34,8 @@ export default function OperationsDocument({ titre, lignes, filiale, filtres, on
     <DocumentImprimable titre={titre} filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetre}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetre}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '62mm' }}>

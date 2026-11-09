@@ -1,8 +1,14 @@
 import { createPortal } from 'react-dom';
+import {
+  CalendarDaysIcon, ClockIcon, CreditCardIcon, InformationCircleIcon, MapPinIcon, UserIcon,
+} from '@heroicons/react/24/solid';
 import { montantEnLettresFcfa } from '../../../core/commun/montantEnLettres';
+import { enteteDocument } from '../../../core/parametres';
 import { LIBELLES_MODE_PAIEMENT, type LigneFacture, type RecapFacture } from '../../../core/ventes';
 import type { ModePaiement } from '@quinca/shared-types';
+import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import CodeBarres from '../../components/print/CodeBarres';
+import { useEntrepriseDocument } from '../parametres/hooks';
 
 /** Identité du client telle qu'elle s'imprime dans le cartouche. */
 export interface ClientFacture {
@@ -16,6 +22,12 @@ export interface ClientFacture {
 
 interface Props {
   numero: string;
+  /**
+   * Numéro court de la vente (`VNT-AN8-000075`) : c'est lui qui s'imprime en
+   * tête. Absent sur les ventes d'avant la série courte, qui s'impriment avec
+   * leur numéro long, comme elles l'ont toujours fait.
+   */
+  numeroCourt?: string | null;
   date: Date;
   vendeur: string;
   client: ClientFacture | null;
@@ -38,6 +50,7 @@ const entier = (valeur: number) => Math.round(valeur).toLocaleString('fr-FR');
 /** Modes de paiement proposés en pied de facture, hors crédit (porté par COMPTANT / CRÉDIT). */
 const MODES_COCHES: ModePaiement[] = ['ESPECES', 'CHEQUE', 'MOBILE_MONEY'];
 
+/** Une case à cocher imprimée, déjà cochée quand la vente le dit. */
 function Case({ coche, libelle }: { coche: boolean; libelle: string }) {
   return (
     <span className="facture-case-groupe">
@@ -48,25 +61,65 @@ function Case({ coche, libelle }: { coche: boolean; libelle: string }) {
 }
 
 /**
+ * Un repère en tête de facture : une icône, ce que c'est, et sa valeur.
+ *
+ * Date, heure et opérateur ne se lisent pas en colonnes — on y jette un œil
+ * pour situer la pièce. Les poser en tuiles plutôt qu'en tableau les rend
+ * lisibles d'un coup, et laisse la grille aux lignes de vente.
+ */
+function Repere({ icone: Icone, nom, valeur }: { icone: typeof ClockIcon; nom: string; valeur: string }) {
+  return (
+    <div className="facture-repere">
+      <Icone className="document-icone" aria-hidden />
+      <div>
+        <p className="facture-repere-nom">{nom}</p>
+        <p className="facture-repere-valeur">{valeur}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Facture A4 d'une vente, sans portail : la feuille seule, pour qui décide où
  * la rendre — seule à l'impression, ou répétée dans une liasse.
  *
  * Les montants arrivent déjà calculés : la même mise en page sert à la vente
  * qui vient d'être encaissée et à la réédition d'une facture plus ancienne.
- * Reprend la mise en page attendue par la maison : cartouches facture / client,
- * lignes en HT, cachet, récapitulatif des montants, montant en toutes lettres
- * et conditions de règlement.
+ *
+ * C'est la seule pièce de l'application qui parte chez le client, et la seule
+ * à porter des bandeaux noirs : ce qui est noir ici est ce que le client lit
+ * en premier — qui il est, ce qu'il emporte, ce qu'il doit. Le reste de
+ * l'application imprime en gris (voir `.facture` dans `index.css`).
+ *
+ * L'en-tête et le pied viennent de **Paramètres → Entreprise**, comme pour
+ * toutes les autres pièces : logo, adresse, mentions. La facture les ignorait
+ * et portait un « Q.C.F » écrit en dur — une maison qui changeait de nom
+ * l'imprimait quand même.
  */
-export function CorpsFacture({ numero, date, vendeur, client, lignes, recap, modePaiement, filiale, mention, exemplaire }: Props) {
+export function CorpsFacture({ numero, numeroCourt, date, vendeur, client, lignes, recap, modePaiement, filiale, mention, exemplaire }: Props) {
+  const { filialeId } = useFilialeCourante();
+  const entreprise = useEntrepriseDocument(filialeId);
+  const entete = enteteDocument(entreprise, filiale, entreprise?.documents.facture);
+  const adresse = [entete.adresse, entete.ville].filter(Boolean).join(' — ');
+
   return (
     <div className="document facture">
+      {entete.filigrane && <img src={entete.filigrane} alt="" aria-hidden className="document-filigrane" />}
       <header className="facture-entete">
-        <div className="document-logo">Q.C.F</div>
-        <div className="facture-cachet">
-          <p className="facture-cachet-nom">{filiale.nom}</p>
-          {filiale.telephone && <p>{filiale.telephone}</p>}
+        {entete.logo
+          ? <img src={entete.logo} alt="" className="document-logo-image" data-testid="document-logo" />
+          : <div className="document-logo">{entete.initiales}</div>}
+        <p className="facture-filiale"><MapPinIcon className="document-icone" aria-hidden />{filiale.nom}</p>
+        <div className="facture-intitule">
+          <p className="facture-nom-piece">Facture</p>
+          {/* Le court en tête, le long dans le code-barres : l'un se dicte au
+              téléphone, l'autre se douchette et identifie la pièce. */}
+          <p className="facture-numero-piece">N° <span data-testid="facture-numero">{numeroCourt || numero}</span></p>
+          <p className="facture-moment">
+            <CalendarDaysIcon className="document-icone" aria-hidden />
+            {date.toLocaleDateString('fr-FR')} · {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </p>
         </div>
-        <div className="facture-entete-vide">{filiale.adresse}</div>
       </header>
 
       {mention && <p className="facture-mention" data-testid="facture-mention">{mention}</p>}
@@ -74,31 +127,27 @@ export function CorpsFacture({ numero, date, vendeur, client, lignes, recap, mod
 
       <div className="facture-haut">
         <div className="facture-haut-gauche">
-          <table className="facture-identite">
-            <thead>
-              <tr><th>FACTURE N°</th><th>DATE</th><th>HEURE</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td data-testid="facture-numero">{numero}</td>
-                <td>{date.toLocaleDateString('fr-FR')}</td>
-                <td>{date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</td>
-              </tr>
-            </tbody>
-          </table>
-          <table className="facture-operateur">
-            <tbody><tr><th>OP. Saisie</th><td>{vendeur || '—'}</td></tr></tbody>
-          </table>
+          <div className="facture-reperes">
+            <Repere icone={CalendarDaysIcon} nom="Date" valeur={date.toLocaleDateString('fr-FR')} />
+            <Repere icone={ClockIcon} nom="Heure" valeur={date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} />
+          </div>
+          <div className="facture-reperes">
+            <Repere icone={UserIcon} nom="Op. saisie" valeur={vendeur || '—'} />
+          </div>
         </div>
-        <CodeBarres valeur={numero} avecTexte={false} />
+        <CodeBarres valeur={numero} />
         <table className="facture-client">
-          <thead><tr><th colSpan={2}>CLIENT</th></tr></thead>
+          <thead>
+            <tr className="facture-client-titre">
+              <th>Client</th>
+              <th>{client ? client.raison_sociale : 'CLIENT DIVERS'}</th>
+            </tr>
+          </thead>
           <tbody>
-            <tr><td colSpan={2} className="facture-client-nom">{client ? client.raison_sociale : 'CLIENT DIVERS'}</td></tr>
-            <tr><th>N° RC</th><td>{client?.numero_rc ?? ''}</td></tr>
-            <tr><th>N° CC</th><td>{client?.numero_cc ?? ''}</td></tr>
-            <tr><th>Adresse</th><td>{client?.adresse ?? ''}</td></tr>
-            <tr><th>Contact</th><td>{client?.contact || client?.mobile || ''}</td></tr>
+            <tr><th>N° RC</th><td>{client?.numero_rc || '—'}</td></tr>
+            <tr><th>N° CC</th><td>{client?.numero_cc || '—'}</td></tr>
+            <tr><th>Adresse</th><td>{client?.adresse || '—'}</td></tr>
+            <tr><th>Contact</th><td>{client?.contact || client?.mobile || '—'}</td></tr>
           </tbody>
         </table>
       </div>
@@ -125,7 +174,7 @@ export function CorpsFacture({ numero, date, vendeur, client, lignes, recap, mod
 
       <div className="facture-bas">
         <div className="facture-signature">
-          <p className="facture-signature-titre">CACHET/SIGNATURE</p>
+          <p className="facture-signature-titre">Cachet / Signature</p>
           <div className="facture-signature-cadre" />
         </div>
         <table className="facture-paiement">
@@ -136,7 +185,7 @@ export function CorpsFacture({ numero, date, vendeur, client, lignes, recap, mod
           </tbody>
         </table>
         <div className="facture-totaux-bloc">
-          <p className="facture-devise">en FCFA</p>
+          <p className="facture-totaux-titre">Détails des montants <em>(en FCFA)</em></p>
           <table className="facture-totaux">
             <tbody>
               <tr><th>MONTANT BRUT HT</th><td className="num">{entier(recap.brut_ht)}</td></tr>
@@ -149,20 +198,41 @@ export function CorpsFacture({ numero, date, vendeur, client, lignes, recap, mod
         </div>
       </div>
 
-      <p className="facture-arrete">
-        <strong>Arrêté la présente facture à la somme de :</strong>
-        <br />
-        <span data-testid="facture-lettres">{montantEnLettresFcfa(recap.net_a_payer)}</span>
+      <p className="document-arrete facture-arrete">
+        <span>Arrêté la présente facture à la somme de :</span>
+        <strong data-testid="facture-lettres">{montantEnLettresFcfa(recap.net_a_payer)}</strong>
       </p>
 
       <div className="facture-reglement">
-        <em>Conditions de règlement :</em>
-        {MODES_COCHES.map((m) => <Case key={m} coche={modePaiement === m} libelle={LIBELLES_MODE_PAIEMENT[m]} />)}
-        <span className="facture-reglement-nature">
-          <Case coche={recap.comptant} libelle="COMPTANT" />
-          <Case coche={!recap.comptant} libelle="CRÉDIT" />
+        <span className="facture-reglement-intitule">
+          <CreditCardIcon className="document-icone" aria-hidden />
+          <span>Conditions<br />de règlement :</span>
+        </span>
+        <span className="facture-reglement-cases">
+          {MODES_COCHES.map((m) => <Case key={m} coche={modePaiement === m} libelle={LIBELLES_MODE_PAIEMENT[m]} />)}
+          <span className="facture-reglement-nature">
+            <Case coche={recap.comptant} libelle="COMPTANT" />
+            <Case coche={!recap.comptant} libelle="CRÉDIT" />
+          </span>
         </span>
       </div>
+
+      {(adresse || entete.mentions_legales) && (
+        <div className="document-pied">
+          {adresse && (
+            <span className="document-pied-mention">
+              <MapPinIcon className="document-icone" aria-hidden />
+              <p>{adresse}</p>
+            </span>
+          )}
+          {entete.mentions_legales && (
+            <span className="document-pied-mention" data-testid="document-mentions">
+              <InformationCircleIcon className="document-icone" aria-hidden />
+              <p>{entete.mentions_legales}</p>
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

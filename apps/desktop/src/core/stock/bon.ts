@@ -24,6 +24,8 @@ export interface MouvementDuBon {
   fournisseur_nom: string | null;
   utilisateur: string;
   created_at: string;
+  /** Numéro court du bon, quand l'application l'a numéroté elle-même. */
+  reference_courte: string | null;
 }
 
 export interface LigneBonImprime {
@@ -43,6 +45,13 @@ export interface LigneBonImprime {
 
 export interface BonStock {
   reference: string;
+  /**
+   * Numéro court et lisible du bon (`ENT-AN8-000012`), quand l'application l'a
+   * numéroté elle-même. Nul si la référence a été saisie à la main : elle est
+   * alors le numéro de la pièce. C'est le court qui s'imprime en tête, et la
+   * `reference` qui part dans le code-barres.
+   */
+  reference_courte: string | null;
   titre: string;
   date: string;
   /** Dépôt concerné ; pour un transfert, le dépôt d'origine. */
@@ -107,6 +116,7 @@ export function construireBon(reference: string, mouvements: MouvementDuBon[]): 
 
   return {
     reference,
+    reference_courte: ordonnes.find((m) => m.reference_courte)?.reference_courte ?? null,
     titre: titreBon(premier.type),
     date: premier.created_at,
     depot: premier.depot_nom,

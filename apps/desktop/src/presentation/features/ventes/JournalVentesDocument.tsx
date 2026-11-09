@@ -26,8 +26,8 @@ export default function JournalVentesDocument({ ventes, filiale, filtres, onClos
     <DocumentImprimable titre="Journal des ventes" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetreJournalVentes(filtres)}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetreJournalVentes(filtres)}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '72mm' }}>
@@ -61,7 +61,9 @@ export default function JournalVentesDocument({ ventes, filiale, filtres, onClos
           {ventes.map((v) => (
             <tr key={v.id} data-testid="ligne-journal-vente">
               <td>{formaterDateHeure(v.date_vente)}</td>
-              <td className="document-code">{v.numero}</td>
+              {/* Le numéro court est celui que porte l'exemplaire du client :
+                  c'est sur lui qu'on rapproche un ticket présenté au comptoir. */}
+              <td className="document-code">{v.numero_court ?? v.numero}</td>
               <td>{v.client_nom ?? 'Comptoir'}</td>
               <td>{v.caisse_nom ?? '—'}</td>
               <td>{[v.utilisateur_prenom, v.utilisateur_nom].filter(Boolean).join(' ') || '—'}</td>
@@ -84,9 +86,7 @@ export default function JournalVentesDocument({ ventes, filiale, filtres, onClos
 
       {ventes.length === 0 && <p>Aucune vente sur la période.</p>}
 
-      <div className="document-signature" style={{ marginTop: '10mm' }}>
-        <strong>Visa du gérant</strong>
-      </div>
+      <p className="document-visa">Visa du gérant<span /></p>
     </DocumentImprimable>
   );
 }

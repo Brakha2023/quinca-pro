@@ -82,87 +82,167 @@
   .ticket-pied { text-align: center; margin-top: 6px; }
 }
 
-/* Documents A4 (bon de commande, balance, relevé…) : aperçu à l'écran, seuls imprimés.
+/* ============================================================
+   Documents A4 : aperçu à l'écran, seuls imprimés.
 
-   `print-color-adjust` : le navigateur supprime les fonds à l'impression, par
-   économie d'encre. Ici ils portent du sens — la bande grise d'un entête de
-   colonne, le bandeau du titre, et surtout le cadre « FACTURE ANNULÉE », qui
+   L'habillage suit les pièces modèles de la maison : blocs aux coins
+   arrondis, bandeaux pleine largeur en tête de chaque tableau, filets
+   intérieurs clairs et cadre extérieur net. Deux teintes de bandeau, et
+   un seul sens à retenir :
+     — **gris** sur les pièces de travail (bons, journaux, états), qui se
+       classent et s'annotent ;
+     — **noir** sur la facture, la seule pièce qui parte chez le client.
+
+   `print-color-adjust` : le navigateur supprime les fonds à l'impression,
+   par économie d'encre. Ici ils portent du sens — le bandeau d'un entête de
+   colonne, la bande du titre, et surtout le cadre « FACTURE ANNULÉE », qui
    doit se voir de loin sur une pièce classée. Sans cette ligne, l'aperçu
    montre une feuille que l'imprimante ne rend pas. */
-.document { font: 12px/1.4 Arial, Helvetica, sans-serif; color: #000; background: #fff; max-width: 190mm; margin: 0 auto; padding: 8mm;
-  print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-.document-entete { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; }
-.document-logo { font: bold 26px Georgia, serif; border: 3px double #000; border-radius: 8px; padding: 4px 14px; }
+.document {
+  /* Le noir d'imprimerie. Un gris très sombre sort plus net qu'un noir pur,
+     qui s'empâte sur les laser de comptoir. */
+  --doc-encre: #15181b;
+  /* Filet intérieur : assez clair pour que la grille s'efface derrière les
+     chiffres, assez franc pour séparer deux lignes. */
+  --doc-filet: #c2c8cf;
+  /* Fond des bandeaux et des cartouches. */
+  --doc-fond: #ecedef;
+  --doc-rayon: 9px;
+  position: relative;
+  font: 12px/1.45 Arial, Helvetica, sans-serif; color: var(--doc-encre); background: #fff;
+  max-width: 190mm; margin: 0 auto; padding: 8mm;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.document-entete { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 2px solid var(--doc-encre); padding-bottom: 8px; }
+.document-logo { font: bold 26px Georgia, serif; border: 3px double var(--doc-encre); border-radius: 8px; padding: 4px 14px; }
 .document-societe { text-align: right; }
 /* Logo chargé dans Paramètres → Entreprise. Borné pour ne pas pousser l'en-tête. */
 .document-logo-image { max-height: 22mm; max-width: 50mm; object-fit: contain; display: block; }
 .document-societe-identifiants { font-size: 10px; }
 /* Filigrane : derrière le texte, assez pâle pour ne jamais gêner la lecture. */
-.document { position: relative; }
 .document-filigrane { position: absolute; inset: 0; margin: auto; max-width: 60%; max-height: 50%;
   object-fit: contain; opacity: .07; pointer-events: none; z-index: 0; }
 .document > *:not(.document-filigrane) { position: relative; z-index: 1; }
 /* Mentions légales, au pied de chaque pièce. */
-.document-mentions { margin-top: 10px; padding-top: 6px; border-top: 1px solid #000;
+.document-mentions { margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--doc-encre);
   font-size: 10px; white-space: pre-line; }
 .document-societe p { margin: 0; }
 .document-societe-nom { font-weight: bold; font-size: 14px; }
-.document-titre { text-align: center; font-size: 15px; font-weight: bold; text-transform: uppercase; background: #eee; border: 1px solid #000; padding: 6px; margin: 14px 0; }
-.document table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-.document th, .document td { border: 1px solid #000; padding: 3px 6px; }
-.document th { background: #eee; font-size: 11px; text-transform: uppercase; }
+.document-titre { text-align: center; font: bold 16px/1.25 Arial, Helvetica, sans-serif; text-transform: uppercase; letter-spacing: .6px;
+  background: var(--doc-fond); border: 1px solid var(--doc-encre); border-radius: var(--doc-rayon); padding: 7px; margin: 14px 0; }
+
+/* Le numéro de la pièce, juste sous son titre. Encadré et détaché, il se
+   retrouve d'un coup d'œil dans un classeur où toutes les feuilles se
+   ressemblent — c'est par lui qu'on rapproche un bon d'une facture. */
+.document .document-reference { display: table; margin: -6px auto 10px; padding: 4px 18px;
+  border: 1.5px solid var(--doc-encre); border-radius: 999px; font: bold 13px Arial, Helvetica, sans-serif; }
+
+/* Les tableaux d'une pièce : cadre net, coins arrondis, filets intérieurs
+   clairs. `separate` n'est pas un détail de goût — en `collapse`, le
+   navigateur fusionne les bordures voisines et ignore le rayon des coins.
+   Chaque cellule ne porte donc que son filet droit et son filet bas, et le
+   cadre vient du tableau lui-même. */
+.document table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 8px 0;
+  border: 1px solid var(--doc-encre); border-radius: var(--doc-rayon); }
+.document th, .document td { border: 0; border-right: 1px solid var(--doc-filet); border-bottom: 1px solid var(--doc-filet); padding: 4px 7px; }
+.document tr > *:last-child { border-right: 0; }
+/* Dernière ligne du dernier groupe (le `tfoot` s'il existe, sinon le `tbody`). */
+.document table > *:last-child > tr:last-child > * { border-bottom: 0; }
+.document th { background: var(--doc-fond); font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
+/* Les quatre coins s'arrondissent cellule par cellule : un tableau ne se
+   rogne pas avec `overflow`, qui casserait les sauts de page. */
+.document table > *:first-child > tr:first-child > *:first-child { border-top-left-radius: 8px; }
+.document table > *:first-child > tr:first-child > *:last-child { border-top-right-radius: 8px; }
+.document table > *:last-child > tr:last-child > *:first-child { border-bottom-left-radius: 8px; }
+.document table > *:last-child > tr:last-child > *:last-child { border-bottom-right-radius: 8px; }
 .document .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.document .document-bloc { border: 1px solid #000; padding: 6px; }
+.document .document-bloc { border: 1px solid var(--doc-encre); border-radius: var(--doc-rayon); padding: 6px 8px; }
+/* Un cartouche porte son intitulé sur un bandeau, comme un tableau porte le
+   sien : d'un coup d'œil, on voit ce que le bloc contient avant de le lire. */
+.document .document-bloc-titre { display: block; margin: -6px -8px 6px; padding: 4px 8px;
+  background: var(--doc-fond); border-bottom: 1px solid var(--doc-encre);
+  border-radius: 8px 8px 0 0; font-weight: bold; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
 .document .document-cartouches { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; margin: 8px 0; }
+/* Les champs d'identification d'un cartouche. Deux colonnes qui s'alignent
+   se parcourent du regard ; la même chose écrite au fil du texte oblige à
+   tout lire pour trouver la date. */
+.document .document-champs { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; }
+.document .document-champs dt { font-weight: bold; white-space: nowrap; }
+/* Le deux-points est posé par la feuille de style, pas écrit dans le texte :
+   il sépare à l'œil sans entrer dans ce que la pièce dit. */
+.document .document-champs dt::after { content: ' :'; }
+.document .document-champs dd { margin: 0; }
 .document .document-totaux { margin-left: auto; width: 60mm; }
 .document .document-totaux td:last-child { font-weight: bold; }
 .document .document-signature { width: 70mm; height: 30mm; }
+/* Une icône accompagne toujours un mot, jamais seule : une imprimante qui
+   la rendrait mal ne doit faire perdre aucune information. */
+.document .document-icone { width: 13px; height: 13px; flex: none; vertical-align: -2px; }
 /* Facture d'achat : conditions de règlement à cocher à la main, comme sur le formulaire. */
 .document .document-cases { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; }
 .document .document-case { display: inline-flex; align-items: center; gap: 5px; }
-.document .document-case i { display: inline-block; width: 12px; height: 12px; border: 1px solid #000; font-style: normal; line-height: 11px; text-align: center; font-weight: bold; }
-.document .document-arrete { margin: 8px 0 0; font-size: 11px; }
+.document .document-case i { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--doc-encre); border-radius: 3px; font-style: normal; line-height: 11px; text-align: center; font-weight: bold; }
+/* Le montant en toutes lettres : la ligne qui fait foi quand les chiffres
+   sont contestés. Posée sur un fond, elle ne se perd pas dans le corps. */
+.document .document-arrete { margin: 8px 0 0; padding: 6px 9px; font-size: 11px;
+  background: var(--doc-fond); border-radius: var(--doc-rayon); }
+.document .document-arrete > * { display: block; }
+.document .document-arrete strong { font-weight: bold; font-size: 12px; }
 
 /* Bon de transfert entre filiales : deux cachets côte à côte, comme sur le papier. */
 .document .document-cachets { display: flex; gap: 12px; margin-top: 8px; }
-.document .document-cachet { flex: 1; border: 1px solid #000; min-height: 28mm; }
-.document .document-cachet-titre { background: #eee; border-bottom: 1px solid #000; padding: 3px 6px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+.document .document-cachet { flex: 1; border: 1px solid var(--doc-encre); border-radius: var(--doc-rayon); min-height: 28mm; }
+.document .document-cachet-titre { background: var(--doc-fond); border-bottom: 1px solid var(--doc-encre); padding: 4px 8px;
+  border-radius: 8px 8px 0 0; font-weight: bold; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; }
 /* Bordereau de fonds : la ligne qui dit qui signe, sous le titre du cachet. */
-.document .document-cachet-pied { margin: 3px 6px 0; font-size: 9px; font-style: italic; }
+.document .document-cachet-pied { margin: 3px 8px 0; font-size: 9px; font-style: italic; }
 /* Pièce annulée : elle reste imprimable pour le classement, mais se voit de loin. */
-.document .document-annule { border: 2px solid #000; background: #eee; padding: 5px 8px; margin: 8px 0 0;
+.document .document-annule { border: 2px solid var(--doc-encre); border-radius: var(--doc-rayon); background: var(--doc-fond); padding: 5px 8px; margin: 8px 0 0;
   font-weight: bold; font-size: 12px; text-align: center; text-transform: uppercase; letter-spacing: .5px; }
-.document .document-operateur { display: inline-flex; margin-top: 8px; border: 1px solid #000; font-size: 11px; }
-.document .document-operateur strong { background: #eee; border-right: 1px solid #000; padding: 3px 8px; }
+.document .document-operateur { display: inline-flex; margin-top: 8px; border: 1px solid var(--doc-encre); border-radius: 7px; overflow: hidden; font-size: 11px; }
+.document .document-operateur strong { background: var(--doc-fond); border-right: 1px solid var(--doc-encre); padding: 3px 9px; }
 .document .document-operateur span { padding: 3px 12px; }
+/* Pied d'une pièce remise en main propre : où l'on se présente, et ce qu'on
+   demande à celui qui garde le papier. Un double trait le détache du corps,
+   pour qu'il se lise comme une mention et non comme une ligne de plus. */
+.document .document-pied { display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  margin-top: 12px; padding-top: 8px; border-top: 2px solid var(--doc-encre); font-size: 10.5px; }
+.document .document-pied-mention { display: flex; align-items: flex-start; gap: 7px; }
+.document .document-pied-mention p { margin: 0; }
 
 /* Reçu de caisse (versement, retrait, entrée) : cartouches encadrés, montant en évidence. */
 .document .recu-corps { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; }
 .document .recu-tiers { flex: 1; }
-.document .recu-tiers-titre { text-align: center; font-weight: bold; border-bottom: 1px dotted #000; margin-bottom: 6px; }
+.document .recu-tiers-titre { text-align: center; font-weight: bold; border-bottom: 1px dotted var(--doc-encre); margin-bottom: 6px; }
 .document .recu-ligne { display: flex; gap: 6px; margin: 4px 0; }
 .document .recu-ligne dt { min-width: 42mm; }
 .document .recu-ligne dd { margin: 0; font-weight: bold; flex: 1; border-bottom: 1px dotted #999; }
 .document .recu-chiffres { width: 78mm; }
 .document .recu-devise { text-align: right; font-style: italic; font-size: 10px; margin: 2px 0; }
-.document .recu-montant { border: 2px solid #000; padding: 5px 8px; text-align: right; font: bold 17px/1.2 Arial, sans-serif; font-variant-numeric: tabular-nums; }
+.document .recu-montant { border: 2px solid var(--doc-encre); border-radius: var(--doc-rayon); padding: 6px 9px; text-align: right; font: bold 17px/1.2 Arial, sans-serif; font-variant-numeric: tabular-nums; }
 .document .recu-lettres { font-style: italic; font-size: 11px; margin: 4px 0 0; }
-.document .recu-encadre { border: 1px solid #000; min-height: 12mm; padding: 5px; margin-top: 4px; }
-.document .recu-encadre-titre { background: #eee; border: 1px solid #000; display: inline-block; padding: 2px 16px; font-weight: bold; font-size: 11px; }
+.document .recu-encadre { border: 1px solid var(--doc-encre); border-radius: var(--doc-rayon); min-height: 12mm; padding: 6px; margin-top: 4px; }
+.document .recu-encadre-titre { background: var(--doc-fond); border: 1px solid var(--doc-encre); border-radius: 6px; display: inline-block; padding: 2px 16px; font-weight: bold; font-size: 11px; }
 .document .recu-pied { display: flex; gap: 12px; align-items: flex-end; justify-content: space-between; margin-top: 10px; }
-.document .recu-signatures { display: flex; justify-content: space-between; border-top: 1px solid #000; padding-top: 6px; margin-top: 10px; font-weight: bold; font-size: 11px; }
-.document .recu-decoupe { border-top: 1px dashed #000; margin-top: 14px; padding-top: 4px; font-size: 10px; color: #444; }
+/* Deux signatures au pied d'une pièce : qui signe, puis le trait où il
+   signe. Le filet était posé *au-dessus* des deux noms — il séparait le bas
+   de page du corps au lieu d'offrir une ligne, et il ne restait aucune place
+   pour écrire. */
+.document .recu-signatures { display: flex; justify-content: space-between; gap: 20px; margin-top: 10px; font-weight: bold; font-size: 11px; }
+.document .recu-signatures > * { flex: 1; max-width: 62mm; text-align: center; }
+.document .recu-signatures > *::after { content: ''; display: block; margin-top: 13mm; border-top: 1px solid var(--doc-encre); }
+.document .recu-decoupe { border-top: 1px dashed var(--doc-encre); margin-top: 14px; padding-top: 4px; font-size: 10px; color: #444; }
 /* Longues listes (catalogue, journaux) : plus compact, et le tableau se
    poursuit de page en page avec ses entêtes au lieu de s'arrêter au bas. */
 .document .document-liste { font-size: 10px; }
-.document .document-liste th, .document .document-liste td { padding: 2px 4px; }
+.document .document-liste th, .document .document-liste td { padding: 3px 5px; }
 .document .document-liste .document-code { font-family: 'Courier New', monospace; white-space: nowrap; }
 .document .document-liste thead { display: table-header-group; }
 .document .document-liste tr { break-inside: avoid; page-break-inside: avoid; }
 /* Répété au bas de chaque page par le moteur d'impression : sans lui, les
    pages suivantes ne portent aucune identification. */
 .document .document-liste tfoot { display: table-footer-group; }
-.document .document-liste .document-liste-pied { border: 0; border-top: 1px solid #000; padding-top: 3px; font-size: 9px; text-align: center; }
+.document .document-liste .document-liste-pied { border: 0; border-top: 1px solid var(--doc-encre); padding-top: 3px; font-size: 9px; text-align: center; }
 /* Les marges d'une feuille A4.
 
    La règle `@page` globale vaut 4 mm, parce qu'elle gouverne aussi le ticket
@@ -181,53 +261,95 @@
 .document.document-paysage { max-width: 277mm; page: paysage; }
 @page paysage { size: A4 landscape; margin: 10mm; }
 /* Intertitre, quand une feuille porte deux listes (stock dormant, stock actif). */
-.document .document-section { font-size: 12px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #000; margin: 10px 0 4px; padding-bottom: 2px; }
+.document .document-section { font-size: 12px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid var(--doc-encre); margin: 10px 0 4px; padding-bottom: 2px; }
+/* Le visa au bas d'un journal : qui signe, et le trait où il signe. Sans le
+   trait, la signature se pose n'importe où et la feuille suivante ne se
+   classe plus de la même façon. */
+.document .document-visa { width: 62mm; margin-left: auto; margin-top: 8mm; text-align: center; font-weight: bold; font-size: 11px; }
+.document .document-visa span { display: block; margin-top: 14mm; border-top: 1px solid var(--doc-encre); }
 /* Ce que la liste compte au juste, en bas de feuille et en petits caractères. */
 .document .document-note { font-size: 9px; font-style: italic; margin-top: 6px; }
 
 .document .code-barres { display: block; width: 58mm; height: 14mm; }
-.document .code-barres-texte { text-align: center; font: 10px/1.2 'Courier New', monospace; letter-spacing: 2px; }
+/* Le numéro sous les barres tient sur une ligne. Coupé en deux, il ne se
+   recopie plus au téléphone — et c'est tout ce qu'il sert à faire quand la
+   douchette ne lit pas. */
+.document .code-barres-texte { text-align: center; font: 9px/1.2 'Courier New', monospace; letter-spacing: .8px; white-space: nowrap; margin: 1px 0 0; }
 
-/* Facture A4 d'une vente : mise en page attendue par la maison (cartouches, lignes HT, cachet, règlement). */
-.facture { font-size: 11px; }
-.facture .facture-entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; padding-bottom: 10px; }
-.facture .facture-entete-vide { flex: 1; text-align: right; font-size: 10px; }
-.facture .document-logo { flex: 1; font-size: 22px; text-align: center; border: 0; }
-.facture .facture-cachet { border: 2px solid #000; border-radius: 10px; padding: 4px 18px; text-align: center; }
-.facture .facture-cachet p { margin: 0; }
-.facture .facture-cachet-nom { font: bold 20px Georgia, serif; letter-spacing: 1px; }
-.facture .facture-mention { border: 2px solid #000; text-align: center; font: bold 13px Arial, sans-serif; letter-spacing: 2px; padding: 4px; margin: 4px 0 0; }
-.facture .facture-haut { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin: 6px 0; }
-.facture .facture-haut-gauche { width: 76mm; }
-.facture .facture-identite { margin: 0; }
-.facture .facture-identite th, .facture .facture-identite td { white-space: nowrap; font-size: 10px; }
-.facture .facture-identite td { font-weight: bold; text-align: center; }
-.facture .facture-operateur { margin: 4px 0 0; width: 62mm; }
-.facture .facture-operateur th { width: 22mm; }
-.facture .facture-client { width: 72mm; margin: 0; }
-.facture .facture-client th { width: 18mm; text-align: left; }
-.facture .facture-client-nom { text-align: center; font-weight: bold; }
+/* ------------------------------------------------------------
+   Facture A4 d'une vente.
+
+   C'est la seule pièce qui quitte la maison, et la seule à porter les
+   bandeaux noirs : ce qui est noir sur une facture est ce qu'on lit en
+   premier — le client, les colonnes, le net à payer. Le reste de
+   l'application imprime en gris. */
+.facture { font-size: 11px; border: 2.5px solid var(--doc-encre); border-radius: 14px; }
+.facture table { border-color: var(--doc-encre); }
+/* Les bandeaux de la facture : fond encre, texte blanc. */
+.facture th { background: var(--doc-encre); color: #fff; }
+.facture .facture-entete { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 0; padding-bottom: 10px; }
+.facture .document-logo { font-size: 24px; border: 0; padding: 0; letter-spacing: 1px; }
+/* La filiale, en pastille : sur une pièce qui circule, c'est elle qu'on
+   cherche d'abord quand la maison a plusieurs magasins. */
+.facture .facture-filiale { display: inline-flex; align-items: center; gap: 7px; margin: 0;
+  background: var(--doc-encre); color: #fff; border-radius: 999px; padding: 6px 16px; font: bold 13px Arial, sans-serif; }
+.facture .facture-intitule { text-align: right; }
+.facture .facture-intitule p { margin: 0; }
+.facture .facture-nom-piece { font: bold 24px/1.1 Arial, Helvetica, sans-serif; letter-spacing: .5px; }
+.facture .facture-numero-piece { font: bold 15px/1.3 Arial, Helvetica, sans-serif; }
+.facture .facture-moment { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 11px; }
+.facture .facture-mention { border: 2px solid var(--doc-encre); border-radius: var(--doc-rayon); text-align: center; font: bold 13px Arial, sans-serif; letter-spacing: 2px; padding: 5px; margin: 4px 0 0; }
+.facture .facture-haut { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin: 8px 0; }
+.facture .facture-haut-gauche { width: 78mm; display: flex; flex-direction: column; gap: 6px; }
+/* Date, heure, opérateur : trois repères, posés en tuiles plutôt qu'en
+   tableau. Ils ne se lisent pas en colonnes — on y jette un œil. */
+.facture .facture-reperes { display: flex; gap: 6px; }
+.facture .facture-repere { flex: 1; display: flex; align-items: center; gap: 8px;
+  background: var(--doc-fond); border-radius: var(--doc-rayon); padding: 6px 9px; }
+.facture .facture-repere p { margin: 0; }
+.facture .facture-repere-nom { font-size: 9.5px; text-transform: uppercase; letter-spacing: .4px; }
+.facture .facture-repere-valeur { font: bold 13px Arial, sans-serif; }
+.facture .facture-client { width: 74mm; margin: 0; }
+.facture .facture-client th:first-child { width: 20mm; }
+/* Les intitulés de la colonne de gauche restent des `th` : sur fond clair,
+   pour ne pas noircir tout un cartouche de quatre lignes. */
+.facture .facture-client tbody th { background: var(--doc-fond); color: var(--doc-encre); text-align: left; }
+.facture .facture-client-titre th:last-child { text-align: right; }
 .facture .facture-lignes { margin: 8px 0; }
 .facture .facture-lignes th { white-space: nowrap; }
 .facture .facture-lignes th:nth-child(2) { width: 32%; }
 .facture .facture-lignes th:first-child { width: 14%; }
-.facture .code-barres { width: 42mm; height: 12mm; margin-top: 2px; }
+.facture .code-barres { width: 46mm; height: 13mm; margin-top: 2px; }
 .facture .facture-bas { display: flex; align-items: flex-start; gap: 8px; margin-top: 6px; }
-.facture .facture-signature { flex: 1; }
-.facture .facture-signature-titre { border: 1px solid #000; background: #eee; text-align: center; font-weight: bold; margin: 0; padding: 3px; }
-.facture .facture-signature-cadre { border: 1px solid #000; border-top: 0; height: 28mm; }
-.facture .facture-paiement, .facture .facture-totaux { margin: 0; width: 60mm; table-layout: fixed; }
-.facture .facture-paiement th, .facture .facture-totaux th { text-align: left; background: #fff; text-transform: none; font-size: 10px; white-space: nowrap; }
-.facture .facture-totaux-bloc { width: 60mm; }
-.facture .facture-devise { text-align: center; font: italic bold 11px Arial, sans-serif; margin: 0 0 1px; }
-.facture .facture-net th, .facture .facture-net td { font-weight: bold; }
+.facture .facture-signature { flex: 1; border: 1px solid var(--doc-encre); border-radius: var(--doc-rayon); }
+.facture .facture-signature-titre { background: var(--doc-encre); color: #fff; border-radius: 8px 8px 0 0; text-align: center;
+  font-weight: bold; font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; margin: 0; padding: 4px; }
+/* Le trait pointillé dit où signer sans imposer un cadre de plus. */
+.facture .facture-signature-cadre { height: 26mm; margin: 5px; border: 1px dashed #9aa2ab; border-radius: 6px; }
+.facture .facture-paiement, .facture .facture-totaux { margin: 0; width: 58mm; table-layout: fixed; }
+.facture .facture-paiement th, .facture .facture-totaux th { text-align: left; background: var(--doc-fond); color: var(--doc-encre); text-transform: none; font-size: 10.5px; white-space: nowrap; }
+.facture .facture-totaux-bloc { width: 58mm; }
+/* Le titre du bloc de totaux dit sa devise une fois pour toutes les lignes. */
+.facture .facture-totaux-titre { background: var(--doc-encre); color: #fff; border-radius: 8px 8px 0 0;
+  margin: 0; padding: 4px 8px; font: bold 10.5px Arial, sans-serif; text-transform: uppercase; letter-spacing: .3px; }
+.facture .facture-totaux-titre em { font-style: italic; font-weight: normal; text-transform: none; letter-spacing: 0; }
+.facture .facture-totaux { border-top-left-radius: 0; border-top-right-radius: 0; margin-top: -1px; }
+.facture .facture-totaux > *:first-child > tr:first-child > * { border-radius: 0; }
+.facture .facture-net th, .facture .facture-net td { background: var(--doc-encre); color: #fff; font-weight: bold; }
+.facture .facture-net td { font-size: 15px; }
 .facture .facture-arrete { margin: 10px 0 0; }
-.facture .facture-reglement { display: flex; align-items: flex-end; gap: 14px; margin-top: 10px; }
-.facture .facture-reglement em { margin-right: 6px; }
-.facture .facture-case-groupe { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
-.facture .facture-case { width: 14px; height: 14px; border: 1px solid #000; font: bold 12px/12px Arial, sans-serif; text-align: center; }
-.facture .facture-reglement-nature { display: inline-flex; gap: 12px; margin-left: 18px; }
-.facture .facture-reglement-nature .facture-case-groupe { flex-direction: row; align-items: center; gap: 4px; }
+.facture .facture-reglement { display: flex; align-items: stretch; gap: 10px; margin-top: 10px; }
+/* L'intitulé en pavé noir : on coche à la main, et il faut voir tout de
+   suite où. */
+.facture .facture-reglement-intitule { display: flex; align-items: center; gap: 8px;
+  background: var(--doc-encre); color: #fff; border-radius: var(--doc-rayon); padding: 7px 12px; font: bold 11px Arial, sans-serif; }
+.facture .facture-reglement-intitule span { display: block; }
+.facture .facture-reglement-cases { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  border: 1px solid var(--doc-encre); border-radius: var(--doc-rayon); padding: 6px 14px; }
+.facture .facture-case-groupe { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; }
+.facture .facture-case { width: 15px; height: 15px; border: 1.5px solid var(--doc-encre); border-radius: 3px; font: bold 12px/13px Arial, sans-serif; text-align: center; }
+.facture .facture-reglement-nature { display: inline-flex; gap: 14px; }
+.facture .facture-reglement-nature .facture-case-groupe { flex-direction: row; align-items: center; gap: 6px; font-weight: bold; }
 /* À qui revient l'exemplaire, quand la facture sort en plusieurs copies. */
 .facture .facture-exemplaire { text-align: right; font: italic bold 11px Arial, sans-serif; margin: 3px 0 0; }
 

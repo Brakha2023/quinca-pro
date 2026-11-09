@@ -61,7 +61,7 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
   const [mode, setMode] = useState<ModePaiement>('ESPECES');
   const [montantPercu, setMontantPercu] = useState<number>(totaux.total_ttc);
   const [enCours, setEnCours] = useState(false);
-  const [terminee, setTerminee] = useState<{ preparee: VentePreparee; lignes: LignePanier[]; client: Client | null; avoir: number; date: Date; numeroLivraison: string | null } | null>(null);
+  const [terminee, setTerminee] = useState<{ preparee: VentePreparee; lignes: LignePanier[]; client: Client | null; avoir: number; date: Date; numeroLivraison: string | null; numeroCourt: string; numeroCourtLivraison: string | null } | null>(null);
   /**
    * Ce que le caissier a choisi d'envoyer à l'imprimante. Proposé d'office
    * selon le réglage du poste et la livraison demandée (voir `sortieParDefaut`),
@@ -91,11 +91,11 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
   const encaisser = async (forcerStock = false) => {
     setEnCours(true);
     try {
-      const { preparee, numeroLivraison } = await repository.enregistrer(
+      const { preparee, numeroLivraison, numeroCourt, numeroCourtLivraison } = await repository.enregistrer(
         { ...ctx, autoriserStockNegatif: forcerStock, proformaId: proforma?.id ?? null },
         { lignes, remise, client, paiement: { mode_paiement: mode, montant_percu: montantPercu }, livraison, notes: '' },
       );
-      setTerminee({ preparee, lignes, client, avoir: avoirClient(client), date: new Date(), numeroLivraison });
+      setTerminee({ preparee, lignes, client, avoir: avoirClient(client), date: new Date(), numeroLivraison, numeroCourt, numeroCourtLivraison });
       viderPanier();
       notifier('succes', `Vente ${preparee.numero} enregistrée${proforma ? ` (proforma ${proforma.numero} facturée)` : ''}.`);
     } catch (error) {
@@ -186,6 +186,8 @@ export default function PaiementModal({ ctx, depot, format, livraison, peutForce
             depot={depot}
             livraison={livraison}
             numeroLivraison={terminee.numeroLivraison}
+            numeroCourt={terminee.numeroCourt}
+            numeroCourtLivraison={terminee.numeroCourtLivraison}
             filiale={infosFiliale}
           />
         )}

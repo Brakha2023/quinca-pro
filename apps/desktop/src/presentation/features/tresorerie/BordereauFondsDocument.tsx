@@ -33,12 +33,12 @@ export default function BordereauFondsDocument({ bordereau, filiale, onClose }: 
           <div style={{ marginTop: 4 }}><CodeBarres valeur={bordereau.numero} /></div>
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Expéditeur</strong>
-          <br />{bordereau.filiale_source}
+          <strong className="document-bloc-titre">Expéditeur</strong>
+          {bordereau.filiale_source}
           <br />Caisse de départ : {bordereau.caisse_source}
           <br />
-          <strong>Destinataire</strong>
-          <br />{bordereau.filiale_destination}
+          <strong className="document-bloc-titre">Destinataire</strong>
+          {bordereau.filiale_destination}
           <br />Caisse d'arrivée : {bordereau.caisse_destination ?? 'désignée à la réception'}
         </div>
       </div>

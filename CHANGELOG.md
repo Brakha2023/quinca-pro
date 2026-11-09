@@ -54,8 +54,84 @@ teintées que le tableau de bord.
 - `Indicateur` quitte `features/pilotage/` pour `components/ui/` : cinq modules s'en servent, ce
   n'est plus une pièce du tableau de bord.
 
+### Ajouté
+
+- **Un numéro court sur les pièces.** Le numéro d'une vente était
+  `C01-6WR-20261020-RMTPJS` : vingt-six caractères tirés au hasard, que
+  personne ne dicte au téléphone et que personne ne recopie sur un cahier. Les
+  pièces portent désormais **deux numéros** :
+
+      VNT-AN8-000075        ← imprimé en tête, c'est celui qu'on lit
+      C01-6WR-20261020-…    ← dans le code-barres, c'est l'identité de la pièce
+
+  Le court s'imprime en tête de la facture, du bon de livraison et des bons de
+  stock, s'affiche dans la liste des ventes, et **se cherche** : la recherche
+  des ventes et celle des bons acceptent l'un ou l'autre numéro.
+
+  Le compteur est **propre à la machine**, et c'est le code du poste
+  (`AN8`) qui le rend unique. Un compteur commun à la filiale — `VNT-000075`
+  tout court — ne peut pas être attribué hors ligne : deux caisses qui vendent
+  au même moment, sans réseau, tireraient toutes les deux le 76. Le compteur
+  est rangé **avec le code du poste, dans une seule entrée** du stockage
+  local, pour qu'un effacement ne laisse jamais une machine recompter sous un
+  code qu'elle a déjà utilisé.
+
+  Un bon dont la référence est **saisie à la main** — le numéro du bon de
+  livraison du fournisseur — ne reçoit pas de numéro court : cette référence
+  *est* le numéro de la pièce, lui en adjoindre un second en imprimerait deux.
+
+  Les pièces déjà enregistrées n'en ont pas et s'impriment avec leur numéro
+  long, comme avant.
+
+### Base de données
+
+À appliquer **avant** de déployer les postes : `20261107000000_numero_court_pieces.sql`
+(colonnes `ventes.numero_court`, `livraisons.numero_court`,
+`mouvements_stock.reference_courte`, plus deux index de recherche). Tant que la
+migration n'est pas passée, le poste signalera le serveur comme non conforme au
+démarrage, et toute vente créée partira en échec d'envoi — le serveur refusant
+une colonne qu'il ne connaît pas.
+
+### Modifié — ce qui sort de l'imprimante
+
+Les pièces papier suivent maintenant les **modèles de la maison** : blocs aux coins arrondis,
+bandeau en tête de chaque tableau et de chaque cartouche, filets intérieurs clairs, cadre
+extérieur net. Un seul sens à retenir pour les bandeaux : **gris** sur les pièces de travail
+qu'on classe et qu'on annote, **noir** sur la facture, la seule qui parte chez le client. Les
+vingt-sept documents de l'application partagent cette feuille de style : ils changent tous.
+
+- **La facture A4 est redessinée.** Elle porte son nom et son numéro en gros, la filiale en
+  pastille, la date et l'heure en repères, le cartouche client à bandeau noir, le bloc *Détails
+  des montants* avec le **net à payer en blanc sur noir**, le montant en toutes lettres sur fond
+  clair, les conditions de règlement dans leur cadre, et un pied de page qui rappelle où l'on se
+  présente.
+- **La facture prend enfin l'en-tête de la maison.** Elle ignorait Paramètres → Entreprise et
+  imprimait un « Q.C.F » écrit en dur : une maison qui changeait de nom l'imprimait quand même.
+  Elle affiche désormais le logo chargé, le filigrane réglé pour sa nature, et les mentions
+  légales en pied, comme les vingt-six autres pièces.
+- **Le numéro de la pièce est encadré sous son titre** sur les bons : c'est par lui qu'on
+  rapproche un bon d'une facture dans un classeur.
+- **Le bon de livraison porte un code-barres** et **trois cadres de signature** au lieu de deux :
+  le magasinier qui charge, le gestionnaire de stock qui vise la sortie, le client qui reçoit.
+  C'est le visa du milieu qui permet de savoir, devant une contestation, si la marchandise est
+  sortie du dépôt ou n'y est jamais passée.
+- **Le bon de stock numérote ses lignes** — devant un écart on se dit « ligne 3 », pas « la ligne
+  du ciment » —, écrit son total **en toutes lettres** quand il est valorisé, et offre deux cadres
+  de signature au lieu de deux intitulés posés sur un trait.
+- **Les cartouches portent leur intitulé sur un bandeau** (Périmètre, Période, Dépôt, Tarifs,
+  Expéditeur…) : on voit ce que le bloc contient avant de le lire. Les blocs qui commencent par un
+  chiffre — « 7 vente(s) · 103 825 F TTC » — n'en prennent pas : le chiffre est déjà le titre.
+- **Le journal des ventes a son trait de visa** : « Visa du gérant » était posé seul, sans ligne
+  où signer.
+
 ### Corrigé
 
+- **Les signatures de bas de page n'avaient pas de ligne où se poser.** Le filet était tracé
+  *au-dessus* des deux intitulés (« Le caissier », « Le gérant ») : il séparait le pied du corps
+  au lieu d'offrir une ligne, et il ne restait aucune place pour écrire. Sept pièces étaient
+  concernées, dont le reçu de versement et l'état des caisses.
+- **Le numéro sous le code-barres se coupait en deux lignes** sur la facture : recopié au
+  téléphone quand la douchette ne lit pas, c'est pourtant sa seule raison d'être.
 - **Le journal de caisse laissait sa colonne « Solde » hors de l'écran.** La carte rognait ce qui
   dépassait et le tableau n'avait pas de défilement horizontal : en dessous de 1500 px de large, le
   solde courant après chaque opération — ce pour quoi on ouvre un journal — était inatteignable.
@@ -77,6 +153,14 @@ teintées que le tableau de bord.
 
 ### Tests
 
+- **Le numéro court est éprouvé de bout en bout** : format et série par nature
+  (`numerotation.test.ts`, `identitePoste.test.ts`), reprise d'un poste d'avant
+  la série courte, compteur mémorisé aussitôt, recherche d'un bon par l'un ou
+  l'autre numéro (`bonsStockQuery.test.ts`), et à l'écran la facture, le bon de
+  livraison et le bon d'entrée (`pos.e2e.cjs`, `stock.e2e.cjs`).
+- **`stock.e2e.cjs` lisait « Origine : Principal » dans le bon de transfert.** Le cartouche aligne
+  désormais intitulés et valeurs en deux colonnes, et le deux-points vient de la feuille de style :
+  l'assertion vérifie les deux mots, non le séparateur qui les joignait.
 - **`verrou.e2e.cjs` lisait le nom de la filiale sans l'avoir attendu.** L'écran verrouillé le
   reçoit d'une requête vivante distincte, qui arrive après « Poste verrouillé » et après le
   dernier utilisateur : l'assertion passait presque toujours et échouait de loin en loin — une

@@ -27,13 +27,13 @@ export default function UtilisateursDocument({ utilisateurs, filiale, filtres, n
     <DocumentImprimable titre="Comptes et rôles" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetreUtilisateurs(filtres, nomRole)}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetreUtilisateurs(filtres, nomRole)}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '62mm' }}>
-          <strong>Comptes retenus</strong>
-          <br />{recap.nombre} compte(s) · {recap.actifs} actif(s)
+          <strong className="document-bloc-titre">Comptes retenus</strong>
+          {recap.nombre} compte(s) · {recap.actifs} actif(s)
           {recap.sans_role > 0 && <><br />{recap.sans_role} sans rôle</>}
           {recap.mot_de_passe_par_defaut > 0 && <><br />{recap.mot_de_passe_par_defaut} mot(s) de passe à changer</>}
         </div>

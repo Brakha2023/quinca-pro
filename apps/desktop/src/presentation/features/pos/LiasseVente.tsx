@@ -21,6 +21,10 @@ interface Props {
   depot: string;
   livraison: LivraisonDemande | null;
   numeroLivraison: string | null;
+  /** Numéro court de la vente (`VNT-AN8-000075`), imprimé en tête de la facture. */
+  numeroCourt: string | null;
+  /** Numéro court du bon de livraison, quand une livraison a été créée. */
+  numeroCourtLivraison: string | null;
   filiale: { nom: string; adresse?: string | null; telephone?: string | null };
 }
 
@@ -34,10 +38,11 @@ interface Props {
  * lequel reste à la maison. Ce qui sort est décidé par `feuillesAImprimer`.
  */
 export default function LiasseVente({
-  sortie, preparee, lignes, client, avoir, date, vendeur, depot, livraison, numeroLivraison, filiale,
+  sortie, preparee, lignes, client, avoir, date, vendeur, depot, livraison, numeroLivraison, numeroCourt, numeroCourtLivraison, filiale,
 }: Props) {
   const facture = {
     numero: preparee.numero,
+    numeroCourt,
     date,
     vendeur,
     client,
@@ -57,6 +62,7 @@ export default function LiasseVente({
             <BonLivraisonVente
               numeroVente={preparee.numero}
               numero={numeroLivraison}
+              numeroCourt={numeroCourtLivraison ?? numeroCourt}
               date={date}
               vendeur={vendeur}
               client={client}

@@ -32,8 +32,8 @@ export default function RotationStockDocument({ dormants, actifs, filiale, filtr
     <DocumentImprimable titre="Stock dormant et stock actif" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetreRotation(filtres)}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetreRotation(filtres)}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '72mm' }}>

@@ -189,6 +189,11 @@ export const TABLES = {
     quantite_apres: 'real',
     cout_unitaire: 'real',
     reference: 'text',
+    /**
+     * Numéro court du **bon** auquel la ligne appartient : toutes les lignes
+     * d'un même bon le portent, comme `reference`. Voir `ventes.numero_court`.
+     */
+    reference_courte: 'text',
     motif: 'text',
     utilisateur_id: 'text',
     created_at: 'text',
@@ -313,6 +318,12 @@ export const TABLES = {
   },
   ventes: {
     numero: 'text',
+    /**
+     * Numéro court, lisible et séquentiel sur le poste qui a créé la pièce
+     * (`VNT-AN8-000075`). C'est celui qui s'imprime en tête ; `numero` reste
+     * l'identité de la pièce et ce que porte le code-barres.
+     */
+    numero_court: 'text',
     date_vente: 'text',
     client_id: 'text',
     utilisateur_id: 'text',
@@ -382,6 +393,12 @@ export const TABLES = {
   },
   livraisons: {
     numero: 'text',
+    /**
+     * Numéro court, lisible et séquentiel sur le poste qui a créé la pièce
+     * (`VNT-AN8-000075`). C'est celui qui s'imprime en tête ; `numero` reste
+     * l'identité de la pièce et ce que porte le code-barres.
+     */
+    numero_court: 'text',
     vente_id: 'text',
     client_id: 'text',
     adresse_livraison: 'text',

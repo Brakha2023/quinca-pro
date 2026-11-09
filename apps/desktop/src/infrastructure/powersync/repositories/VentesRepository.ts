@@ -3,7 +3,7 @@ import type { CaisseRow, ClientRow, LigneVenteRow, ModePaiement, StatutVente, Ve
 import { calculerSolde } from '../../../core/clients';
 import { codeAnnulationDefini, normaliserCodeAnnulation } from '../../../core/parametres';
 import { verifierEmpreinte } from '../../auth/empreinteLocale';
-import { codePoste, numeroPiece } from '../../desktop/identitePoste';
+import { codePoste, numeroCourt, numeroPiece } from '../../desktop/identitePoste';
 import {
   MODES_EN_CAISSE, calculerLigne, preparerVente, venteModifiable,
   type VenteAEnregistrer, type VentePreparee,
@@ -75,7 +75,9 @@ export function ventesQuery(filialeId: string | null, filtres: FiltresVentes = {
   if (filtres.caisseId) { conditions.push('v.caisse_id = ?'); params.push(filtres.caisseId); }
   if (filtres.statut) { conditions.push('v.statut = ?'); params.push(filtres.statut); }
   const q = filtres.recherche?.trim();
-  if (q) { conditions.push('(v.numero LIKE ? OR c.raison_sociale LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  // Une pièce se retrouve par l'un ou l'autre de ses numéros : le client
+  // présente le court, le code-barres rend le long.
+  if (q) { conditions.push('(v.numero LIKE ? OR v.numero_court LIKE ? OR c.raison_sociale LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   // Les totaux sont arrondis au franc à l'enregistrement ; `ROUND` met à l'abri
   // d'un centime hérité d'un calcul flottant, qui ferait rater la ligne.
   if (filtres.montantTtc) { conditions.push('ROUND(v.total_ttc) = ?'); params.push(Math.round(filtres.montantTtc)); }
@@ -109,20 +111,27 @@ export class VentesRepository extends BaseRepository {
   /**
    * Le numéro du bon de livraison est rendu avec la vente : il s'imprime dans
    * la foulée, sur la pièce qui part avec la marchandise.
+   *
+   * Les **numéros courts** sont tirés ici et pas dans `preparerVente` : cette
+   * fonction est aussi appelée à chaque frappe pour l'aperçu de l'encaissement,
+   * et un compteur qui avancerait à chaque aperçu laisserait des trous de
+   * plusieurs dizaines de numéros entre deux ventes. Le numéro long, lui, est
+   * tiré au hasard : le jeter ne coûte rien.
    */
-  enregistrer(ctx: ContexteVente, vente: VenteAEnregistrer): Promise<{ id: string; preparee: VentePreparee; numeroLivraison: string | null }> {
+  enregistrer(ctx: ContexteVente, vente: VenteAEnregistrer): Promise<{ id: string; preparee: VentePreparee; numeroCourt: string; numeroLivraison: string | null; numeroCourtLivraison: string | null }> {
     const preparee = preparerVente(vente, { caisse: ctx.caisseCode, code: codePoste() });
+    const numeroCourtVente = numeroCourt('VNT');
     return this.db.writeTransaction(async (tx) => {
       const id = this.nouvelId();
       const now = this.maintenant();
       const t = preparee.totaux;
 
       await tx.execute(
-        `INSERT INTO ventes (id, numero, date_vente, client_id, utilisateur_id, caisse_id, filiale_id, total_brut_ht, total_remise, total_net_ht,
+        `INSERT INTO ventes (id, numero, numero_court, date_vente, client_id, utilisateur_id, caisse_id, filiale_id, total_brut_ht, total_remise, total_net_ht,
                              total_tva, total_ttc, montant_percu, reste_a_payer, monnaie, mode_paiement, statut, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'EN_ATTENTE', ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'EN_ATTENTE', ?, ?, ?)`,
         [
-          id, preparee.numero, now, vente.client?.id ?? null, ctx.utilisateurId, ctx.caisseId, ctx.filialeId,
+          id, preparee.numero, numeroCourtVente, now, vente.client?.id ?? null, ctx.utilisateurId, ctx.caisseId, ctx.filialeId,
           t.total_brut_ht, t.total_remise, t.total_net_ht, t.total_tva, t.total_ttc,
           preparee.montant_percu, preparee.reste_a_payer, preparee.monnaie, preparee.mode_paiement, vente.notes || null, now, now,
         ],
@@ -167,17 +176,19 @@ export class VentesRepository extends BaseRepository {
       }
 
       let numeroLivraison: string | null = null;
+      let numeroCourtLivraison: string | null = null;
       if (vente.livraison) {
         numeroLivraison = numeroPiece('LIV');
+        numeroCourtLivraison = numeroCourt('LIV');
         await tx.execute(
-          `INSERT INTO livraisons (id, numero, vente_id, client_id, adresse_livraison, chauffeur, vehicule, statut, date_livraison_prevue, filiale_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'A_PREPARER', ?, ?, ?, ?)`,
-          [this.nouvelId(), numeroLivraison, id, vente.client?.id ?? null, vente.livraison.adresse_livraison,
+          `INSERT INTO livraisons (id, numero, numero_court, vente_id, client_id, adresse_livraison, chauffeur, vehicule, statut, date_livraison_prevue, filiale_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'A_PREPARER', ?, ?, ?, ?)`,
+          [this.nouvelId(), numeroLivraison, numeroCourtLivraison, id, vente.client?.id ?? null, vente.livraison.adresse_livraison,
            vente.livraison.chauffeur || null, vente.livraison.vehicule || null, new Date(vente.livraison.date_livraison_prevue).toISOString(), ctx.filialeId, now, now],
         );
       }
 
-      return { id, preparee, numeroLivraison };
+      return { id, preparee, numeroCourt: numeroCourtVente, numeroLivraison, numeroCourtLivraison };
     });
   }
 

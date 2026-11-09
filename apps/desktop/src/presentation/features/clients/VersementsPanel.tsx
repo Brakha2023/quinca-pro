@@ -145,7 +145,7 @@ export default function VersementsPanel({ filialeId, filiale }: Props) {
               <tr><th>Nature</th><td>{nature(modal.v)}{modal.v.vente_numero ? ` — vente ${modal.v.vente_numero}` : ''}</td></tr>
               <tr><th>Mode</th><td>{LIBELLES_TYPE_REGLEMENT[(modal.v.type_reglement ?? 'ESPECES') as TypeReglement]}{modal.v.reference ? ` · ${modal.v.reference}` : ''}</td></tr>
             </tbody></table>
-            <div className="document-bloc" style={{ width: '48%' }}><strong>Reçu de</strong><br />{modal.v.client_nom}<br />Code : {modal.v.client_code}</div>
+            <div className="document-bloc" style={{ width: '48%' }}><strong className="document-bloc-titre">Reçu de</strong>{modal.v.client_nom}<br />Code : {modal.v.client_code}</div>
           </div>
           <table><tbody><tr><th style={{ textAlign: 'left' }}>Montant versé</th><td className="num" style={{ fontSize: 16 }}><strong>{formaterFcfa(modal.v.montant)}</strong></td></tr></tbody></table>
           <p>Encaissé par {[modal.v.utilisateur_prenom, modal.v.utilisateur_nom].filter(Boolean).join(' ')}{modal.v.caisse_nom ? ` · ${modal.v.caisse_nom}` : ''}</p>

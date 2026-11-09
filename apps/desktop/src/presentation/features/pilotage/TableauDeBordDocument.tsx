@@ -38,18 +38,18 @@ export default function TableauDeBordDocument({ fenetre, filialeId, lecture, fil
     <DocumentImprimable titre="Tableau de bord" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Période</strong>
-          <br />{fenetre.libelle}
+          <strong className="document-bloc-titre">Période</strong>
+          {fenetre.libelle}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{filialeId ? filiale.nom : `Groupe · ${filiales.length} filiale(s)`}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {filialeId ? filiale.nom : `Groupe · ${filiales.length} filiale(s)`}
           <br />{total.ventes} vente(s) · {total.clients_servis} client(s) servi(s)
         </div>
         <div className="document-bloc" style={{ width: '62mm' }}>
-          <strong>Résultat estimé</strong>
-          <br />{formaterFcfa(total.resultat)}
+          <strong className="document-bloc-titre">Résultat estimé</strong>
+          {formaterFcfa(total.resultat)}
           <br /><span style={{ fontSize: 9 }}>marge {formaterFcfa(total.marge)} − dépenses {formaterFcfa(total.charges)}</span>
         </div>
       </div>

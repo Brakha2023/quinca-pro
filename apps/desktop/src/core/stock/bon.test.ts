@@ -15,6 +15,7 @@ const mvt = (over: Partial<MouvementDuBon> = {}): MouvementDuBon => ({
   remise_percent: 0,
   remise_montant: 0,
   date_livraison: null,
+  reference_courte: 'ENT-K7Q-000012',
   motif: 'BL 42',
   fournisseur_nom: 'SOCIMAT CI',
   utilisateur: 'Awa Koné',
@@ -102,5 +103,15 @@ describe('construireBon', () => {
 
   it('rend null sans mouvement', () => {
     expect(construireBon('ENT-0', [])).toBeNull();
+  });
+});
+
+describe('numéro court du bon', () => {
+  it('reprend celui que portent les mouvements', () => {
+    expect(construireBon('ENT-1', [mvt()])!.reference_courte).toBe('ENT-K7Q-000012');
+  });
+
+  it('reste nul quand la référence a été saisie à la main', () => {
+    expect(construireBon('BL-FOURNISSEUR-77', [mvt({ reference_courte: null })])!.reference_courte).toBeNull();
   });
 });

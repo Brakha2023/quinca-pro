@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NATURES_DOCUMENTS, normaliserPrefixe, prefixesParDefaut, type Entreprise } from '../../../core/parametres';
-import { LONGUEUR_SUFFIXE, genererNumeroPiece } from '../../../core/commun/numerotation';
+import { LONGUEUR_SEQUENCE, LONGUEUR_SUFFIXE, genererNumeroPiece } from '../../../core/commun/numerotation';
 import { codePoste } from '../../../infrastructure/desktop/identitePoste';
 import { EntrepriseRepository } from '../../../infrastructure/powersync/repositories/EntrepriseRepository';
 import { useRepository } from '../../hooks/useRepository';
@@ -49,6 +49,19 @@ export default function NumerotationPanel({ entreprise, peutModifier }: Props) {
           {' - '}<span className="rounded bg-neutral-200 px-1.5 py-0.5">{poste}</span>
           {' - '}<span className="rounded bg-neutral-200 px-1.5 py-0.5">AAAAMMJJ</span>
           {' - '}<span className="rounded bg-neutral-200 px-1.5 py-0.5">{'X'.repeat(LONGUEUR_SUFFIXE)}</span>
+        </p>
+        <p className="mt-2 font-mono text-sm text-neutral-800">
+          <span className="rounded bg-primary-100 px-1.5 py-0.5 text-primary-800">PRÉFIXE</span>
+          {' - '}<span className="rounded bg-neutral-200 px-1.5 py-0.5">{poste}</span>
+          {' - '}<span className="rounded bg-neutral-200 px-1.5 py-0.5">{'0'.repeat(LONGUEUR_SEQUENCE)}</span>
+          <span className="ml-3 font-sans text-xs text-neutral-500">numéro court, imprimé en tête des pièces</span>
+        </p>
+        <p className="mt-2 text-xs leading-relaxed text-neutral-600">
+          Chaque pièce porte <strong>deux numéros</strong>. Le long identifie la pièce et part dans le
+          code-barres ; le <strong>court</strong> est celui qui s'imprime en tête, se dicte au téléphone et se
+          recopie sur un cahier. Son compteur est propre à <strong>cette machine</strong> : un compteur commun à
+          la filiale ne pourrait pas être attribué hors ligne, deux caisses qui vendent en même temps
+          tireraient le même numéro.
         </p>
         <p className="mt-2 text-xs leading-relaxed text-neutral-600">
           Seul le préfixe se règle. Le <strong>code de ce poste</strong> ({poste}) est

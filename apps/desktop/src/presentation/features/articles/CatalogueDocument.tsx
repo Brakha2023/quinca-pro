@@ -26,8 +26,8 @@ export default function CatalogueDocument({ articles, nomFamille, filiale, filtr
     <DocumentImprimable titre="Catalogue des articles" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetreCatalogue(filtres)}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetreCatalogue(filtres)}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '60mm' }}>

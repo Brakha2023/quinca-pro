@@ -29,8 +29,8 @@ export default function EtatStockDocument({ stocks, filiale, filtres, onClose }:
     <DocumentImprimable titre="État du stock" filiale={filiale} paysage onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetreEtatStock(filtres)}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetreEtatStock(filtres)}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '70mm' }}>
@@ -40,8 +40,8 @@ export default function EtatStockDocument({ stocks, filiale, filtres, onClose }:
           <br />Marge potentielle : {formaterFcfa(recap.marge)} ({recap.marge_percent} %)
         </div>
         <div className="document-bloc" style={{ width: '52mm' }}>
-          <strong>À surveiller</strong>
-          <br />Ruptures : {recap.ruptures} · Stock faible : {recap.faibles}
+          <strong className="document-bloc-titre">À surveiller</strong>
+          Ruptures : {recap.ruptures} · Stock faible : {recap.faibles}
           <br />Surstock : {recap.surstocks}
           {recap.negatifs > 0 && <><br />{recap.negatifs} quantité(s) négative(s) à régulariser</>}
         </div>

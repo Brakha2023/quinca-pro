@@ -5,6 +5,7 @@ import {
   genererCodePoste,
   genererCodeTiers,
   genererNumeroPiece,
+  formaterNumeroCourt,
 } from './numerotation';
 
 const ALPHABET_ATTENDU = /^[A-HJ-NP-Z2-9]+$/;
@@ -56,5 +57,28 @@ describe('codePoste', () => {
 describe('genererCodeTiers', () => {
   it('compose préfixe et suffixe de 6 caractères', () => {
     expect(genererCodeTiers('CLI')).toMatch(/^CLI-[A-HJ-NP-Z2-9]{6}$/);
+  });
+});
+
+describe('formaterNumeroCourt', () => {
+  it('compose préfixe, poste et compteur sur six chiffres', () => {
+    expect(formaterNumeroCourt({ prefixe: 'VNT', poste: 'AN8', sequence: 75 })).toBe('VNT-AN8-000075');
+  });
+
+  it('normalise le code du poste comme le numéro long', () => {
+    expect(formaterNumeroCourt({ prefixe: 'ENT', poste: ' k7q ', sequence: 1 })).toBe('ENT-K7Q-000001');
+  });
+
+  it('tire un code de poste plutôt que de numéroter avec un code altéré', () => {
+    const numero = formaterNumeroCourt({ prefixe: 'ENT', poste: 'pas un code', sequence: 3 });
+    expect(numero).toMatch(/^ENT-[A-HJ-NP-Z2-9]{3}-000003$/);
+  });
+
+  it('déborde des six chiffres plutôt que de recommencer à zéro', () => {
+    expect(formaterNumeroCourt({ prefixe: 'VNT', poste: 'AN8', sequence: 1234567 })).toBe('VNT-AN8-1234567');
+  });
+
+  it('ne descend jamais en dessous de 1 : il n’existe pas de pièce numéro zéro', () => {
+    expect(formaterNumeroCourt({ prefixe: 'VNT', poste: 'AN8', sequence: 0 })).toBe('VNT-AN8-000001');
   });
 });

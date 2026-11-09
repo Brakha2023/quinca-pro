@@ -117,8 +117,8 @@ export default function FactureAchatDocument({ facture, filiale, onClose }: Prop
       </div>
 
       <p className="document-arrete">
-        Arrêté la présente facture à la somme de :
-        <br /><strong>{premiereMajuscule(facture.montant_en_lettres)}</strong>
+        <span>Arrêté la présente facture à la somme de :</span>
+        <strong>{premiereMajuscule(facture.montant_en_lettres)}</strong>
       </p>
 
       <div className="document-cases">

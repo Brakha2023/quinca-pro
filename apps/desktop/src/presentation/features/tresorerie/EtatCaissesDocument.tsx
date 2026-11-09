@@ -29,18 +29,18 @@ export default function EtatCaissesDocument({ lignes, filiale, filtres, onClose 
     <DocumentImprimable titre="État des caisses" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Période</strong>
-          <br />Du {filtres.debut} au {filtres.fin}
+          <strong className="document-bloc-titre">Période</strong>
+          Du {filtres.debut} au {filtres.fin}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetre}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetre}
           <br />{recap.nombre} caisse(s) · {recap.mouvements} mouvement(s)
         </div>
         <div className="document-bloc" style={{ width: '62mm' }}>
-          <strong>Total en caisses</strong>
-          <br />Clôture : {formaterFcfa(recap.cloture)}
+          <strong className="document-bloc-titre">Total en caisses</strong>
+          Clôture : {formaterFcfa(recap.cloture)}
           <br />Aujourd'hui : {formaterFcfa(recap.solde_actuel)}
           {recap.negatives > 0 && <><br />{recap.negatives} caisse(s) à découvert</>}
         </div>

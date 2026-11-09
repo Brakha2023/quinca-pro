@@ -54,8 +54,8 @@ export default function FicheArticleDocument({
     <DocumentImprimable titre={`Fiche article — ${article.code}`} filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Identification</strong>
-          <br />Code : {article.code}
+          <strong className="document-bloc-titre">Identification</strong>
+          Code : {article.code}
           <br />Désignation : {article.designation}
           <br />Famille : {familleNom}
           {article.sous_famille ? <><br />Sous-famille : {article.sous_famille}</> : null}
@@ -63,16 +63,16 @@ export default function FicheArticleDocument({
           <br />État : {article.est_actif ? 'Actif' : 'Inactif'}
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Tarifs</strong>
-          <br />Prix d'achat : {formaterFcfa(article.prix_achat)}
+          <strong className="document-bloc-titre">Tarifs</strong>
+          Prix d'achat : {formaterFcfa(article.prix_achat)}
           <br />Prix de vente : {formaterFcfa(article.prix_vente)}
           <br />Prix VIP : {article.prix_vip != null ? formaterFcfa(article.prix_vip) : 'non défini'}
           <br />Marge : {formaterFcfa(indicateurs.marge_valeur)} ({indicateurs.marge_percent} %)
           {indicateurs.marge_vip_percent != null ? <><br />Marge VIP : {indicateurs.marge_vip_percent} %</> : null}
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Stock</strong>
-          <br />Quantité : {quantite(totaux.quantite, article.unite)}
+          <strong className="document-bloc-titre">Stock</strong>
+          Quantité : {quantite(totaux.quantite, article.unite)}
           <br />Réservée : {quantite(totaux.reservee, article.unite)}
           <br />Disponible : {quantite(totaux.disponible, article.unite)}
           <br />Seuils : min {article.stock_min} · max {article.stock_max || '—'}

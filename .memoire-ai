@@ -147,7 +147,57 @@ session ont été prouvés ainsi ; sans cela on corrige une intuition.
   l'élément immobile (cas réel : `verrou.e2e.cjs`).
 - `page.pdf()` est la seule façon de vérifier les sauts de page.
 
+### Numérotation
+- Chaque pièce porte **deux numéros**. Le **long**
+  (`C01-6WR-20261020-RMTPJS`, `genererNumeroPiece`) est l'identité : unique
+  hors ligne par tirage au sort, porté par le code-barres, protégé par
+  `unique (filiale_id, numero)` côté serveur. Le **court**
+  (`VNT-AN8-000075`, `formaterNumeroCourt`) est celui qu'on lit, qu'on dicte
+  et qu'on cherche ; il s'imprime en tête.
+- Le compteur du court est **propre au poste**, rangé **avec le code du poste
+  dans une seule entrée** de `localStorage` (`quinca-poste`) : s'ils étaient
+  séparés, un effacement partiel ferait recompter la machine sous un code
+  déjà utilisé. Un poste d'avant la série courte est repris par son ancienne
+  clé `quinca-code-poste`.
+- Le court est tiré **au moment de l'écriture**, jamais dans `preparerVente` :
+  cette fonction tourne à chaque frappe pour l'aperçu de l'encaissement, et
+  le compteur y sauterait des dizaines de numéros entre deux ventes.
+- Une référence **saisie à la main** (le BL du fournisseur) ne reçoit pas de
+  numéro court : elle est déjà le numéro de la pièce.
+- Colonnes : `ventes.numero_court`, `livraisons.numero_court`,
+  `mouvements_stock.reference_courte`. Aucune contrainte d'unicité dessus —
+  une contrainte ferait **refuser** la pièce à la synchronisation et
+  transformerait une gêne de lecture en écriture perdue.
+- **Défaut connu, non corrigé** : les préfixes réglés dans Paramètres →
+  Numérotation ne sont lus par rien. Les pièces portent des préfixes écrits en
+  dur (`ENT`, `SOR`, `REG`, `LIV`…), et l'écran annonce pourtant « Les pièces
+  créées ensuite les porteront ». Les câbler suppose d'étendre
+  `NATURES_DOCUMENTS` (8 natures) aux dix-sept réellement numérotées.
+
 ### Impression
+- **Le langage visuel du papier est dans `index.css`**, pas dans les
+  vingt-sept documents : trois variables sur `.document` (`--doc-encre`,
+  `--doc-filet`, `--doc-fond`, `--doc-rayon`) et des pièces nommées
+  (`document-bloc` + `document-bloc-titre`, `document-champs`,
+  `document-reference`, `document-cachets`, `document-arrete`,
+  `document-pied`, `document-visa`). Un changement d'allure se fait là.
+- **Deux teintes de bandeau, un seul sens** : *gris* sur les pièces de travail
+  qu'on classe et qu'on annote, *noir* sur la **facture**, la seule pièce qui
+  parte chez le client. Ne pas noircir une liste.
+- Les tableaux sont en **`border-collapse: separate`** : en `collapse`, le
+  navigateur fusionne les bordures et **ignore le rayon des coins**. Chaque
+  cellule ne porte donc que son filet droit et son filet bas ; le cadre vient
+  du tableau. Les quatre coins s'arrondissent cellule par cellule, via
+  `table > *:first-child > tr:first-child > *:first-child` et ses trois
+  voisins — le dernier groupe est `*:last-child`, pour que le `tfoot` prenne
+  le relais du `tbody` quand il existe.
+- Un cartouche prend son intitulé en bandeau (`document-bloc-titre`) **quand
+  cet intitulé est un libellé** (Périmètre, Dépôt, Tarifs). Un bloc qui
+  commence par un chiffre — « 7 vente(s) · 103 825 F TTC » — n'en prend pas :
+  le chiffre est déjà le titre.
+- Le deux-points de `document-champs` vient de la feuille de style
+  (`dt::after`) : il ne figure donc **pas** dans le `textContent`, et un test
+  qui lisait « Origine : Principal » doit lire les deux mots séparément.
 - `document-section` est un **intertitre**, pas un conteneur : il met en
   capitales tout ce qu'il contient. Le tableau vient *après* lui.
 - Le navigateur **supprime les fonds** à l'impression ; `.document` porte
@@ -201,6 +251,7 @@ endroits** et ne doivent pas changer ; 800/900/950 sont la nuit.
 | `components/ui/Carte` | Carte à bandeau bleu nuit + icône. `nu` pour un tableau qui touche les bords ; `sousEntier` quand la ligne `sous` ne doit pas être coupée (le périmètre d'une liste filtrée, qui dit ce qui s'imprime). Un tableau posé dans une carte `nu` a besoin de son propre `overflow-x-auto` : la carte rogne ce qui dépasse. |
 | `components/ui/Pagination` + `hooks/usePagination` | Pages de 50 ; un filtre ramène en page 1, pas le total qui bouge. |
 | `components/print/DocumentImprimable` | Aperçu A4 ; l'orientation se mesure seule. |
+| `components/print/CorpsDocument` | La feuille elle-même : en-tête, logo, filigrane et mentions tirés de Paramètres → Entreprise. Vingt-sept pièces passent par là. `features/pos/FactureVente` ne l'utilise pas (mise en page propre) mais tire le même en-tête par `enteteDocument`. |
 | `components/ui/Indicateur` | Tuile de chiffre, teinte + pastille d'icône. La teinte dit la **nature** du chiffre, jamais s'il est bon. `nuit` laisse la tuile blanche : réservée aux chiffres de référence en tête ou en queue de série, sinon elle ressort comme sélectionnée. |
 | `.tableau` (dans `index.css`) | Tous les tableaux d'écran : entête bleuté, zébrure, survol, ligne au clavier. Les teintes se superposent en `background-image` pour ne pas effacer une ligne d'alerte. |
 
@@ -286,6 +337,12 @@ reprise de bout en bout, polices embarquées, et l'habillage bleu nuit / orange.
 3. Listes converties récemment sans pied de page d'identification : aucune —
    les vingt-deux listes imprimables en ont un. Vérifier pour toute liste
    nouvelle.
+4. **L'habillage du papier suit les quatre pièces modèles** fournies par la
+   maison (facture, bon de livraison, journal des ventes, bon d'entrée). Le
+   modèle de la facture la titre « REÇU DE VENTE » : l'utilisateur a tranché,
+   la pièce **reste une facture**. La série courte demandée par le modèle
+   (`VNT-000075`) est **construite**, par poste (`VNT-AN8-000075`) — voir la
+   section Numérotation.
 
 ### Questions posées à l'utilisateur, jamais tranchées
 
@@ -300,6 +357,10 @@ Ne pas décider seul ; les reposer si le sujet revient.
   fournisseurs* ?
 - La « valeur à la vente » du stock doit-elle tenir compte d'une remise
   moyenne ou du prix VIP ?
+- Faut-il étendre la série courte aux **autres pièces** (règlements, bons de
+  commande, avances, bordereaux) ? Pour l'instant seules la vente, la
+  livraison et les bons de stock en ont une — ce sont les trois qui
+  s'impriment et circulent.
 
 ### Dettes connues, non corrigées
 

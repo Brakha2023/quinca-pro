@@ -283,7 +283,11 @@ const pagesImprimees = async (page) => {
   await liasse.waitFor({ state: 'attached' });
   const facture = liasse.locator('.facture').first();
   const papier = await texteDe(facture);
-  verifier(/^C01-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(await facture.locator('[data-testid=facture-numero]').textContent()), 'facture A4 : numéro de la vente');
+  // La facture imprime le numéro **court** : c'est celui que le client emporte,
+  // dicte au téléphone et présente au comptoir. Le long, lui, reste dans le
+  // code-barres et dans la base — c'est lui qui identifie la pièce.
+  verifier(/^VNT-[A-HJ-NP-Z2-9]{3}-\d{6}$/.test(await facture.locator('[data-testid=facture-numero]').textContent()), 'facture A4 : numéro court de la vente');
+  verifier(papier.includes(r.v1.numero.split('-')[1]), 'facture A4 : le code-barres porte toujours le numéro long');
   verifier(papier.includes('CLIENT DIVERS'), 'facture A4 : cartouche client (vente au comptoir)');
   verifier(papier.includes('CIM-50') && papier.includes('Ciment 50kg') && papier.includes('Dépôt principal'), 'facture A4 : ligne, désignation et dépôt');
   verifier(papier.includes('5 000,00') && papier.includes('10 000,00') && papier.includes('1 800,00'), 'facture A4 : prix unitaire HT, total HT et TVA de la ligne');
@@ -314,6 +318,8 @@ const pagesImprimees = async (page) => {
   // demande de paiement.
   verifier(!bon.includes('11 800') && !bon.includes('5 000,00') && !bon.includes('NET À PAYER'), 'bon de livraison : aucun prix');
   verifier(bon.includes('reçu en bon état') && bon.includes('Le magasinier'), 'bon de livraison : les deux signatures de la remise');
+  // Sans livraison créée, le bon reprend le numéro de la vente — le court en
+  // tête, comme la facture, pour qu'on rapproche les deux feuilles à l'œil.
   verifier(bon.includes(await facture.locator('[data-testid=facture-numero]').textContent()), 'bon de livraison : rattaché au numéro de la facture');
   verifier((await pagesImprimees(page)) === 3, 'facture ×2 + bon : trois pages A4, chacune sur sa feuille');
 
@@ -446,7 +452,8 @@ const pagesImprimees = async (page) => {
   await bonLivre.locator('[data-testid=bl-livraison]').waitFor({ state: 'attached' });
   const tournee = await texteDe(bonLivre);
   const numeroBon = await bonLivre.locator('[data-testid=bl-numero]').textContent();
-  verifier(tournee.includes('Bon n°') && /^LIV-/.test(numeroBon), `bon de livraison : son propre numéro quand une livraison a été créée (${numeroBon})`);
+  verifier(tournee.includes('Bon n°') && /^LIV-[A-HJ-NP-Z2-9]{3}-\d{6}$/.test(numeroBon),
+    `bon de livraison : son propre numéro court quand une livraison a été créée (${numeroBon})`);
   verifier(tournee.includes('Riviera 3') && tournee.includes('Yao') && tournee.includes('4521 CI'), 'bon de livraison : adresse, chauffeur et véhicule de la tournée');
   await page.keyboard.press('Escape');
   await page.goto(`${BASE_URL}/#/ventes`);
@@ -478,7 +485,9 @@ const pagesImprimees = async (page) => {
   verifier(true, 'audit : page rendue (journal serveur, vide hors ligne)');
 
   console.log('Numérotation : un espace de numéros par poste');
-  const codeA = await page.evaluate(() => localStorage.getItem('quinca-code-poste'));
+  // Le code du poste et ses compteurs tiennent dans une seule entrée, pour
+  // qu'un effacement ne laisse jamais le poste recompter sous le même code.
+  const codeA = await page.evaluate(() => JSON.parse(localStorage.getItem('quinca-poste') ?? 'null')?.code ?? null);
   verifier(/^[A-HJ-NP-Z2-9]{3}$/.test(codeA) && r.v1.numero.split('-')[1] === codeA,
     `code de ce poste ${codeA} mémorisé sur la machine et porté par le numéro de vente`);
 

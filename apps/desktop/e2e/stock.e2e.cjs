@@ -171,6 +171,10 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await bon.waitFor();
   const papier = (await bon.textContent()).replace(/\s+/g, ' ');
   verifier(papier.includes("Bon d'entrée — achat"), 'bon d’entrée : titre du document');
+  // Le bon porte son numéro court en tête — celui qu'on dicte au fournisseur —
+  // et son numéro long dans le code-barres.
+  verifier(/^N° ENT-[A-HJ-NP-Z2-9]{3}-\d{6}$/.test((await bon.getByTestId('bon-numero').textContent()).trim()),
+    `bon d’entrée : numéro court en tête (${(await bon.getByTestId('bon-numero').textContent()).trim()})`);
   // L'écran d'entrée propose le premier dépôt actif par ordre alphabétique : « Annexe ».
   verifier(papier.includes('SOCIMAT CI') && papier.includes('Annexe'), 'bon d’entrée : fournisseur et dépôt');
   verifier(papier.includes('Total brut') && papier.includes('12 500 F'), 'bon d’entrée : le brut avant remise');
@@ -217,7 +221,10 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await bonTransfert.waitFor();
   const papierTransfert = (await bonTransfert.textContent()).replace(/\s+/g, ' ');
   verifier(papierTransfert.includes('Bon de transfert entre dépôts'), 'réédition : bon de transfert');
-  verifier(papierTransfert.includes('Origine : Principal') && papierTransfert.includes('Destination : Annexe'), 'réédition : les deux dépôts du transfert');
+  // Le cartouche aligne intitulés et valeurs en deux colonnes, et le
+  // deux-points vient de la feuille de style : le texte de la pièce porte
+  // « Origine » puis « Principal », sans séparateur entre les deux.
+  verifier(/Origine\s*Principal/.test(papierTransfert) && /Destination\s*Annexe/.test(papierTransfert), 'réédition : les deux dépôts du transfert');
   verifier((await bonTransfert.locator('tbody tr').count()) === 1, 'réédition : l’article transféré ne compte qu’une fois');
   await bonTransfert.getByRole('button', { name: "Fermer l'aperçu" }).click();
 

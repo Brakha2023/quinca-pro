@@ -37,8 +37,8 @@ export default function AlertesStockDocument({ lignes, suivies, filiale, filtres
     <DocumentImprimable titre="Alertes de stock" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetreAlertes(filtres)}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetreAlertes(filtres)}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '72mm' }}>

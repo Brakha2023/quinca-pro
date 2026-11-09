@@ -35,13 +35,13 @@ export default function HistoriqueDocument({ section, pieces, filiale, filtres, 
     <DocumentImprimable titre={`Historique — ${description.label}`} filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Période</strong>
-          <br />Du {filtres.debut} au {filtres.fin}
+          <strong className="document-bloc-titre">Période</strong>
+          Du {filtres.debut} au {filtres.fin}
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetre}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetre}
         </div>
         <div className="document-bloc" style={{ width: '62mm' }}>
           <strong>{recap.pieces} {description.piece}(s)</strong>

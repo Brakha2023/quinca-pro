@@ -34,13 +34,13 @@ export default function MatricePermissionsDocument({ roles, accordees, filiale, 
     <DocumentImprimable titre="Rôles et permissions" filiale={filiale} onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>État des droits</strong>
-          <br />Édité le {edite}
+          <strong className="document-bloc-titre">État des droits</strong>
+          Édité le {edite}
           <br />{roles.length} rôle(s) · {lignes.length} permission(s) · {porteurs} compte(s) rattaché(s)
         </div>
         <div className="document-bloc" style={{ width: '82mm' }}>
-          <strong>Lecture</strong>
-          <br />Une croix vaut droit accordé. Sous chaque rôle : la portée de
+          <strong className="document-bloc-titre">Lecture</strong>
+          Une croix vaut droit accordé. Sous chaque rôle : la portée de
           ses données, et le nombre de comptes qui le portent.
         </div>
       </div>

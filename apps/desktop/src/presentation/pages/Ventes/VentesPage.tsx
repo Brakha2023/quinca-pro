@@ -162,7 +162,8 @@ export default function VentesPage() {
                   <tr key={v.id} className={`hover:bg-neutral-50 ${st === 'ANNULEE' ? 'opacity-50' : ''}`}>
                     {peutValider && <td className="px-3 py-2 print:hidden">{st === 'EN_ATTENTE' && <input type="checkbox" checked={selection.has(v.id)} onChange={(e) => setSelection((s) => { const n = new Set(s); if (e.target.checked) n.add(v.id); else n.delete(v.id); return n; })} className="rounded" />}</td>}
                     <td className="px-3 py-2 text-sm text-neutral-600 whitespace-nowrap">{formaterDateHeure(v.date_vente)}</td>
-                    <td className="px-3 py-2 text-sm font-mono text-primary-700">{v.numero}</td>
+                    {/* Le numéro court : celui que le client présente au comptoir. */}
+                    <td className="px-3 py-2 text-sm font-mono text-primary-700" title={v.numero ?? ''}>{v.numero_court ?? v.numero}</td>
                     <td className="px-3 py-2 text-sm">{v.client_nom ?? <span className="text-neutral-400">Comptoir</span>}</td>
                     <td className="px-3 py-2 text-sm text-neutral-600">{v.caisse_nom}</td>
                     <td className="px-3 py-2 text-sm text-neutral-600">{[v.utilisateur_prenom, v.utilisateur_nom].filter(Boolean).join(' ')}</td>

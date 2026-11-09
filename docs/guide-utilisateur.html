@@ -533,8 +533,9 @@ et celui qui convient le plus souvent est déjà proposé.</p>
 </table>
 <p>La <strong>facture A4</strong> porte le cartouche client, le détail des lignes, le montant en
 toutes lettres et les cases de règlement. Le <strong>bon de livraison</strong>, lui, ne porte
-<strong>aucun prix</strong> : il dit ce qui sort, de quel dépôt, et comporte deux emplacements de
-signature — le magasinier et le client, qui reconnaît avoir reçu la marchandise en bon état. Si une
+<strong>aucun prix</strong> : il dit ce qui sort, de quel dépôt, et comporte trois emplacements de
+signature — le magasinier qui charge, le gestionnaire de stock qui vise la sortie, et le client,
+qui reconnaît avoir reçu la marchandise en bon état. Si une
 livraison a été demandée au comptoir, le bon porte en plus son numéro, l'adresse, la date prévue, le
 chauffeur et le véhicule.</p>
 <p>Le format habituel du poste se choisit dans les réglages du point de vente : un poste réglé sur
@@ -560,10 +561,30 @@ part pas avec le client.</p>
 vous pouvez passer outre — le stock devient alors négatif et la régularisation est attendue. Ce
 droit (<em>Vendre malgré un stock insuffisant</em>) s'accorde rôle par rôle.</p>
 
-<h3>5.8 — Le code du poste</h3>
+<h3>5.8 — Le code du poste, et les deux numéros d'une pièce</h3>
 <p><span class="chemin-ui">Point de Vente → Changer</span> affiche le <strong>code du poste</strong>,
 tiré une fois par machine. Il entre dans les numéros de pièces et garantit que deux caisses ne
 tirent jamais le même numéro. Collez-le sur l'unité centrale : il sert au dépannage.</p>
+<p>Chaque pièce porte <strong>deux numéros</strong>, et c'est voulu :</p>
+<table>
+  <tr><th>Numéro</th><th>Où il se trouve</th><th>À quoi il sert</th></tr>
+  <tr><td class="chemin">VNT-AN8-000075</td><td>Imprimé en tête de la facture, du bon de livraison et
+    des bons de stock. Affiché dans la liste des ventes.</td><td>Le <strong>court</strong>. Celui qu'on
+    dicte au téléphone, qu'on recopie sur un cahier, et que le client vous présente.</td></tr>
+  <tr><td class="chemin">C01-6WR-20261020-RMTPJS</td><td>Dans le code-barres de la pièce.</td>
+    <td>Le <strong>long</strong>. L'identité de la pièce : c'est lui qui garantit que deux caisses
+    hors ligne n'enregistrent jamais la même vente.</td></tr>
+</table>
+<p>La recherche accepte <strong>l'un ou l'autre</strong> : tapez ce que vous avez sous les yeux.</p>
+<div class="note">
+  <span class="titre">Pourquoi le numéro court porte le code du poste</span>
+  <p>Un compteur commun à toute la filiale — <em>vente n° 75</em> tout court — supposerait que les
+  caisses se parlent au moment de la vente. Elles travaillent hors ligne : deux caisses qui vendent
+  en même temps prendraient toutes les deux le 76. Le code du poste donne à chaque machine sa
+  propre série, et le compte reste juste même sans réseau.</p>
+  <p>Un bon dont vous saisissez vous-même la référence — le numéro du bon de livraison de votre
+  fournisseur — n'en reçoit pas : cette référence <em>est</em> le numéro de la pièce.</p>
+</div>
 
 <!-- ============ 6. VENTES & CATALOGUE ============ -->
 <h2><span class="num">6.</span>Ventes et catalogue</h2>
@@ -699,7 +720,7 @@ seuls — on y cherche son bon d'entrée sans traverser la journée de la caisse
     <li>Portez la <strong>remise globale en francs</strong> si le fournisseur en a accordé une : elle se donne sur le bon entier, jamais article par article.</li>
     <li>Relisez le pied du tableau : <em>Total brut</em>, <em>Remise globale</em>, <em>Net à payer</em>.</li>
     <li>Validez. Le stock monte, le coût moyen du dépôt est recalculé <strong>sur le coût net de remise</strong>, et le message confirme le montant porté au compte du fournisseur.</li>
-    <li><em>Imprimer le bon</em> sort le <strong>bon d'entrée</strong> : lignes, stock avant / après, remise, brut et net, date de livraison, code-barres.</li>
+    <li><em>Imprimer le bon</em> sort le <strong>bon d'entrée</strong> : lignes numérotées, stock avant / après, remise, brut et net, date de livraison, code-barres, le total <strong>en toutes lettres</strong> et deux cadres de signature — le magasinier et le responsable.</li>
   </ol>
 </div>
 <div class="note">

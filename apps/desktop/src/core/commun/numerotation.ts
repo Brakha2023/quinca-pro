@@ -68,3 +68,39 @@ export function genererNumeroPiece({ prefixe, poste, date = new Date() }: PieceA
 export function genererCodeTiers(prefixe: string): string {
   return `${prefixe}-${suffixeAleatoire(LONGUEUR_CODE_TIERS)}`;
 }
+
+/** Chiffres du compteur dans un numéro court : 999 999 pièces par poste et par nature. */
+export const LONGUEUR_SEQUENCE = 6;
+
+export interface PieceANumeroterCourt {
+  /** Nature de la pièce (`VNT`, `ENT`, `LIV`…). */
+  prefixe: string;
+  /** Code du poste qui crée la pièce (voir {@link genererCodePoste}). */
+  poste: string;
+  /** Rang de la pièce sur ce poste, pour ce préfixe. Commence à 1. */
+  sequence: number;
+}
+
+/**
+ * Numéro **court** d'une pièce : `PREFIXE-POSTE-NNNNNN`, par exemple
+ * `VNT-AN8-000075`.
+ *
+ * Il ne remplace pas {@link genererNumeroPiece} : le numéro long reste
+ * l'identité de la pièce, celle que porte le code-barres et sur laquelle le
+ * serveur garantit l'unicité. Le court est celui qu'on lit, qu'on dicte au
+ * téléphone et qu'on cherche dans un classeur.
+ *
+ * Le compteur est **propre au poste**, et c'est le code du poste qui le rend
+ * unique. Un compteur par filiale serait plus joli — `VNT-000075` tout court —
+ * mais il ne peut pas être attribué hors ligne : deux caisses qui vendent au
+ * même moment, sans réseau, tireraient toutes les deux le 76. Le code du
+ * poste est le seul cloisonnement qui tienne sans serveur.
+ *
+ * Si le compteur venait à repartir de zéro (stockage local effacé), deux
+ * pièces du même poste pourraient porter le même numéro court. C'est une gêne
+ * de lecture, jamais une perte : l'identité, elle, reste le numéro long.
+ */
+export function formaterNumeroCourt({ prefixe, poste, sequence }: PieceANumeroterCourt): string {
+  const machine = codePosteValide(poste) ?? genererCodePoste();
+  return `${prefixe}-${machine}-${String(Math.max(1, Math.trunc(sequence))).padStart(LONGUEUR_SEQUENCE, '0')}`;
+}

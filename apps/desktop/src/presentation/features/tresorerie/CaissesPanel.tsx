@@ -332,9 +332,9 @@ export default function CaissesPanel({ filialeId, filiale }: Props) {
       {modal?.type === 'journal' && (
         <DocumentImprimable titre={`Journal de caisse — ${intitule}`} filiale={filiale} onClose={() => setModal(null)}>
           <div className="document-cartouches">
-            <div className="document-bloc"><strong>Période</strong><br />Du {enJour(dateDebut)} au {enJour(dateFin)}</div>
-            <div className="document-bloc"><strong>Caisse</strong><br />{intitule}{caisseChoisie?.responsable ? <><br />Responsable : {caisseChoisie.responsable}</> : null}</div>
-            <div className="document-bloc"><strong>Soldes</strong><br />Ouverture : {formaterFcfa(journal.ouverture)}<br />Clôture : {formaterFcfa(journal.cloture)}</div>
+            <div className="document-bloc"><strong className="document-bloc-titre">Période</strong>Du {enJour(dateDebut)} au {enJour(dateFin)}</div>
+            <div className="document-bloc"><strong className="document-bloc-titre">Caisse</strong>{intitule}{caisseChoisie?.responsable ? <><br />Responsable : {caisseChoisie.responsable}</> : null}</div>
+            <div className="document-bloc"><strong className="document-bloc-titre">Soldes</strong>Ouverture : {formaterFcfa(journal.ouverture)}<br />Clôture : {formaterFcfa(journal.cloture)}</div>
           </div>
           <table className="document-liste">
             <thead><tr><th>Date</th><th>Caisse</th><th>Catégorie</th><th>Description</th><th>Pièce</th><th className="num">Recette</th><th className="num">Dépense</th><th className="num">Solde</th></tr></thead>

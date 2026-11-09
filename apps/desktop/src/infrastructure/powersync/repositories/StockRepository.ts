@@ -12,7 +12,7 @@ import {
   type SortieStock,
   type TransfertStock,
 } from '../../../core/stock';
-import { numeroPiece } from '../../desktop/identitePoste';
+import { numeroCourt, numeroPiece } from '../../desktop/identitePoste';
 import { BaseRepository } from './BaseRepository';
 import { porterLivraisonAuCompte } from './compteFournisseur';
 
@@ -261,10 +261,10 @@ export function bonsStockQuery(filialeId: string | null, filtres: FiltresBons) {
   }
   const q = filtres.recherche?.trim();
   if (q) {
-    conditions.push(`(m.reference LIKE ? OR m.motif LIKE ? OR EXISTS (
+    conditions.push(`(m.reference LIKE ? OR m.reference_courte LIKE ? OR m.motif LIKE ? OR EXISTS (
       SELECT 1 FROM mouvements_stock mr JOIN articles ar ON ar.id = mr.article_id
       WHERE mr.reference = m.reference AND mr.filiale_id = m.filiale_id AND (ar.code LIKE ? OR ar.designation LIKE ?)))`);
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
   params.push(filtres.limite ?? 200);
 
@@ -313,6 +313,27 @@ export interface OptionsMouvement {
   remiseMontant?: number;
   /** Arrivée réelle de la marchandise, quand elle a été saisie (bon de livraison). */
   dateLivraison?: string | null;
+  /**
+   * Numéro court du bon auquel la ligne appartient (`ENT-AN8-000012`).
+   * Toutes les lignes d'un bon portent le même, comme `reference`. Nul quand
+   * la référence a été saisie à la main : elle est alors le numéro de la pièce.
+   */
+  referenceCourte?: string | null;
+}
+
+/**
+ * Les deux numéros d'un bon : le **long**, qui l'identifie et que porte le
+ * code-barres, et le **court**, qui se lit et se dicte (`ENT-AN8-000012`).
+ *
+ * Une référence saisie à la main — le numéro du bon de livraison du
+ * fournisseur, le plus souvent — est reprise telle quelle et n'appelle aucun
+ * numéro court : elle *est* le numéro de la pièce, lui en adjoindre un second
+ * reviendrait à imprimer deux numéros sur le même bon.
+ */
+function numerosDuBon(referenceSaisie: string | null | undefined, prefixe: string): { reference: string; referenceCourte: string | null } {
+  return referenceSaisie
+    ? { reference: referenceSaisie, referenceCourte: null }
+    : { reference: numeroPiece(prefixe), referenceCourte: numeroCourt(prefixe) };
 }
 
 /**
@@ -335,7 +356,7 @@ export class StockRepository extends BaseRepository {
    * d'entrée qui n'engagerait rien obligerait à ressaisir l'achat ailleurs.
    */
   enregistrerEntree(ctx: ContexteMouvement, entree: EntreeStock): Promise<string> {
-    const reference = entree.reference || numeroPiece('ENT');
+    const { reference, referenceCourte } = numerosDuBon(entree.reference, 'ENT');
     const dateLivraison = entree.date_livraison ? new Date(entree.date_livraison).toISOString() : null;
     return this.db.writeTransaction(async (tx) => {
       const parts = repartirRemiseGlobale(fusionnerLignes(entree.lignes), entree.remise);
@@ -344,7 +365,7 @@ export class StockRepository extends BaseRepository {
           article_id: ligne.article_id,
           quantite: ligne.quantite,
           cout_unitaire: cout_unitaire_net,
-        }, reference, entree.motif || null, { fournisseurId: entree.fournisseur_id, remiseMontant: remise, dateLivraison });
+        }, reference, entree.motif || null, { fournisseurId: entree.fournisseur_id, remiseMontant: remise, dateLivraison, referenceCourte });
       }
       // Une ligne sans coût saisi ne doit rien : on ne sait pas ce qu'elle
       // vaut. Un bon qui n'en porte aucun ne crée donc aucune pièce — une
@@ -371,14 +392,14 @@ export class StockRepository extends BaseRepository {
   }
 
   enregistrerSortie(ctx: ContexteMouvement, sortie: SortieStock): Promise<string> {
-    const reference = sortie.reference || numeroPiece(sortie.type === 'CASSE' ? 'CAS' : 'SOR');
+    const { reference, referenceCourte } = numerosDuBon(sortie.reference, sortie.type === 'CASSE' ? 'CAS' : 'SOR');
     return this.db.writeTransaction(async (tx) => {
       for (const ligne of fusionnerLignes(sortie.lignes)) {
         await this.appliquer(tx, ctx, sortie.depot_id, sortie.type, {
           article_id: ligne.article_id,
           quantite: ligne.quantite,
           cout_unitaire: null,
-        }, reference, sortie.motif || null);
+        }, reference, sortie.motif || null, { referenceCourte });
       }
       return reference;
     });
@@ -386,7 +407,7 @@ export class StockRepository extends BaseRepository {
 
   /** Transfert inter-dépôts : sortie du dépôt source puis entrée au dépôt destination, au coût moyen source. */
   transferer(ctx: ContexteMouvement, transfert: TransfertStock): Promise<string> {
-    const reference = transfert.reference || numeroPiece('TRF');
+    const { reference, referenceCourte } = numerosDuBon(transfert.reference, 'TRF');
     return this.db.writeTransaction(async (tx) => {
       for (const ligne of fusionnerLignes(transfert.lignes)) {
         const source = await this.lireEtat(tx, ligne.article_id, transfert.depot_source_id);
@@ -394,12 +415,12 @@ export class StockRepository extends BaseRepository {
           article_id: ligne.article_id,
           quantite: ligne.quantite,
           cout_unitaire: null,
-        }, reference, transfert.motif || null);
+        }, reference, transfert.motif || null, { referenceCourte });
         await this.appliquer(tx, ctx, transfert.depot_destination_id, 'TRANSFERT_ENTREE', {
           article_id: ligne.article_id,
           quantite: ligne.quantite,
           cout_unitaire: source.cout_moyen,
-        }, reference, transfert.motif || null);
+        }, reference, transfert.motif || null, { referenceCourte });
       }
       return reference;
     });
@@ -407,7 +428,7 @@ export class StockRepository extends BaseRepository {
 
   /** Inventaire : la quantité comptée devient la quantité en stock ; seuls les écarts génèrent un mouvement. */
   enregistrerInventaire(ctx: ContexteMouvement, inventaire: Inventaire): Promise<{ reference: string; ecarts: number }> {
-    const reference = inventaire.reference || numeroPiece('INV');
+    const { reference, referenceCourte } = numerosDuBon(inventaire.reference, 'INV');
     return this.db.writeTransaction(async (tx) => {
       let ecarts = 0;
       for (const ligne of inventaire.lignes) {
@@ -417,7 +438,7 @@ export class StockRepository extends BaseRepository {
           article_id: ligne.article_id,
           quantite: ligne.quantite_comptee,
           cout_unitaire: null,
-        }, reference, inventaire.motif || null);
+        }, reference, inventaire.motif || null, { referenceCourte });
         ecarts++;
       }
       return { reference, ecarts };
@@ -481,8 +502,8 @@ export class StockRepository extends BaseRepository {
     }
 
     await tx.execute(
-      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, motif, fournisseur_id, remise_montant, date_livraison, utilisateur_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO mouvements_stock (id, article_id, depot_id, filiale_id, type, quantite, quantite_avant, quantite_apres, cout_unitaire, reference, reference_courte, motif, fournisseur_id, remise_montant, date_livraison, utilisateur_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         this.nouvelId(), ligne.article_id, depotId, ctx.filialeId, type,
         Math.abs(resultat.quantite), resultat.quantite_avant, resultat.quantite_apres,
@@ -490,7 +511,7 @@ export class StockRepository extends BaseRepository {
         // lui, un bon de casse ou de transfert ne dit pas ce qu'il a coûté, et
         // le coût moyen d'aujourd'hui ne le dira plus jamais exactement.
         ligne.cout_unitaire ?? resultat.cout_moyen,
-        reference, motif, options.fournisseurId ?? null, options.remiseMontant ?? 0, options.dateLivraison ?? null, ctx.utilisateurId, now,
+        reference, options.referenceCourte ?? null, motif, options.fournisseurId ?? null, options.remiseMontant ?? 0, options.dateLivraison ?? null, ctx.utilisateurId, now,
       ],
     );
   }

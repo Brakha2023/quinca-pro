@@ -112,6 +112,7 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
       {facture && dateVente && (
         <FactureVente
           numero={vente.numero ?? ''}
+          numeroCourt={vente.numero_court}
           date={dateVente}
           vendeur={[vente.utilisateur_prenom, vente.utilisateur_nom].filter(Boolean).join(' ')}
           client={client}

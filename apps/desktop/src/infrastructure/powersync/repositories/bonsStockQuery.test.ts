@@ -31,7 +31,7 @@ function baseDeDemonstration() {
     CREATE TABLE mouvements_stock (id TEXT PRIMARY KEY, article_id TEXT, depot_id TEXT, filiale_id TEXT,
       type TEXT, quantite REAL, quantite_avant REAL, quantite_apres REAL, cout_unitaire REAL,
       reference TEXT, motif TEXT, fournisseur_id TEXT, utilisateur_id TEXT, created_at TEXT,
-      remise_montant REAL, date_livraison TEXT);
+      remise_montant REAL, date_livraison TEXT, reference_courte TEXT);
 
     INSERT INTO articles VALUES ('a1','CIM-50','Ciment 50kg'),('a2','VIS-50','Vis 50mm');
     INSERT INTO depots VALUES ('d1','Principal'),('d2','Annexe');
@@ -39,25 +39,25 @@ function baseDeDemonstration() {
     INSERT INTO fournisseurs VALUES ('f1','SOCIMAT CI');
 
     -- Entrée d'achat : deux lignes, valorisées toutes les deux.
-    INSERT INTO mouvements_stock VALUES ('m1','a1','d1','F','ENTREE_ACHAT',10,0,10,4500,'ENT-1','BL 42','f1','u1','2026-10-13T08:00:00.000Z',0,NULL);
-    INSERT INTO mouvements_stock VALUES ('m2','a2','d1','F','ENTREE_ACHAT',5,0,5,2000,'ENT-1','BL 42','f1','u1','2026-10-13T08:00:01.000Z',0,NULL);
+    INSERT INTO mouvements_stock VALUES ('m1','a1','d1','F','ENTREE_ACHAT',10,0,10,4500,'ENT-1','BL 42','f1','u1','2026-10-13T08:00:00.000Z',0,NULL,'ENT-K7Q-000001');
+    INSERT INTO mouvements_stock VALUES ('m2','a2','d1','F','ENTREE_ACHAT',5,0,5,2000,'ENT-1','BL 42','f1','u1','2026-10-13T08:00:01.000Z',0,NULL,'ENT-K7Q-000001');
     -- Entrée remisée : 55 000 F de marchandise, 5 500 F de rabais sur le bon
     -- entier, répartis au prorata (4 500 + 1 000), et livrée la veille au soir.
-    INSERT INTO mouvements_stock VALUES ('m11','a1','d1','F','ENTREE_ACHAT',10,0,10,4050,'ENT-2','BL 50','f1','u1','2026-10-12T08:00:00.000Z',4500,'2026-10-11T18:30:00.000Z');
-    INSERT INTO mouvements_stock VALUES ('m12','a2','d1','F','ENTREE_ACHAT',5,0,5,1800,'ENT-2','BL 50','f1','u1','2026-10-12T08:00:01.000Z',1000,'2026-10-11T18:30:00.000Z');
+    INSERT INTO mouvements_stock VALUES ('m11','a1','d1','F','ENTREE_ACHAT',10,0,10,4050,'ENT-2','BL 50','f1','u1','2026-10-12T08:00:00.000Z',4500,'2026-10-11T18:30:00.000Z',NULL);
+    INSERT INTO mouvements_stock VALUES ('m12','a2','d1','F','ENTREE_ACHAT',5,0,5,1800,'ENT-2','BL 50','f1','u1','2026-10-12T08:00:01.000Z',1000,'2026-10-11T18:30:00.000Z',NULL);
     -- Transfert entre dépôts : les deux moitiés portent le coût moyen du départ.
-    INSERT INTO mouvements_stock VALUES ('m3','a1','d1','F','TRANSFERT_SORTIE',4,10,6,4500,'TRF-1',NULL,NULL,'u1','2026-10-14T08:00:00.000Z',0,NULL);
-    INSERT INTO mouvements_stock VALUES ('m4','a1','d2','F','TRANSFERT_ENTREE',4,0,4,4500,'TRF-1',NULL,NULL,'u1','2026-10-14T08:00:01.000Z',0,NULL);
+    INSERT INTO mouvements_stock VALUES ('m3','a1','d1','F','TRANSFERT_SORTIE',4,10,6,4500,'TRF-1',NULL,NULL,'u1','2026-10-14T08:00:00.000Z',0,NULL,NULL);
+    INSERT INTO mouvements_stock VALUES ('m4','a1','d2','F','TRANSFERT_ENTREE',4,0,4,4500,'TRF-1',NULL,NULL,'u1','2026-10-14T08:00:01.000Z',0,NULL,NULL);
     -- Inventaire : un écart en moins, un en plus.
-    INSERT INTO mouvements_stock VALUES ('m5','a1','d1','F','INVENTAIRE',-2,6,4,4500,'INV-1','Comptage',NULL,'u1','2026-10-15T08:00:00.000Z',0,NULL);
-    INSERT INTO mouvements_stock VALUES ('m6','a2','d1','F','INVENTAIRE',1,5,6,2000,'INV-1','Comptage',NULL,'u1','2026-10-15T08:00:01.000Z',0,NULL);
+    INSERT INTO mouvements_stock VALUES ('m5','a1','d1','F','INVENTAIRE',-2,6,4,4500,'INV-1','Comptage',NULL,'u1','2026-10-15T08:00:00.000Z',0,NULL,NULL);
+    INSERT INTO mouvements_stock VALUES ('m6','a2','d1','F','INVENTAIRE',1,5,6,2000,'INV-1','Comptage',NULL,'u1','2026-10-15T08:00:01.000Z',0,NULL,NULL);
     -- Une casse (valorisée : c'est une perte sèche), et une vente qui ne doit
     -- figurer dans aucun onglet de saisie. Un vieux mouvement sans coût aussi.
-    INSERT INTO mouvements_stock VALUES ('m7','a2','d1','F','CASSE',2,6,4,2000,'CAS-1','Chute',NULL,'u1','2026-10-16T08:00:00.000Z',0,NULL);
-    INSERT INTO mouvements_stock VALUES ('m10','a2','d1','F','SORTIE_DESTOCKAGE',1,4,3,NULL,'SOR-1','Échantillon',NULL,'u1','2026-10-16T07:00:00.000Z',0,NULL);
-    INSERT INTO mouvements_stock VALUES ('m8','a2','d1','F','SORTIE_VENTE',1,4,3,NULL,'VTE-1',NULL,NULL,'u1','2026-10-16T09:00:00.000Z',0,NULL);
+    INSERT INTO mouvements_stock VALUES ('m7','a2','d1','F','CASSE',2,6,4,2000,'CAS-1','Chute',NULL,'u1','2026-10-16T08:00:00.000Z',0,NULL,NULL);
+    INSERT INTO mouvements_stock VALUES ('m10','a2','d1','F','SORTIE_DESTOCKAGE',1,4,3,NULL,'SOR-1','Échantillon',NULL,'u1','2026-10-16T07:00:00.000Z',0,NULL,NULL);
+    INSERT INTO mouvements_stock VALUES ('m8','a2','d1','F','SORTIE_VENTE',1,4,3,NULL,'VTE-1',NULL,NULL,'u1','2026-10-16T09:00:00.000Z',0,NULL,NULL);
     -- Une autre filiale, pour vérifier qu'elle reste chez elle.
-    INSERT INTO mouvements_stock VALUES ('m9','a1','d1','AUTRE','ENTREE_ACHAT',3,0,3,4500,'ENT-9',NULL,'f1','u1','2026-10-17T08:00:00.000Z',0,NULL);
+    INSERT INTO mouvements_stock VALUES ('m9','a1','d1','AUTRE','ENTREE_ACHAT',3,0,3,4500,'ENT-9',NULL,'f1','u1','2026-10-17T08:00:00.000Z',0,NULL,NULL);
   `);
   return db;
 }
@@ -107,6 +107,12 @@ describe('bonsStockQuery', () => {
     expect(bons({ types: TYPES_BON_ENTREE, recherche: 'VIS' })[0]).toMatchObject({ reference: 'ENT-1', nombre_lignes: 2, quantite: 15 });
     expect(bons({ types: TYPES_BON_ENTREE, recherche: 'BL 42' })).toHaveLength(1);
     expect(bons({ types: TYPES_BON_ENTREE, recherche: 'introuvable' })).toHaveLength(0);
+  });
+
+  it('retrouve un bon par son numéro court comme par son numéro long', () => {
+    // Le magasinier a le bon sous les yeux : c'est le court qui y est imprimé.
+    expect(bons({ types: TYPES_BON_ENTREE, recherche: 'ENT-K7Q-000001' })[0]).toMatchObject({ reference: 'ENT-1' });
+    expect(bons({ types: TYPES_BON_ENTREE, recherche: 'ENT-1' })[0]).toMatchObject({ reference: 'ENT-1' });
   });
 
   it('additionne la remise du bon et garde l’heure de la livraison', () => {

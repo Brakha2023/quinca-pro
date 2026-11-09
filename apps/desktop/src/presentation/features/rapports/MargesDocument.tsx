@@ -42,14 +42,14 @@ export default function MargesDocument({ categories, articles, filiale, filtres,
     <DocumentImprimable titre="Rapport des marges" filiale={filiale} paysage onClose={onClose}>
       <div className="document-cartouches">
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Périmètre</strong>
-          <br />{perimetre}
+          <strong className="document-bloc-titre">Périmètre</strong>
+          {perimetre}
           <br />{recap.categories} catégorie(s) · {recap.articles} article(s) · {recap.lignes} ligne(s) de vente
           <br />Édité le {edite}
         </div>
         <div className="document-bloc" style={{ width: '70mm' }}>
-          <strong>Marge commerciale</strong>
-          <br />Chiffre d'affaires HT : {formaterFcfa(recap.ca_ht)}
+          <strong className="document-bloc-titre">Marge commerciale</strong>
+          Chiffre d'affaires HT : {formaterFcfa(recap.ca_ht)}
           <br />Coût d'achat : {formaterFcfa(recap.cout)}
           <br /><strong>Marge : {formaterFcfa(recap.marge)}</strong>
           <br />Taux de marge : {formaterPourcentage(recap.taux_marge)}

@@ -31,20 +31,20 @@ export default function BonTransfertFilialeDocument({ bon, filiale, onClose }: P
           <div style={{ marginTop: 4 }}><CodeBarres valeur={bon.numero} /></div>
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Expéditeur</strong>
-          <br />{bon.filiale_source}
+          <strong className="document-bloc-titre">Expéditeur</strong>
+          {bon.filiale_source}
           <br />Dépôt : {bon.depot_source}
           <br />
-          <strong>Destinataire</strong>
-          <br />{bon.filiale_destination}
+          <strong className="document-bloc-titre">Destinataire</strong>
+          {bon.filiale_destination}
           <br />Dépôt : {bon.depot_destination ?? 'désigné à la réception'}
         </div>
         <div className="document-bloc" style={{ flex: 1 }}>
-          <strong>Transport</strong>
-          <br />{bon.transporteur || '—'}
+          <strong className="document-bloc-titre">Transport</strong>
+          {bon.transporteur || '—'}
           <br />
-          <strong>Motif</strong>
-          <br />{bon.motif || '—'}
+          <strong className="document-bloc-titre">Motif</strong>
+          {bon.motif || '—'}
         </div>
       </div>
 
