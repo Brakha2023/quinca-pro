@@ -1,11 +1,13 @@
 import type { Transaction } from '@powersync/web';
-import type { CaisseRow, ClientRow, LigneVenteRow, ModePaiement, StatutVente, VenteRow } from '@quinca/shared-types';
+import type { CaisseRow, ClientRow, LigneVenteRow, StatutVente, VenteRow } from '@quinca/shared-types';
 import { calculerSolde } from '../../../core/clients';
 import { codeAnnulationDefini, normaliserCodeAnnulation } from '../../../core/parametres';
+import { CATEGORIE_REOUVERTURE_VENTE } from '../../../core/tresorerie';
+import { arrondirFcfa } from '../../../core/commun/prix';
 import { verifierEmpreinte } from '../../auth/empreinteLocale';
 import { codePoste, numeroCourt, numeroPiece } from '../../desktop/identitePoste';
 import {
-  MODES_EN_CAISSE, calculerLigne, preparerVente, venteModifiable,
+  calculerLigne, preparerVente, venteModifiable,
   type VenteAEnregistrer, type VentePreparee,
 } from '../../../core/ventes';
 import { BaseRepository } from './BaseRepository';
@@ -165,9 +167,12 @@ export class VentesRepository extends BaseRepository {
         }
       }
 
-      if (preparee.montant_encaisse > 0) {
-        await this.encaisser(tx, ctx, preparee.montant_encaisse, preparee.numero, MODES_EN_CAISSE.has(preparee.mode_paiement), `Vente ${preparee.numero}`);
-      }
+      /*
+       * Rien n'entre en caisse ici. L'argent reste au comptoir, entre les
+       * mains du caissier, et il est **versé à la validation** de la vente
+       * (voir `valider`). Le règlement du client, lui, est bien enregistré
+       * tout de suite : il a payé, sa créance baisse le jour où il paie.
+       */
 
       if (ctx.proformaId) {
         const p = await tx.getOptional<{ statut: string }>('SELECT statut FROM proformas WHERE id = ?', [ctx.proformaId]);
@@ -219,7 +224,6 @@ export class VentesRepository extends BaseRepository {
       const numero = v.numero ?? '';
       const now = this.maintenant();
       const ancienEncaisse = (v.montant_percu ?? 0) - (v.monnaie ?? 0);
-      const ancienMode = (v.mode_paiement ?? 'ESPECES') as ModePaiement;
       const motif = `Correction du ticket ${numero}`;
 
       /*
@@ -263,17 +267,12 @@ export class VentesRepository extends BaseRepository {
         await tx.execute('DELETE FROM reglements_clients WHERE vente_id = ?', [venteId]);
         await this.debiterClient(tx, v.client_id, -(v.total_ttc ?? 0), -ancienEncaisse);
       }
-      if (ancienEncaisse > 0) {
-        await tx.execute(
-          `INSERT INTO mouvements_tresorerie (id, type, categorie, montant, description, reference, caisse_id, utilisateur_id, filiale_id, date_operation, created_at)
-           VALUES (?, 'DEPENSE', 'CORRECTION_VENTE', ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [this.nouvelId(), ancienEncaisse, `${motif} : reprise de l'encaissement`, numero, caisseId || null, ctx.utilisateurId, ctx.filialeId, now, now],
-        );
-        if (caisseId && MODES_EN_CAISSE.has(ancienMode)) {
-          const caisse = await tx.get<CaisseRow>('SELECT * FROM caisses WHERE id = ?', [caisseId]);
-          await this.patch(tx, 'caisses', caisseId, { solde_actuel: (caisse.solde_actuel ?? 0) - ancienEncaisse });
-        }
-      }
+      /*
+       * Aucune reprise en caisse : un ticket en attente n'y a rien versé, le
+       * versement attend la validation. Avant ce changement il fallait sortir
+       * l'ancien encaissement puis remettre le nouveau, et le journal portait
+       * deux lignes pour une seule vente corrigée.
+       */
 
       // 2. Le ticket corrigé, écrit comme s'il venait d'être encaissé.
       const t = preparee.totaux;
@@ -304,13 +303,6 @@ export class VentesRepository extends BaseRepository {
           );
         }
       }
-      if (preparee.montant_encaisse > 0) {
-        await this.encaisser(
-          tx, interne, preparee.montant_encaisse, numero,
-          MODES_EN_CAISSE.has(preparee.mode_paiement), `Vente ${numero} (corrigée)`,
-        );
-      }
-
       await this.patch(tx, 'ventes', venteId, {
         client_id: vente.client?.id ?? null,
         total_brut_ht: t.total_brut_ht, total_remise: t.total_remise, total_net_ht: t.total_net_ht,
@@ -324,19 +316,132 @@ export class VentesRepository extends BaseRepository {
     });
   }
 
-  /** Validation de fin de journée : les ventes en attente passent en VALIDEE. */
-  async valider(ids: string[]): Promise<number> {
+  /**
+   * Validation de fin de journée : les ventes en attente passent en VALIDEE,
+   * **et leur encaissement entre en caisse**.
+   *
+   * C'est ici que l'argent est versé, pas au comptoir : le caissier le garde
+   * sous la main pendant la journée, et la caisse ne reçoit que ce qui a été
+   * arrêté. Une ligne par ticket, portant son numéro — le journal reste
+   * lisible ticket par ticket, et un ticket seul peut être rouvert.
+   *
+   * La ligne est datée du **jour de la validation**, pas de celui de la vente :
+   * c'est le jour où l'argent entre. Un journal de caisse déjà imprimé ne se
+   * voit donc pas complété après coup.
+   */
+  async valider(ctx: { utilisateurId: string | null }, ids: string[]): Promise<number> {
     if (ids.length === 0) return 0;
     return this.db.writeTransaction(async (tx) => {
       let n = 0;
       for (const id of ids) {
         // rowsAffected n'est pas fiable avec les vues PowerSync : on vérifie l'état avant.
-        const v = await tx.getOptional<{ statut: string }>('SELECT statut FROM ventes WHERE id = ?', [id]);
+        const v = await tx.getOptional<VenteRow>('SELECT * FROM ventes WHERE id = ?', [id]);
         if (v?.statut !== 'EN_ATTENTE') continue;
+
+        const aVerser = (v.montant_percu ?? 0) - (v.monnaie ?? 0);
+        /*
+         * Déjà en caisse ? On ne verse pas deux fois. Le cas existe pour les
+         * ventes enregistrées **avant** ce changement : elles ont été versées
+         * au comptoir et attendent encore leur validation. Le garde-fou reste
+         * utile ensuite — il rend la validation rejouable sans dommage.
+         */
+        if (aVerser > 0 && (await this.versementNet(tx, v.numero)) <= 0) {
+          await this.mouvementCaisse(tx, ctx, v, 'RECETTE', 'VENTE', aVerser, `Vente ${v.numero}`);
+        }
         await tx.execute(`UPDATE ventes SET statut = 'VALIDEE', updated_at = ? WHERE id = ?`, [this.maintenant(), id]);
         n++;
       }
       return n;
+    });
+  }
+
+  /**
+   * Ce que la caisse détient aujourd'hui au titre d'une vente.
+   *
+   * Le journal est en ajout seul : un versement repris laisse ses deux lignes.
+   * C'est donc leur **somme signée** qui dit si l'argent y est encore, et non
+   * la présence d'une ligne. Les catégories d'avant ce changement sont
+   * comptées aussi : une vente corrigée ou annulée à l'époque porte les
+   * contre-passations de son temps.
+   */
+  private async versementNet(tx: Transaction, numero: string | null): Promise<number> {
+    if (!numero) return 0;
+    const r = await tx.getOptional<{ net: number | null }>(
+      `SELECT COALESCE(SUM(CASE WHEN type = 'RECETTE' THEN montant ELSE -montant END), 0) AS net
+         FROM mouvements_tresorerie
+        WHERE reference = ? AND categorie IN ('VENTE', 'CORRECTION_VENTE', 'ANNULATION_VENTE', ?)`,
+      [numero, CATEGORIE_REOUVERTURE_VENTE],
+    );
+    return arrondirFcfa(r?.net ?? 0);
+  }
+
+  /**
+   * Une ligne de journal de caisse au titre d'une vente, et la projection du
+   * solde qui va avec.
+   *
+   * Le solde n'est écrit ici **qu'en projection**, pour que l'écran réagisse
+   * tout de suite : c'est Postgres qui le tient, par delta sur chaque ligne du
+   * journal portant une caisse (`cumuler_mouvement_tresorerie`, migration
+   * `cumuls_serveur`). Tout mode de paiement verse donc, carte comprise — le
+   * poste ne pourrait pas en décider autrement, le serveur renverrait son
+   * calcul et effacerait la nuance.
+   */
+  private async mouvementCaisse(
+    tx: Transaction,
+    ctx: { utilisateurId: string | null },
+    vente: Pick<VenteRow, 'numero' | 'caisse_id' | 'filiale_id'>,
+    sens: 'RECETTE' | 'DEPENSE',
+    categorie: string,
+    montant: number,
+    description: string,
+  ): Promise<void> {
+    const now = this.maintenant();
+    await tx.execute(
+      `INSERT INTO mouvements_tresorerie (id, type, categorie, montant, description, reference, caisse_id, utilisateur_id, filiale_id, date_operation, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [this.nouvelId(), sens, categorie, montant, description, vente.numero, vente.caisse_id, ctx.utilisateurId, vente.filiale_id, now, now],
+    );
+    if (!vente.caisse_id) return;
+    const caisse = await tx.get<CaisseRow>('SELECT * FROM caisses WHERE id = ?', [vente.caisse_id]);
+    const delta = sens === 'RECETTE' ? montant : -montant;
+    await this.patch(tx, 'caisses', vente.caisse_id, { solde_actuel: (caisse.solde_actuel ?? 0) + delta });
+  }
+
+  /**
+   * Remet une vente validée « en attente », pour la rattraper après coup.
+   *
+   * Le versement **ressort de la caisse** : l'argent y était entré à la
+   * validation, et un ticket en attente n'a rien en caisse — c'est ce qui
+   * permet de le corriger ou de l'annuler sans rien contre-passer. La reprise
+   * se lit au journal (catégorie « Réouverture de vente ») : une recette ne
+   * doit pas quitter la caisse en silence.
+   *
+   * Ce qui ressort est le **net détenu** au titre de la vente, pas son
+   * encaissement théorique : une vente validée avant que le versement passe à
+   * la validation, ou corrigée du temps où la correction contre-passait la
+   * caisse, n'y a pas forcément le montant qu'on croit.
+   *
+   * Le statut est vérifié **ici**, dans le dépôt, et pas seulement à l'écran :
+   * une vente annulée ne doit revenir par aucun chemin.
+   */
+  async remettreEnAttente(ctx: { utilisateurId: string | null }, venteId: string): Promise<void> {
+    return this.db.writeTransaction(async (tx) => {
+      const v = await tx.get<VenteRow>('SELECT * FROM ventes WHERE id = ?', [venteId]);
+      if (v.statut !== 'VALIDEE') {
+        throw new Error(
+          v.statut === 'ANNULEE'
+            ? "Une vente annulée ne revient pas en attente : sa marchandise est rentrée et son encaissement contre-passé. Refaites le ticket."
+            : 'Seule une vente validée se remet en attente.',
+        );
+      }
+      const enCaisse = await this.versementNet(tx, v.numero);
+      if (enCaisse > 0) {
+        await this.mouvementCaisse(
+          tx, ctx, v, 'DEPENSE', CATEGORIE_REOUVERTURE_VENTE, enCaisse,
+          `Réouverture du ticket ${v.numero} : reprise du versement`,
+        );
+      }
+      await this.patch(tx, 'ventes', venteId, { statut: 'EN_ATTENTE' });
     });
   }
 
@@ -398,17 +503,18 @@ export class VentesRepository extends BaseRepository {
         await this.debiterClient(tx, v.client_id, -(v.total_ttc ?? 0), -encaisse);
       }
 
-      if (encaisse > 0) {
-        const mode = v.mode_paiement ?? 'ESPECES';
-        await tx.execute(
-          `INSERT INTO mouvements_tresorerie (id, type, categorie, montant, description, reference, caisse_id, utilisateur_id, filiale_id, date_operation, created_at)
-           VALUES (?, 'DEPENSE', 'ANNULATION_VENTE', ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [this.nouvelId(), encaisse, `Annulation vente ${v.numero} : ${motif}`, v.numero, v.caisse_id, ctx.utilisateurId, ctx.filialeId, now, now],
+      /*
+       * La caisse ne bouge pas : une vente en attente n'y a rien versé, le
+       * versement attend la validation. Si la vente avait tout de même de
+       * l'argent en caisse — validée puis rouverte, ou enregistrée avant ce
+       * changement —, la reprise a déjà eu lieu à la réouverture.
+       */
+      const enCaisse = await this.versementNet(tx, v.numero);
+      if (enCaisse > 0) {
+        await this.mouvementCaisse(
+          tx, ctx, v, 'DEPENSE', 'ANNULATION_VENTE', enCaisse,
+          `Annulation vente ${v.numero} : ${motif}`,
         );
-        if (v.caisse_id && MODES_EN_CAISSE.has(mode as 'ESPECES')) {
-          const caisse = await tx.get<CaisseRow>('SELECT * FROM caisses WHERE id = ?', [v.caisse_id]);
-          await this.patch(tx, 'caisses', v.caisse_id, { solde_actuel: (caisse.solde_actuel ?? 0) - encaisse });
-        }
       }
 
       await tx.execute(`UPDATE livraisons SET statut = 'ANNULEE', updated_at = ? WHERE vente_id = ? AND statut != 'LIVREE'`, [now, venteId]);
@@ -425,18 +531,5 @@ export class VentesRepository extends BaseRepository {
       cumul_reglements,
       solde_actuel: calculerSolde({ solde_initial: c.solde_initial ?? 0, cumul_factures, cumul_reglements }),
     });
-  }
-
-  private async encaisser(tx: Transaction, ctx: ContexteVente, montant: number, reference: string, enCaisse: boolean, description: string): Promise<void> {
-    const now = this.maintenant();
-    await tx.execute(
-      `INSERT INTO mouvements_tresorerie (id, type, categorie, montant, description, reference, caisse_id, utilisateur_id, filiale_id, date_operation, created_at)
-       VALUES (?, 'RECETTE', 'VENTE', ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [this.nouvelId(), montant, description, reference, ctx.caisseId, ctx.utilisateurId, ctx.filialeId, now, now],
-    );
-    if (enCaisse) {
-      const caisse = await tx.get<CaisseRow>('SELECT * FROM caisses WHERE id = ?', [ctx.caisseId]);
-      await this.patch(tx, 'caisses', ctx.caisseId, { solde_actuel: (caisse.solde_actuel ?? 0) + montant });
-    }
   }
 }

@@ -146,6 +146,43 @@ montant en toutes lettres et conditions de règlement cochées. Le format habitu
 La même facture se réédite depuis **Ventes → détail d'un ticket → Facture A4**, avec les montants
 d'origine (jamais recalculés) ; une vente annulée ressort barrée d'un bandeau « FACTURE ANNULÉE ».
 
+**L'encaissement ne met pas l'argent en caisse.** Il sort la marchandise du stock, enregistre le
+règlement du client et fixe les montants du ticket, qui reste *en attente* ; l'argent demeure au
+comptoir, entre les mains du caissier. Il entre dans la caisse désignée à la **validation de journée**
+(*Ventes → Valider*), par une recette `VENTE` au journal de caisse par ticket, datée du jour de la
+validation — ce qui est versé est donc ce qui a été arrêté et compté. L'indicateur *En attente de
+validation* annonce le montant restant à verser, et *Encaissé* se lit sur les ventes : les deux
+divergent tant que la journée n'est pas validée, et c'est voulu.
+
+Une vente validée se **remet en attente** (*Ventes → détail d'un ticket → Remettre en attente*, droit
+`ventes.valider`) quand une erreur se voit après coup : le ticket redevient corrigible et annulable, et
+son versement **ressort de la caisse**, ce qui se lit au journal sous *Réouverture de vente*. Une vente
+annulée, elle, ne revient par aucun chemin : sa marchandise est rentrée et son encaissement
+contre-passé — on refait le ticket.
+
+### Dépenses
+
+Menu **Dépense** : une dépense s'**engage** d'abord, puis s'**approuve** — et c'est l'approbation qui
+fait sortir l'argent de la caisse, par une ligne de journal portant la pièce et sa catégorie, datée du
+jour de l'approbation. Tant qu'elle attend, la dépense existe, se lit, se corrige et ne coûte rien.
+C'est le symétrique de la vente, dans l'autre sens : là, l'argent entre à la validation ; ici, il sort.
+
+Saisir et approuver sont **deux droits** (`tresorerie.mouvement` et `depenses.valider`), sans quoi
+l'attente ne protégerait rien : le caissier engage, le gérant autorise. La pièce garde le nom de qui l'a
+engagée et de qui l'a approuvée — une autorisation sans nom n'en est pas une. Le bénéficiaire est
+obligatoire à la saisie, et l'écran montre le solde de la caisse avant et après, découvert annoncé.
+
+Une dépense en attente se **corrige** ou se **refuse** (avec motif, conservé au dossier). Une dépense
+approuvée se **remet en attente** : son montant rentre alors en caisse, et la reprise se lit au journal
+sous *Réouverture de dépense* — une sortie d'argent ne s'efface pas, elle se contre-passe. Une dépense
+refusée n'a rien sorti de la caisse : il n'y a rien à y reprendre, et qui change d'avis l'engage de
+nouveau. Les indicateurs distinguent ce qui est **sorti** de caisse de ce qui est **engagé sans être
+payé** — encore en caisse, mais déjà promis.
+
+À côté, **Trésorerie → Dépense** reste la dépense réglée sur-le-champ : la caisse est débitée à
+l'enregistrement, sans approbation à demander. Les deux écrans se renvoient l'un à l'autre, pour qu'on
+sache lequel ouvrir.
+
 ### Catalogue
 
 Onglets **Articles**, **Familles**, **Dépôts**.
@@ -187,6 +224,10 @@ tirés des journaux (`mouvements_stock`, `mouvements_tresorerie`), qui sont en a
 toujours exacts. Deux postes hors ligne qui vendent le même article arrivent dans n'importe quel ordre
 et donnent le même résultat — alors qu'en envoyant chacun sa valeur absolue, le dernier arrivé écrasait
 l'autre et sa vente disparaissait du stock.
+
+Toute ligne de journal portant un `caisse_id` compte dans le solde, quel que soit le mode de paiement :
+carte, chèque et virement y entrent comme les espèces. Un poste qui voudrait n'y mettre que le liquide
+ne tiendrait pas — le calcul du serveur redescendrait et effacerait la nuance.
 
 Le poste continue de tenir ces valeurs dans sa base locale : l'écran réagit immédiatement et la vente
 hors ligne contrôle le disponible. Mais il ne les **envoie** plus (`sansCumulsServeur`), et deux

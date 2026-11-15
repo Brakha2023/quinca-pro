@@ -115,13 +115,37 @@ const pagesImprimees = async (page) => {
     out.apresAnnulation = { client: (await lireClient()).solde_actuel, statut: (await db.get('SELECT statut FROM ventes WHERE id = ?', [v2.id])).statut, livraison: (await db.get('SELECT statut FROM livraisons WHERE vente_id = ?', [v2.id])).statut, stockRobinet: (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a2])).quantite };
 
     // 6. Validation de journée
-    out.validees = await ventes.valider([v1.id, v2.id, v4.id]);
-    out.treso = await db.getAll("SELECT type, categorie, montant FROM mouvements_tresorerie WHERE filiale_id = ? ORDER BY created_at", [F]);
+    out.validees = await ventes.valider({ utilisateurId: U }, [v1.id, v2.id, v4.id]);
+
+    /*
+     * 7. Rattrapage après coup : le ticket validé revient en attente, et
+     * rien n'est contre-passé — la validation n'avait rien déplacé. La vente
+     * annulée, elle, ne revient par aucun chemin : sa marchandise est rentrée
+     * et son encaissement contre-passé.
+     */
+    const etatV1 = async () => ({
+      statut: (await db.get('SELECT statut FROM ventes WHERE id = ?', [v1.id])).statut,
+      stock: (await db.get('SELECT quantite FROM stocks WHERE article_id = ?', [a1])).quantite,
+      caisse: (await db.get('SELECT solde_actuel FROM caisses WHERE id = ?', ['caisse-1'])).solde_actuel,
+    });
+    const avantReouverture = await etatV1();
+    await ventes.remettreEnAttente({ utilisateurId: U }, v1.id);
+    out.reouverture = { avant: avantReouverture, apres: await etatV1() };
+    try { await ventes.remettreEnAttente({ utilisateurId: U }, v2.id); out.refusReouverture = 'NON'; }
+    catch (e) { out.refusReouverture = e.message; }
+    // Et il se revalide : la journée se referme.
+    out.revalidee = await ventes.valider({ utilisateurId: U }, [v1.id]);
+
+    // Deux versements écrits dans la même transaction partagent la
+    // milliseconde : le montant tranche, sinon l'ordre serait au hasard.
+    out.treso = await db.getAll("SELECT type, categorie, montant FROM mouvements_tresorerie WHERE filiale_id = ? ORDER BY created_at, montant DESC", [F]);
     return out;
   }, { F: filialeId, U: userId });
 
   verifier(/^C01-[A-HJ-NP-Z2-9]{3}-\d{8}-[A-HJ-NP-Z2-9]{6}$/.test(r.v1.numero) && r.v1.ttc === 59000 && r.v1.monnaie === 1000, `vente comptoir ${r.v1.numero} : 59 000 F, monnaie 1 000`);
-  verifier(r.stockApresV1 === 90 && r.caisseApresV1 === 59000, 'stock −10 et caisse +59 000');
+  // L'argent reste au comptoir jusqu'à la validation : la caisse ne bouge pas
+  // à l'encaissement, mais le stock, lui, sort tout de suite.
+  verifier(r.stockApresV1 === 90 && r.caisseApresV1 === 0, 'stock −10, et la caisse ne bouge pas : le versement attend la validation');
   verifier(r.v2.ttc === 23600 && r.v2.reste === 23600 && r.clientApresV2.solde_actuel === 23600 && r.clientApresV2.cumul_factures === 23600, 'vente à crédit : créance client 23 600');
   verifier(r.livraison?.statut === 'A_PREPARER' && r.livraison.adresse_livraison === 'Cocody', 'bon de livraison créé');
   // Le numéro revient avec la vente : le bon s'imprime dans la foulée.
@@ -133,8 +157,8 @@ const pagesImprimees = async (page) => {
   verifier(r.correction.ttc === 35400, `correction : total recalculé (${r.correction.ttc} F)`);
   // 100 − 10 (vente) + 10 (retour) − 6 (nouvelle sortie) = 94.
   verifier(r.correction.stock === 94, `correction : le stock suit (${r.correction.stock} sacs)`);
-  // 59 000 (v1) + 21 240 (v4) − 59 000 (reprise) + 35 400 (ticket corrigé).
-  verifier(r.correction.caisse === 56640, `correction : la caisse suit, l'ancien encaissement repris (${r.correction.caisse} F)`);
+  // Plus rien à reprendre : le ticket corrigé n'avait pas encore été versé.
+  verifier(r.correction.caisse === 0, 'correction : la caisse reste à zéro, aucun encaissement à reprendre');
   // Entrée, sortie, retour, nouvelle sortie : rien n'est effacé du journal.
   verifier(r.correction.mouvements === 4, `correction : les mouvements de stock se lisent tous (${r.correction.mouvements})`);
   verifier(r.correction.statut === 'EN_ATTENTE', 'correction : le ticket reste en attente');
@@ -145,15 +169,31 @@ const pagesImprimees = async (page) => {
   verifier(/incorrect/.test(r.mauvaisCode) && r.statutAvantAnnulation === 'EN_ATTENTE', 'mauvais code : la vente ne bouge pas');
   verifier(r.apresAnnulation.client === 0 && r.apresAnnulation.statut === 'ANNULEE' && r.apresAnnulation.livraison === 'ANNULEE' && r.apresAnnulation.stockRobinet === 1, 'annulation : créance, livraison et stock contre-passés');
   verifier(r.validees === 2, 'validation de journée : 2 ventes en attente validées (l’annulée ignorée)');
-  // Le journal de caisse porte, dans l'ordre : les deux encaissements, la
-  // reprise de celui qui a été corrigé, le ticket corrigé, puis l'annulation.
-  // Rien n'est effacé — une correction se lit.
+  // 35 400 (v1 corrigé) + 21 240 (v4) : c'est la validation qui remplit la caisse.
+  verifier(r.reouverture.avant.caisse === 56640, `validation : l’encaissement entre en caisse (${r.reouverture.avant.caisse} F)`);
+  verifier(r.reouverture.avant.statut === 'VALIDEE' && r.reouverture.apres.statut === 'EN_ATTENTE',
+    'un ticket validé se remet en attente : il se corrige et s’annule de nouveau');
+  verifier(r.reouverture.apres.stock === r.reouverture.avant.stock,
+    'remise en attente : le stock ne bouge pas — la marchandise est sortie au comptoir');
+  // 56 640 − 35 400 : le versement du seul ticket rouvert ressort, l'autre reste.
+  verifier(r.reouverture.apres.caisse === 21240,
+    `remise en attente : son versement ressort de la caisse (${r.reouverture.apres.caisse} F)`);
+  verifier(/annulée ne revient pas/.test(r.refusReouverture), `une vente annulée ne revient pas : « ${String(r.refusReouverture).slice(0, 50)}… »`);
+  verifier(r.revalidee === 1, 'et le ticket rouvert se revalide');
+  /*
+   * Le journal de caisse porte, dans l'ordre : les deux versements de la
+   * validation, la reprise du ticket rouvert, puis son nouveau versement.
+   * Rien n'est effacé — une réouverture se lit.
+   *
+   * Ce qu'il ne porte **pas** : la correction du ticket, qui a eu lieu avant
+   * tout versement, et l'annulation de la vente à crédit, où rien n'était
+   * encaissé. Le journal ne compte plus que des mouvements de caisse réels.
+   */
   const treso = r.treso.map((t) => `${t.type}/${t.categorie} ${t.montant}`).join(' | ');
-  // La vente annulée était à crédit : rien n'avait été encaissé, il n'y a donc
-  // pas de ligne d'annulation à contre-passer.
-  verifier(treso === 'RECETTE/VENTE 59000 | RECETTE/VENTE 21240 | DEPENSE/CORRECTION_VENTE 59000 | RECETTE/VENTE 35400',
-    `journal de caisse : la correction s'y lit (${treso})`);
-  verifier(r.treso.filter((t) => t.categorie === 'VENTE').length === 3, '3 recettes de vente : les deux tickets, plus le corrigé');
+  verifier(treso === 'RECETTE/VENTE 35400 | RECETTE/VENTE 21240 | DEPENSE/REOUVERTURE_VENTE 35400 | RECETTE/VENTE 35400',
+    `journal de caisse : la validation verse, la réouverture reprend (${treso})`);
+  verifier(r.treso.filter((t) => t.categorie === 'VENTE').length === 3,
+    '3 versements : les deux tickets validés, plus le ticket rouvert revalidé');
 
   console.log('Interface');
   await page.goto(`${BASE_URL}/#/pos`);
@@ -243,6 +283,59 @@ const pagesImprimees = async (page) => {
     return (await db.getAll('SELECT id FROM ventes_brouillons')).length;
   });
   verifier(reste === 0, 'repris, il disparaît pour tout le monde : la table est vide');
+
+  /*
+   * Révocation de la ligne partagée. PowerSync ne garde une écriture faite
+   * dans une table synchronisée que si le serveur la renvoie ; quand le flux
+   * ne couvre pas `ventes_brouillons`, il efface la ligne au checkpoint
+   * suivant. Le geste se reproduit ici tel quel. Le ticket doit rester : c'est
+   * le panier d'un client qui attend au comptoir.
+   */
+  await page.keyboard.press('F9');
+  await page.locator('text=Panier vide').waitFor();
+  const revoque = await page.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { id } = await db.get('SELECT id FROM ventes_brouillons');
+    await db.execute('DELETE FROM ventes_brouillons WHERE id = ?', [id]);
+    return id;
+  });
+  await page.waitForFunction(() => document.querySelector('[data-testid=ouvrir-brouillons]').textContent.includes('1'));
+  verifier(true, 'ligne partagée révoquée : le ticket reste sur le poste au lieu de s’évaporer');
+  await page.getByTestId('ouvrir-brouillons').click();
+  await page.getByTestId('brouillon-non-partage').waitFor();
+  verifier(true, 'et la liste le dit — « reste sur ce poste », plutôt qu’un partage qui n’a pas lieu');
+  await page.keyboard.press('Escape');
+
+  /*
+   * La copie ne doit pas survivre au brouillon lui-même : une autre caisse le
+   * reprend, la ligne partagée s'efface partout, et une copie oubliée le
+   * ferait réapparaître ici — où il serait encaissé une seconde fois. Elle
+   * s'efface donc dès que la ligne partagée est revenue du serveur, et pas
+   * avant (ici, une date de synchronisation postérieure à sa création).
+   */
+  const apresSync = await page.evaluate(async (id) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { BrouillonsRepository } = await import('/src/infrastructure/powersync/repositories/BrouillonsRepository.ts');
+    const repository = new BrouillonsRepository(db);
+    const compter = async () => (await db.getAll('SELECT id FROM brouillons_locaux')).length;
+    const plusTard = new Date(Date.now() + 86400000);
+    await repository.oublierCopiesConfirmees(plusTard);
+    const sansLignePartagee = await compter();
+    await db.execute(
+      `INSERT OR REPLACE INTO ventes_brouillons (id, libelle, filiale_id, lignes, total_ttc, articles, created_at, updated_at)
+       SELECT id, libelle, filiale_id, lignes, total_ttc, articles, created_at, updated_at FROM brouillons_locaux WHERE id = ?`,
+      [id],
+    );
+    await repository.oublierCopiesConfirmees(plusTard);
+    const avecLignePartagee = await compter();
+    await db.execute('DELETE FROM ventes_brouillons');
+    await db.execute('DELETE FROM brouillons_locaux');
+    return { sansLignePartagee, avecLignePartagee };
+  }, revoque);
+  verifier(apresSync.sansLignePartagee === 1, 'une copie dont la ligne partagée manque survit à la synchronisation');
+  verifier(apresSync.avecLignePartagee === 0, 'et s’efface dès que la ligne partagée est revenue du serveur');
+  await page.waitForFunction(() => !document.querySelector('[data-testid=ouvrir-brouillons]').textContent.match(/\d/));
+
   await page.keyboard.press('F10');
   await page.locator('text=Panier vide').waitFor();
 
@@ -464,6 +557,34 @@ const pagesImprimees = async (page) => {
   await page.getByRole('dialog', { name: 'Validation de journée' }).getByRole('button', { name: 'Valider' }).click();
   await page.locator('tbody tr', { hasText: 'En attente' }).first().waitFor({ state: 'detached' });
   verifier((await page.locator('tbody tr', { hasText: 'Validée' }).count()) >= 3, 'validation de journée via la boîte de confirmation');
+
+  /*
+   * Rattrapage par l'écran : le détail d'un ticket validé n'offre ni
+   * correction ni annulation — seulement de le remettre en attente, ce qui
+   * rouvre les deux. On le revalide ensuite, pour rendre la page aux
+   * assertions suivantes telle qu'elles l'attendent.
+   */
+  const valide = page.locator('tbody tr', { hasText: 'Validée' }).first();
+  const numeroValide = await valide.locator('td').nth(2).textContent();
+  await valide.getByTitle('Détail').click();
+  const detail = page.getByRole('dialog', { name: new RegExp('^Ticket ') });
+  await detail.getByTestId('remettre-en-attente').waitFor();
+  verifier((await detail.getByTestId('corriger-vente').count()) === 0 && (await detail.getByTestId('annuler-vente').count()) === 0,
+    'un ticket validé ne se corrige ni ne s’annule : la seule porte est « Remettre en attente »');
+  await detail.getByTestId('remettre-en-attente').click();
+  const boiteReouverture = page.getByRole('dialog', { name: new RegExp('^Remettre le ticket ') });
+  verifier((await texteDe(boiteReouverture)).includes('journal d’audit'),
+    'la boîte dit ce que la remise en attente fait, et qu’elle laisse une trace');
+  await boiteReouverture.getByRole('button', { name: 'Remettre en attente' }).click();
+  await page.locator('tbody tr', { hasText: 'En attente' }).first().waitFor();
+  verifier((await page.locator('tbody tr', { hasText: numeroValide.trim() }).textContent()).includes('En attente'),
+    `le ticket ${numeroValide.trim()} est revenu en attente depuis l’écran`);
+
+  await page.locator('thead input[type=checkbox]').check();
+  await page.getByRole('button', { name: /^Valider \(/ }).click();
+  await page.getByRole('dialog', { name: 'Validation de journée' }).getByRole('button', { name: 'Valider' }).click();
+  await page.locator('tbody tr', { hasText: 'En attente' }).first().waitFor({ state: 'detached' });
+  verifier(true, 'et il se revalide, la journée se referme');
 
   console.log('Pages alimentées par les ventes');
   await page.goto(`${BASE_URL}/#/`);

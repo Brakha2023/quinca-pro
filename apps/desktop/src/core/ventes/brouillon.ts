@@ -30,6 +30,13 @@ export interface Brouillon {
   /** Code de la machine d'origine, pour dire « commencé sur une autre caisse ». */
   poste: string | null;
   cree_le: string;
+  /**
+   * La ligne partagée existe : les autres caisses de la filiale voient ce
+   * ticket. Faux quand il ne reste que la copie de sûreté du poste — le
+   * serveur a révoqué la ligne partagée, et il faut le dire plutôt que de
+   * laisser croire à un partage qui n'a pas lieu (voir `BrouillonsRepository`).
+   */
+  partage: boolean;
 }
 
 const nombre = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
@@ -68,7 +75,11 @@ export function lireLignesBrouillon(json: string | null): LignePanier[] {
 
 export const ecrireLignesBrouillon = (lignes: readonly LignePanier[]): string => JSON.stringify(lignes);
 
-type LigneBrouillon = VenteBrouillonRow & { utilisateur_nom: string | null; utilisateur_prenom: string | null };
+type LigneBrouillon = VenteBrouillonRow & {
+  partage: number | null;
+  utilisateur_nom: string | null;
+  utilisateur_prenom: string | null;
+};
 
 export function brouillonFromRow(row: LigneBrouillon): Brouillon {
   const nom = [row.utilisateur_prenom, row.utilisateur_nom].filter(Boolean).join(' ');
@@ -86,6 +97,8 @@ export function brouillonFromRow(row: LigneBrouillon): Brouillon {
     utilisateur: nom || null,
     poste: row.poste,
     cree_le: row.created_at ?? '',
+    // SQLite n'a pas de booléen : la colonne arrive en 0 / 1.
+    partage: (row.partage ?? 1) !== 0,
   };
 }
 

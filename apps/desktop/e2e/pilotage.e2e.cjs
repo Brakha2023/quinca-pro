@@ -93,6 +93,13 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
           livraison: null, notes: '',
         },
       );
+      /*
+       * La journée est arrêtée : c'est la validation qui verse l'encaissement
+       * dans la caisse (`VentesRepository.valider`). Sans elle, l'argent reste
+       * au comptoir et la trésorerie du tableau de bord ne porte que les
+       * dépenses — ce que `pos.e2e.cjs` vérifie de son côté.
+       */
+      await ventes.valider({ utilisateurId: lieu.ctx.utilisateurId }, [r.id]);
       if (reculDeJours > 0) {
         const d = new Date(); d.setDate(d.getDate() - reculDeJours);
         const iso = d.toISOString();

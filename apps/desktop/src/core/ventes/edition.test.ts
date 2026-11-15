@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lignesPanierDepuisVente, remiseDepuisVente, venteModifiable } from './edition';
+import { lignesPanierDepuisVente, remiseDepuisVente, venteModifiable, venteRouvrable } from './edition';
 import { calculerTotaux, type LignePanier } from './panier';
 import type { LigneVente } from './vente';
 
@@ -15,6 +15,31 @@ describe('venteModifiable', () => {
     expect(venteModifiable('VALIDEE')).toBe(false);
     expect(venteModifiable('ANNULEE')).toBe(false);
     expect(venteModifiable(null)).toBe(false);
+  });
+});
+
+describe('venteRouvrable', () => {
+  it('ne rouvre que les ventes validées', () => {
+    expect(venteRouvrable('VALIDEE')).toBe(true);
+    expect(venteRouvrable('EN_ATTENTE')).toBe(false);
+    expect(venteRouvrable(null)).toBe(false);
+  });
+
+  /*
+   * Le cas qui compte : une annulation a rentré la marchandise et
+   * contre-passé l'encaissement. Rouvrir le ticket ferait repasser dans les
+   * chiffres une vente qui n'existe plus.
+   */
+  it('ne ramène jamais une vente annulée', () => {
+    expect(venteRouvrable('ANNULEE')).toBe(false);
+  });
+
+  // Les deux portes ne sont jamais ouvertes en même temps : un ticket se
+  // corrige, ou se rouvre, selon son statut.
+  it('s’exclut de la correction', () => {
+    for (const statut of ['EN_ATTENTE', 'VALIDEE', 'ANNULEE'] as const) {
+      expect(venteRouvrable(statut) && venteModifiable(statut)).toBe(false);
+    }
   });
 });
 

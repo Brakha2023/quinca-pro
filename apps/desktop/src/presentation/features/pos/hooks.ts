@@ -1,12 +1,13 @@
-import { useCallback, useMemo } from 'react';
-import { usePowerSync, useQuery } from '@powersync/react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { usePowerSync, useQuery, useStatus } from '@powersync/react';
 import type { ArticleRow, CaisseRow, DepotRow, VenteBrouillonRow } from '@quinca/shared-types';
 import { articleFromRow, type Article } from '../../../core/articles';
 import { brouillonFromRow, type Brouillon } from '../../../core/ventes';
-import { BROUILLONS_QUERY } from '../../../infrastructure/powersync/repositories/BrouillonsRepository';
+import { BROUILLONS_QUERY, BrouillonsRepository } from '../../../infrastructure/powersync/repositories/BrouillonsRepository';
 import { catalogueQuery } from '../../../infrastructure/powersync/repositories/ArticlesRepository';
 import { CAISSES_ACTIVES_QUERY } from '../../../infrastructure/powersync/repositories/ClientsRepository';
 import { DEPOTS_ACTIFS_QUERY } from '../../../infrastructure/powersync/repositories/DepotsRepository';
+import { useRepository } from '../../hooks/useRepository';
 import { usePosteStore } from '../../stores/poste.store';
 
 export interface ArticleCatalogue extends Article {
@@ -45,13 +46,28 @@ export function useCatalogue(filialeId: string | null, depotId: string | null, f
 /**
  * Ventes mises de côté dans la filiale, toutes caisses confondues : un ticket
  * commencé sur un poste se reprend depuis un autre.
+ *
+ * La liste réunit la table partagée et la copie de sûreté du poste (voir
+ * `BrouillonsRepository`), d'où la filiale passée deux fois. Les copies dont
+ * la ligne partagée est revenue du serveur s'effacent au fil des
+ * synchronisations : c'est ici qu'on le fait, puisque c'est ici qu'on regarde
+ * la liste — un poste qui n'ouvre pas la caisse n'a rien à réconcilier.
  */
 export function useBrouillons(filialeId: string | null) {
-  const { data, isLoading } = useQuery<VenteBrouillonRow & { utilisateur_nom: string | null; utilisateur_prenom: string | null }>(
+  const { data, isLoading } = useQuery<VenteBrouillonRow & { partage: number; utilisateur_nom: string | null; utilisateur_prenom: string | null }>(
     BROUILLONS_QUERY,
-    [filialeId ?? ''],
+    [filialeId ?? '', filialeId ?? ''],
   );
   const brouillons = useMemo<Brouillon[]>(() => data.map(brouillonFromRow), [data]);
+
+  const repository = useRepository(BrouillonsRepository);
+  const { lastSyncedAt } = useStatus();
+  useEffect(() => {
+    // Un échec ne se signale pas : la copie sera reprise à la synchronisation
+    // suivante, et une base locale muette se voit déjà partout ailleurs.
+    if (lastSyncedAt) void repository.oublierCopiesConfirmees(lastSyncedAt).catch(() => {});
+  }, [repository, lastSyncedAt]);
+
   return { brouillons, isLoading };
 }
 

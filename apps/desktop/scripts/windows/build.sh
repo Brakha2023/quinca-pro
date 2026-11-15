@@ -35,7 +35,13 @@ docker build -t "$IMAGE" "$RACINE/apps/desktop/scripts/windows"
 docker run --rm -v quinca-work:/work "$IMAGE" bash -c 'find /work -mindepth 1 -maxdepth 1 ! -name apps -exec rm -rf {} + ; find /work/apps -mindepth 1 -maxdepth 1 ! -name desktop -exec rm -rf {} + 2>/dev/null; find /work/apps/desktop -mindepth 1 -maxdepth 1 ! -name src-tauri -exec rm -rf {} + 2>/dev/null; find /work/apps/desktop/src-tauri -mindepth 1 -maxdepth 1 ! -name target -exec rm -rf {} + 2>/dev/null; true'
 git -C "$RACINE" archive HEAD | docker run --rm -i -v quinca-work:/work "$IMAGE" tar -x -C /work
 # Le commit seul ignorerait les corrections en cours, notamment le code à compiler.
-git -C "$RACINE" diff HEAD --binary | docker run --rm -i -v quinca-work:/work "$IMAGE" bash -c 'cd /work && git apply --binary'
+# Rien à appliquer quand l'arbre est propre — et il faut le dire avant d'essayer :
+# `git apply` refuse un patch vide (« No valid patches in input ») et, sous
+# `set -e`, le build s'arrêtait là. Autrement dit il ne marchait qu'avec des
+# modifications en cours, et échouait juste après un commit.
+if [[ -n "$(git -C "$RACINE" diff HEAD --name-only)" ]]; then
+  git -C "$RACINE" diff HEAD --binary | docker run --rm -i -v quinca-work:/work "$IMAGE" bash -c 'cd /work && git apply --binary'
+fi
 docker run --rm -i -v quinca-work:/work "$IMAGE" bash -c 'cat > /work/apps/desktop/.env' < "$RACINE/apps/desktop/.env"
 
 if [[ "${1:-}" == "--shell" ]]; then

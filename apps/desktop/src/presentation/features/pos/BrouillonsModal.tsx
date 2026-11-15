@@ -63,6 +63,19 @@ export default function BrouillonsModal({ brouillons, ticketEnCours, onReprendre
                       · d’une autre caisse{b.utilisateur ? ` (${b.utilisateur})` : ''}
                     </span>
                   )}
+                  {/*
+                    Le serveur a révoqué la ligne partagée : il ne reste que la
+                    copie de sûreté du poste. Le ticket est intact, mais il ne
+                    se reprend que d'ici — et le dire vaut mieux que de
+                    promettre un partage qui n'a pas lieu. En clair : les
+                    règles de synchronisation ne couvrent pas encore
+                    `ventes_brouillons` (PowerSync → Sync Streams → Deploy).
+                  */}
+                  {!b.partage && (
+                    <span className="ml-1 text-amber-700" data-testid="brouillon-non-partage">
+                      · reste sur ce poste
+                    </span>
+                  )}
                 </p>
               </div>
               <p className="flex-shrink-0 font-mono text-sm font-bold text-primary-700">{formaterFcfa(b.total_ttc)}</p>

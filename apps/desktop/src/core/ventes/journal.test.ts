@@ -26,6 +26,28 @@ describe('recapJournalVentes', () => {
     expect(r.en_attente).toBe(1);
   });
 
+  /*
+   * L'argent entre en caisse à la validation : ce qui attend encore se compte
+   * à part, c'est le montant que le gérant a sous la main et doit verser.
+   */
+  it('isole l’encaissement qui n’est pas encore en caisse', () => {
+    const r = recapJournalVentes([
+      vente({ statut: 'EN_ATTENTE', total_ttc: 9000, montant_percu: 10000, monnaie: 1000 }),
+      vente({ statut: 'EN_ATTENTE', montant_percu: 4000, reste_a_payer: 6000, mode_paiement: 'CREDIT' }),
+      vente({ statut: 'VALIDEE' }),
+      vente({ statut: 'ANNULEE', montant_percu: 7000 }),
+    ]);
+    // 9 000 (monnaie déduite) + 4 000 d'acompte ; la validée est déjà versée,
+    // l'annulée ne compte nulle part.
+    expect(r.encaisse_en_attente).toBe(13000);
+    expect(r.encaisse).toBe(23000);
+  });
+
+  it('ne laisse rien à verser quand tout est validé', () => {
+    expect(recapJournalVentes([vente(), vente()]).encaisse_en_attente).toBe(0);
+    expect(recapJournalVentes([]).encaisse_en_attente).toBe(0);
+  });
+
   it('ventile l’encaissement par mode de paiement', () => {
     const r = recapJournalVentes([
       vente({ mode_paiement: 'ESPECES', montant_percu: 5000, total_ttc: 5000 }),

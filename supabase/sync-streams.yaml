@@ -98,6 +98,10 @@ streams:
       - SELECT * FROM lignes_commande_fournisseur WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM reglements_fournisseurs WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       - SELECT * FROM mouvements_tresorerie WHERE filiale_id IN mes_filiales AND dans_fenetre = true
+      # Dépenses engagées : celles qui attendent une décision restent dans la
+      # fenêtre quel que soit leur âge (voir `rafraichir_fenetre_historique`),
+      # sinon la pièce à approuver disparaîtrait de l'écran du gérant.
+      - SELECT * FROM depenses WHERE filiale_id IN mes_filiales AND dans_fenetre = true
       # Transfert inter-filiale : visible des deux côtés (l'expéditeur suit son
       # envoi, le destinataire encaisse à l'arrivée).
       - SELECT * FROM transferts_filiales WHERE filiale_source_id IN mes_filiales AND dans_fenetre = true

@@ -18,6 +18,29 @@ import type { StatutVente } from '@quinca/shared-types';
 export const venteModifiable = (statut: StatutVente | null | undefined): boolean => statut === 'EN_ATTENTE';
 
 /**
+ * Défaire la validation d'un ticket, pour le rattraper après coup.
+ *
+ * L'erreur se voit parfois après la validation de journée : une quantité
+ * fausse signalée le lendemain, un ticket validé par mégarde avec tout le
+ * reste. Le gérant remet alors **ce seul ticket** en attente, et retrouve le
+ * droit de le corriger ou de l'annuler.
+ *
+ * Rien n'est contre-passé au passage : la validation n'avait rien déplacé.
+ * Stock, caisse et créance ont bougé à l'encaissement, et les chiffres ne
+ * distinguent pas une vente en attente d'une vente validée — seule une vente
+ * **annulée** en sort. La validation est un verrou, pas une écriture ; on le
+ * rouvre, et l'opération s'inscrit au journal d'audit (table `ventes`, suivie
+ * par `audit_trigger()`).
+ *
+ * **Une vente annulée ne revient pas.** Sa marchandise est rentrée, sa
+ * créance et son encaissement sont contre-passés : la remettre en attente
+ * ferait repasser dans les chiffres une vente qui n'existe plus, et il
+ * faudrait défaire chaque contre-passation pour y revenir. Celui qui s'est
+ * trompé en annulant refait le ticket — c'est ce que dit déjà le comptoir.
+ */
+export const venteRouvrable = (statut: StatutVente | null | undefined): boolean => statut === 'VALIDEE';
+
+/**
  * Les lignes enregistrées, ramenées à la forme d'un panier pour être
  * réouvertes à l'écran. L'unité ne figure pas sur la ligne de vente : elle se
  * relit sur l'article, et vaut « PIECE » si l'article a disparu du catalogue.

@@ -18,8 +18,6 @@ export const LIBELLES_STATUT_VENTE: Record<StatutVente, string> = {
   ANNULEE: 'Annulée',
 };
 
-/** Modes qui alimentent physiquement la caisse. */
-export const MODES_EN_CAISSE: ReadonlySet<ModePaiement> = new Set(['ESPECES', 'MOBILE_MONEY']);
 
 export const paiementSchema = z.object({
   mode_paiement: z.enum(MODES_PAIEMENT),

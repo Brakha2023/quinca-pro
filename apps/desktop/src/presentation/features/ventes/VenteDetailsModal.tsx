@@ -1,20 +1,25 @@
 import { useState } from 'react';
 import { flushSync } from 'react-dom';
-import { DocumentTextIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { ArrowUturnLeftIcon, DocumentTextIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import {
   LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, avoirClient, lignesFactureDepuisVente,
-  recapVenteEnregistree, venteModifiable,
+  recapVenteEnregistree, venteModifiable, venteRouvrable,
 } from '../../../core/ventes';
 import type { ModePaiement, StatutVente } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
 import type { VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
 import Modal from '../../components/ui/Modal';
+import { useAuth } from '../../auth/useAuth';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import { useDepots } from '../articles/hooks';
 import { useClient } from '../clients/hooks';
 import FactureVente from '../pos/FactureVente';
 import AnnulationVenteModal from './AnnulationVenteModal';
 import VenteEditionModal from './VenteEditionModal';
+import { VentesRepository } from '../../../infrastructure/powersync/repositories/VentesRepository';
+import { useRepository } from '../../hooks/useRepository';
+import { useConfirmation } from '../../confirmation/useConfirmation';
+import { useNotifier } from '../../notifications/useNotifier';
 import { formaterFcfa } from '../../hooks/useFormatage';
 import { useLignesVente } from './hooks';
 
@@ -29,18 +34,54 @@ export function formaterDateHeure(iso: string | null): string {
   return new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-/** Détail d'un ticket : lignes, montants, annulation (avec motif) si en attente. */
-export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClose }: { vente: VenteVueRow; filialeId: string; peutAnnuler: boolean; onClose: () => void }) {
+/**
+ * Détail d'un ticket : lignes, montants, et les actes de gestion que le ticket
+ * autorise — corriger ou annuler tant qu'il est en attente, le remettre en
+ * attente s'il a été validé. Les trois sont réservés à qui peut valider une
+ * vente (`ventes.valider`), d'où le `peutValider` reçu de la page.
+ */
+export default function VenteDetailsModal({ vente, filialeId, peutValider, onClose }: { vente: VenteVueRow; filialeId: string; peutValider: boolean; onClose: () => void }) {
   const lignes = useLignesVente(vente.id);
   const { filiale } = useFilialeCourante();
+  const { utilisateurId } = useAuth();
   const client = useClient(vente.client_id);
   const { depots } = useDepots(filialeId);
+  const repository = useRepository(VentesRepository);
+  const confirmer = useConfirmation();
+  const notifier = useNotifier();
   const [annulation, setAnnulation] = useState(false);
   const [facture, setFacture] = useState(false);
   const [correction, setCorrection] = useState(false);
   const statut = (vente.statut ?? 'EN_ATTENTE') as StatutVente;
   // Une vente sans date n'est pas une facture : rien à rééditer.
   const dateVente = vente.date_vente ? new Date(vente.date_vente) : null;
+
+  /**
+   * Rouvre le ticket validé. Le mot de la journée passée est dit : une
+   * correction apportée à un ticket d'hier remonte sur une journée de caisse
+   * déjà close, et celui qui rouvre doit le savoir avant, pas après.
+   */
+  const remettreEnAttente = async () => {
+    const dujour = dateVente ? dateVente.toDateString() === new Date().toDateString() : false;
+    const encaisse = (vente.montant_percu ?? 0) - (vente.monnaie ?? 0);
+    if (!(await confirmer({
+      titre: `Remettre le ticket ${vente.numero_court ?? vente.numero} en attente`,
+      message: [
+        'La validation sera défaite pour ce seul ticket : il pourra de nouveau être corrigé ou annulé.',
+        `Son versement ressortira de la caisse (${formaterFcfa(encaisse)}), et la reprise se lira au journal — l’argent revient entre les mains du caissier jusqu’à la prochaine validation.`,
+        'Le stock ne bouge pas, et l’opération est inscrite au journal d’audit.',
+        dujour ? null : `Ce ticket ne date pas d’aujourd’hui (${formaterDateHeure(vente.date_vente)}) : une correction remonterait sur une journée de caisse déjà close.`,
+      ].filter(Boolean).join(' '),
+      libelleConfirmer: 'Remettre en attente',
+    }))) return;
+    try {
+      await repository.remettreEnAttente({ utilisateurId }, vente.id);
+      notifier('succes', `Ticket ${vente.numero_court ?? vente.numero} remis en attente. Il se corrige et s’annule de nouveau.`);
+      onClose();
+    } catch (error) {
+      notifier('erreur', error instanceof Error ? error.message : 'Remise en attente impossible.');
+    }
+  };
 
   /** Réédition de la facture : le document doit être dans le DOM avant la boîte d'impression. */
   const imprimerFacture = () => {
@@ -56,13 +97,23 @@ export default function VenteDetailsModal({ vente, filialeId, peutAnnuler, onClo
       onClose={onClose}
       pied={
         <>
-          {peutAnnuler && venteModifiable(statut) && (
+          {peutValider && venteModifiable(statut) && (
             <button type="button" onClick={() => setAnnulation(true)} className="mr-auto px-4 py-2 text-red-600 hover:bg-red-50 font-medium rounded-lg" data-testid="annuler-vente">Annuler cette vente</button>
           )}
-          {peutAnnuler && venteModifiable(statut) && (
+          {peutValider && venteModifiable(statut) && (
             <button type="button" onClick={() => setCorrection(true)} className="flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="corriger-vente">
               <PencilSquareIcon className="w-4 h-4" /> Corriger
             </button>
+          )}
+          {/*
+            Le seul acte offert sur un ticket validé : lui rendre son droit
+            d'être corrigé. Il prend la place du bouton « Annuler », à gauche,
+            parce qu'il ouvre la même porte.
+          */}
+          {peutValider && venteRouvrable(statut) && (
+            <Bouton onClick={remettreEnAttente} icone={ArrowUturnLeftIcon} tailleIcone="w-4 h-4" className="mr-auto flex items-center gap-2 px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium rounded-lg" data-testid="remettre-en-attente">
+              Remettre en attente
+            </Bouton>
           )}
           <Bouton onClick={imprimerFacture} icone={DocumentTextIcon} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-300 text-white font-medium rounded-lg" disabled={!dateVente} data-testid="reimprimer-facture-a4">Facture A4</Bouton>
         </>

@@ -14,6 +14,7 @@ import AuditPage from './presentation/pages/Audit/AuditPage';
 import HistoriquesPage from './presentation/pages/Historiques/HistoriquesPage';
 import ParametresPage from './presentation/pages/Parametres/ParametresPage';
 import RapportsPage from './presentation/pages/Rapports/RapportsPage';
+import DepensesPage from './presentation/pages/Depenses/DepensesPage';
 import VentesPage from './presentation/pages/Ventes/VentesPage';
 import EmployesPage from './presentation/pages/Employes/EmployesPage';
 import LoginPage from './presentation/pages/Auth/LoginPage';
@@ -38,6 +39,7 @@ function App() {
             <Route path="tresorerie/:section" element={<TresoreriePage />} />
             <Route path="livraisons" element={<LivraisonsPage />} />
             <Route path="ventes" element={<VentesPage />} />
+            <Route path="depenses" element={<DepensesPage />} />
             <Route path="employes" element={<EmployesPage />} />
             <Route path="employes/:section" element={<EmployesPage />} />
             <Route path="consolidation" element={<ConsolidationPage />} />

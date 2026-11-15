@@ -11,6 +11,7 @@ import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { LIBELLES_MODE_PAIEMENT, LIBELLES_STATUT_VENTE, recapJournalVentes } from '../../../core/ventes';
 import { VentesRepository, type VenteVueRow } from '../../../infrastructure/powersync/repositories/VentesRepository';
+import { useAuth } from '../../auth/useAuth';
 import { usePermissions } from '../../auth/usePermissions';
 import { useFilialeCourante } from '../../auth/useFilialeCourante';
 import NoteHistorique from '../../components/ui/NoteHistorique';
@@ -30,6 +31,7 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 /** Ventes de la filiale : journée de caisse, validation de fin de journée, historique, annulations. */
 export default function VentesPage() {
   const { filialeId, filiale, estVueConsolidee } = useFilialeCourante();
+  const { utilisateurId } = useAuth();
   const { peut } = usePermissions();
   const repository = useRepository(VentesRepository);
   const notifier = useNotifier();
@@ -63,10 +65,18 @@ export default function VentesPage() {
   const validerSelection = async () => {
     const ids = [...selection].filter((id) => enAttenteIds.includes(id));
     if (ids.length === 0) return;
-    if (!(await confirmer({ titre: 'Validation de journée', message: `Valider ${ids.length} vente(s) ? Elles ne pourront plus être annulées depuis l'application.`, libelleConfirmer: 'Valider' }))) return;
+    // Dire les deux effets, dans l'ordre où ils comptent : l'argent entre en
+    // caisse, et le ticket se ferme. Le second se défait (« Remettre en
+    // attente » sur le ticket), le premier ressort alors avec lui.
+    const aVerser = ventes.filter((v) => ids.includes(v.id)).reduce((s, v) => s + ((v.montant_percu ?? 0) - (v.monnaie ?? 0)), 0);
+    if (!(await confirmer({
+      titre: 'Validation de journée',
+      message: `Valider ${ids.length} vente(s) ? ${aVerser > 0 ? `${formaterFcfa(aVerser)} seront versés dans la caisse de chaque ticket, et ` : ''}elles ne pourront plus être corrigées ni annulées.`,
+      libelleConfirmer: 'Valider',
+    }))) return;
     try {
-      const n = await repository.valider(ids);
-      notifier('succes', `${n} vente(s) validée(s).`);
+      const n = await repository.valider({ utilisateurId }, ids);
+      notifier('succes', `${n} vente(s) validée(s)${aVerser > 0 ? `, ${formaterFcfa(aVerser)} versés en caisse` : ''}.`);
       setSelection(new Set());
     } catch (error) {
       notifier('erreur', error instanceof Error ? error.message : 'Validation impossible.');
@@ -109,10 +119,13 @@ export default function VentesPage() {
           sous={stats.par_mode.map((m) => `${LIBELLES_MODE_PAIEMENT[m.mode as ModePaiement] ?? m.mode} ${formaterFcfa(m.montant)}`).join(' · ')}
         />
         <Indicateur label="Vendu à crédit" valeur={formaterFcfa(stats.credit)} ton="text-orange-700" couleur="orange" icone={UserIcon} />
+        {/* Ce qui attend la validation attend aussi d'entrer en caisse : le
+            gérant doit voir d'un coup d'œil combien reste à verser. */}
         <Indicateur
           label="En attente de validation" valeur={`${stats.en_attente}`}
           ton={stats.en_attente ? 'text-orange-700' : undefined}
           couleur="ambre" icone={ClockIcon}
+          sous={stats.encaisse_en_attente > 0 ? `${formaterFcfa(stats.encaisse_en_attente)} à verser en caisse` : undefined}
         />
       </div>
 
@@ -200,7 +213,7 @@ export default function VentesPage() {
         />
       )}
 
-      {detail && <VenteDetailsModal vente={detail} filialeId={filialeId} peutAnnuler={peutValider} onClose={() => setDetail(null)} />}
+      {detail && <VenteDetailsModal vente={detail} filialeId={filialeId} peutValider={peutValider} onClose={() => setDetail(null)} />}
     </div>
   );
 }

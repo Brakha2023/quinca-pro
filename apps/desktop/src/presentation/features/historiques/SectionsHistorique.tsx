@@ -42,7 +42,7 @@ function HistoriqueVentes({ section, filialeId, filiale, filtres, affichage }: P
       onOuvrir={(p) => setOuverte(brut.find((v) => v.id === p.id) ?? null)}
     >
       {/* L'historique relit les ventes ; l'annulation reste au module Ventes. */}
-      {ouverte && <VenteDetailsModal vente={ouverte} filialeId={filialeId} peutAnnuler={false} onClose={() => setOuverte(null)} />}
+      {ouverte && <VenteDetailsModal vente={ouverte} filialeId={filialeId} peutValider={false} onClose={() => setOuverte(null)} />}
     </ListeHistorique>
   );
 }

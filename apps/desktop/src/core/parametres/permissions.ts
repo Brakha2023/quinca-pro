@@ -94,6 +94,11 @@ export const CATALOGUE_PERMISSIONS: ModulePermissions[] = [
     permissions: [
       { code: 'tresorerie.lire', libelle: 'Consulter les caisses et les journaux' },
       { code: 'tresorerie.mouvement', libelle: 'Saisir une recette ou une dépense' },
+      {
+        code: 'depenses.valider',
+        libelle: 'Approuver une dépense engagée',
+        detail: 'C’est la validation qui fait sortir l’argent de la caisse. Saisir une dépense et l’approuver sont deux droits : sans quoi l’attente ne protège rien.',
+      },
       { code: 'tresorerie.caisses', libelle: 'Gérer les caisses', detail: 'Ouvrir, renommer, fermer une caisse.' },
       { code: 'tresorerie.transfert', libelle: 'Transférer des fonds entre filiales' },
     ],

@@ -57,6 +57,19 @@ describe('brouillonFromRow', () => {
     expect(brouillonFromRow(row({ remise_auto: 1 })).remise_auto).toBe(true);
   });
 
+  /*
+   * `partage` dit si la ligne partagée existe encore. La copie de sûreté du
+   * poste la rend à 0 : le ticket est intact, mais il ne se reprend que d'ici.
+   * Une ligne sans la colonne — un `SELECT` ancien, un test — est tenue pour
+   * partagée : c'est le cas normal, et le signaler à tort inquiéterait la
+   * caisse pour rien.
+   */
+  it('lit le drapeau de partage, et tient l’absence pour un partage', () => {
+    expect(brouillonFromRow(row({ partage: 0 })).partage).toBe(false);
+    expect(brouillonFromRow(row({ partage: 1 })).partage).toBe(true);
+    expect(brouillonFromRow(row({ partage: undefined })).partage).toBe(true);
+  });
+
   it('se passe de ce qui manque', () => {
     const b = brouillonFromRow(row({ libelle: null, remise: null, utilisateur_nom: null, utilisateur_prenom: null, poste: null }));
     expect(b).toMatchObject({ libelle: 'Ticket', remise: 0, utilisateur: null, poste: null });

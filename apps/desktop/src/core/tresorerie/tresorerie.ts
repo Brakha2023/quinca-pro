@@ -38,8 +38,29 @@ export const CATEGORIE_VERSEMENT = 'VERSEMENT';
 export const CATEGORIE_RETRAIT = 'RETRAIT';
 export const CATEGORIE_TRANSFERT_FILIALE = 'TRANSFERT_FILIALE';
 
+/**
+ * Reprise du versement d'un ticket remis en attente.
+ *
+ * L'argent d'une vente entre en caisse à la **validation** (voir
+ * `VentesRepository.valider`). Rouvrir le ticket le fait donc ressortir, et
+ * cela se lit au journal : la caisse ne perd pas une recette en silence.
+ */
+export const CATEGORIE_REOUVERTURE_VENTE = 'REOUVERTURE_VENTE';
+
+/**
+ * Reprise du paiement d'une dépense remise en attente. Symétrique du cas
+ * ci-dessus : une dépense sort de la caisse à sa validation, la rouvrir y fait
+ * rentrer l'argent, et la caisse ne gagne pas une recette en silence.
+ */
+export const CATEGORIE_REOUVERTURE_DEPENSE = 'REOUVERTURE_DEPENSE';
+
 export const LIBELLES_CATEGORIE: Record<string, string> = {
   VENTE: 'Vente', REGLEMENT_CLIENT: 'Règlement client', ANNULATION_VENTE: 'Annulation de vente', REGLEMENT_FOURNISSEUR: 'Règlement fournisseur',
+  // `CORRECTION_VENTE` n'est plus produit — une vente se corrige avant d'être
+  // versée en caisse —, mais des mouvements d'avant le portent : sans libellé,
+  // le journal afficherait le code nu.
+  CORRECTION_VENTE: 'Correction de vente', REOUVERTURE_VENTE: 'Réouverture de vente',
+  REOUVERTURE_DEPENSE: 'Réouverture de dépense',
   TRANSFERT_CAISSE: 'Transfert entre caisses', TRANSFERT_FILIALE: 'Transfert inter-filiale', VERSEMENT: 'Versement', RETRAIT: 'Retrait d’espèces', AVANCE_SALAIRE: 'Avance sur salaire', APPORT: 'Apport de fonds', REMBOURSEMENT: 'Remboursement', AUTRE_RECETTE: 'Autre recette',
   TRANSPORT: 'Transport', FOURNITURES: 'Fournitures', LOYER: 'Loyer', SALAIRE: 'Salaires', ELECTRICITE_EAU: 'Électricité / eau', ENTRETIEN: 'Entretien', REPAS: 'Repas', AUTRE_DEPENSE: 'Autre dépense',
 };

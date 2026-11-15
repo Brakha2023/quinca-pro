@@ -28,7 +28,15 @@ export const MODES_PAIEMENT = ['ESPECES', 'CHEQUE', 'MOBILE_MONEY', 'CREDIT'] as
 export type ModePaiement = (typeof MODES_PAIEMENT)[number];
 
 export const STATUTS_VENTE = ['EN_ATTENTE', 'VALIDEE', 'ANNULEE'] as const;
+
+/**
+ * Une dépense engagée attend une décision : approuvée, elle sort de la caisse ;
+ * refusée, elle reste au dossier avec son motif. `REFUSEE` et non `ANNULEE` :
+ * ce n'est pas un fait qu'on défait, c'est une demande à laquelle on répond.
+ */
+export const STATUTS_DEPENSE = ['EN_ATTENTE', 'VALIDEE', 'REFUSEE'] as const;
 export type StatutVente = (typeof STATUTS_VENTE)[number];
+export type StatutDepense = (typeof STATUTS_DEPENSE)[number];
 
 export const TYPES_REGLEMENT = ['ESPECES', 'CHEQUE', 'VIREMENT', 'MOBILE_MONEY'] as const;
 export type TypeReglement = (typeof TYPES_REGLEMENT)[number];

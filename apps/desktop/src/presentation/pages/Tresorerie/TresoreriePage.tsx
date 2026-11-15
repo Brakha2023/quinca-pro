@@ -27,8 +27,14 @@ const DEPENSE: ConfigOperation = {
   libelleTiers: 'Bénéficiaire',
   signatureTiers: 'Signature du bénéficiaire',
   libelleBouton: 'Enregistrer la dépense',
-  titreSaisie: 'Dépense de caisse',
-  sousSaisie: 'Sortie d’espèces imputée à une catégorie de dépense, avec son bénéficiaire',
+  titreSaisie: 'Dépense de caisse, payée tout de suite',
+  /*
+   * Deux écrans paient des dépenses, et il faut dire lequel fait quoi — sinon
+   * personne ne saura lequel ouvrir. Ici, l'argent sort à l'enregistrement :
+   * c'est le menu courant du comptoir, le taxi et le sac de ciment. Le menu
+   * « Dépense » sert à ce qui doit être approuvé avant d'être payé.
+   */
+  sousSaisie: 'Sortie d’espèces imputée à une catégorie, avec son bénéficiaire. La caisse est débitée aussitôt — une dépense à faire approuver avant paiement se saisit dans le menu « Dépense ».',
   titreHistorique: 'Dépenses',
   baseExport: 'depenses',
   prefixeTest: 'depense',

@@ -4,7 +4,7 @@ import {
   ShoppingCartIcon, CubeIcon, UserIcon,
   TruckIcon, BanknotesIcon, ChartBarIcon, Bars3Icon, XMarkIcon, UserGroupIcon,
   CubeTransparentIcon, LockClosedIcon, CreditCardIcon, ArrowRightStartOnRectangleIcon, ChevronDownIcon, UsersIcon, ClockIcon,
-  Cog6ToothIcon, ExclamationTriangleIcon, PresentationChartLineIcon
+  Cog6ToothIcon, ExclamationTriangleIcon, PresentationChartLineIcon, ReceiptPercentIcon
 } from '@heroicons/react/24/outline';
 import { ONGLETS_STOCK, ONGLET_STOCK_DEFAUT, cheminOngletStock } from '../pages/Stock/onglets';
 import { SECTIONS_FOURNISSEURS, SECTION_FOURNISSEURS_DEFAUT, cheminFournisseurs } from '../pages/Fournisseurs/onglets';
@@ -101,6 +101,12 @@ const menuSections: MenuSection[] = [
         permission: 'tresorerie.lire',
         children: SECTIONS_TRESORERIE.map((s) => ({ name: s.label, href: cheminTresorerie(s.id), icon: s.icon })),
       },
+      /*
+        La dépense à approuver vit à côté de la trésorerie, pas dans son
+        sous-menu : c'est une pièce qui a son cycle — engagée, approuvée,
+        refusée —, comme la vente, et non une opération de guichet.
+      */
+      { name: 'Dépense', href: '/depenses', icon: ReceiptPercentIcon, permission: 'tresorerie.lire' },
       { name: 'Livraisons', href: '/livraisons', icon: TruckIcon, permission: 'livraisons.lire' },
     ],
   },

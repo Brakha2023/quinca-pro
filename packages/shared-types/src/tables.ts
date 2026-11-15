@@ -347,6 +347,28 @@ export const TABLES = {
    * Ce n'est pas une pièce : rien n'est vendu, rien ne sort du stock, aucun
    * numéro n'est tiré — d'où sa table à elle (voir la migration 20261029000000).
    */
+  /** Dépenses engagées, en attente d'approbation (voir la migration `depenses`). */
+  depenses: {
+    numero: 'text',
+    filiale_id: 'text',
+    caisse_id: 'text',
+    categorie: 'text',
+    montant: 'real',
+    beneficiaire: 'text',
+    description: 'text',
+    reference: 'text',
+    date_depense: 'text',
+    statut: 'text',
+    motif_refus: 'text',
+    utilisateur_id: 'text',
+    valide_par: 'text',
+    date_validation: 'text',
+    notes: 'text',
+    // `dans_fenetre` n'est pas déclarée : c'est une colonne de service du
+    // serveur, que le poste ne lit jamais — comme pour les autres tables
+    // d'activité (voir `supabase/sync-streams.yaml`).
+    ...COMMUNES_HORODATAGE,
+  },
   ventes_brouillons: {
     libelle: 'text',
     filiale_id: 'text',
@@ -639,6 +661,7 @@ export type FournisseurRow = Row<'fournisseurs'>;
 export type VenteRow = Row<'ventes'>;
 export type LigneVenteRow = Row<'lignes_vente'>;
 export type VenteBrouillonRow = Row<'ventes_brouillons'>;
+export type DepenseRow = Row<'depenses'>;
 export type ReglementClientRow = Row<'reglements_clients'>;
 export type LivraisonRow = Row<'livraisons'>;
 export type CommandeFournisseurRow = Row<'commandes_fournisseurs'>;

@@ -54,7 +54,9 @@ async function poserRolesLivres(page) {
 
   verifier((await texteDe(page, '[data-testid=compteur-roles]')).includes('6 rôle(s)'), 'six rôles : les cinq livrés et celui du poste d’essai');
   verifier((await texteDe(page, '[data-testid=permissions-role_caissier]')) === '11', 'le caissier a onze permissions');
-  verifier((await texteDe(page, '[data-testid=permissions-role_directeur]')) === '42', 'le directeur a tout sauf la définition des rôles');
+  // Le compte est écrit en dur exprès : une permission ajoutée au catalogue
+  // doit se remarquer ici, et non passer en silence dans le rôle du directeur.
+  verifier((await texteDe(page, '[data-testid=permissions-role_directeur]')) === '43', 'le directeur a tout sauf la définition des rôles');
   verifier((await texteDe(page, '[data-testid=permissions-role_superadmin]')) === 'toutes', 'le superadministrateur : « toutes », pas un compte');
   verifier((await page.locator('[data-testid=supprimer-role_caissier]').count()) === 0, 'un rôle livré n’a pas de bouton supprimer');
 
@@ -74,7 +76,7 @@ async function poserRolesLivres(page) {
   await page.getByTestId('permission-articles.lire').check();
   await page.getByTestId('permission-stock.lire').check();
   await page.getByTestId('permission-stock.entree').check();
-  verifier((await texteDe(page, '[data-testid=editeur-permissions]')).includes('3 permission(s) sur 43'), 'le compteur suit les cases cochées');
+  verifier((await texteDe(page, '[data-testid=editeur-permissions]')).includes('3 permission(s) sur 44'), 'le compteur suit les cases cochées');
   await page.getByTestId('enregistrer-permissions').click();
   await page.waitForFunction(() => document.querySelector('[data-testid=permissions-role_chef_de_rayon]')?.textContent.trim() === '3');
   verifier(true, 'les permissions sont enregistrées');
@@ -111,9 +113,9 @@ async function poserRolesLivres(page) {
   const doc = page.locator('#zone-impression');
   await doc.locator('[data-testid=ligne-permission]').first().waitFor();
   const papier = await texteDe(page, '#zone-impression');
-  verifier((await doc.locator('[data-testid=ligne-permission]').count()) === 43, 'document : une ligne par permission du catalogue');
+  verifier((await doc.locator('[data-testid=ligne-permission]').count()) === 44, 'document : une ligne par permission du catalogue');
   verifier(papier.includes('Rôles et permissions') && papier.includes('Chef de rayon'), 'document : titre et colonne du nouveau rôle');
-  verifier(papier.includes('7 rôle(s) · 43 permission(s)'), 'document : le compte des rôles et des permissions');
+  verifier(papier.includes('7 rôle(s) · 44 permission(s)'), 'document : le compte des rôles et des permissions');
   verifier(papier.includes('Visa du directeur') && papier.includes('Visa du contrôle'), 'document : les deux visas');
   verifier(!papier.includes('Point de Vente'), 'document : ni menu ni bandeau de l’application');
   await doc.getByRole('button', { name: "Fermer l'aperçu" }).click();
@@ -129,8 +131,13 @@ async function poserRolesLivres(page) {
   const chef = feuilleRoles.find((l) => l.Rôle === 'Chef de rayon');
   verifier(chef.Code === 'role_chef_de_rayon' && chef.Permissions === 2 && chef.Nature === 'Sur mesure', 'export Excel : le rôle relu depuis le classeur');
   const valider = feuillePerms.find((l) => l.Code === 'ventes.valider');
-  verifier(feuillePerms.length === 43 && valider['Gérant de filiale'] === 'Oui' && valider.Caissier === '',
+  verifier(feuillePerms.length === 44 && valider['Gérant de filiale'] === 'Oui' && valider.Caissier === '',
     'export Excel : la matrice, rôle par rôle');
+  // Approuver une dépense se sépare de la saisir : le gérant autorise, le
+  // caissier engage. La feuille doit le montrer, c'est elle qu'on fait viser.
+  const approuver = feuillePerms.find((l) => l.Code === 'depenses.valider');
+  verifier(approuver['Gérant de filiale'] === 'Oui' && approuver.Caissier === '',
+    'export Excel : approuver une dépense est au gérant, pas au caissier');
 
   console.log('Les comptes');
   await page.getByRole('main').getByRole('link', { name: 'Utilisateurs' }).click();

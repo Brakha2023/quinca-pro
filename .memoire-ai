@@ -136,6 +136,26 @@ session ont été prouvés ainsi ; sans cela on corrige une intuition.
   dans Chromium, et la machine de développement est un Mac. À confirmer sur un
   poste Windows.
 
+### Synchronisation
+- **Une table ajoutée à `supabase/sync-streams.yaml` ne sert à rien tant que le
+  flux n'est pas redéployé** (PowerSync → Sync Streams → Edit → Save and
+  Deploy). Et ce n'est pas sans effet : PowerSync ne garde une écriture faite
+  dans une table synchronisée que si le serveur la **renvoie**. Une ligne que
+  le flux déployé ne couvre pas est donc révoquée au checkpoint suivant — elle
+  s'affiche quelques secondes, puis s'efface sans que personne n'ait rien
+  demandé. Cas réel : les brouillons du point de vente, de leur migration du
+  29 octobre jusqu'au redéploiement, disparaissaient tout seuls de la liste.
+- D'où la **copie de sûreté locale** des brouillons (`brouillons_locaux`, table
+  local-only, voir `schema.ts` et `BrouillonsRepository`) : le panier d'un
+  client qui attend au comptoir ne peut pas dépendre d'un déploiement. Partout
+  ailleurs cette révocation ne se voit pas — les autres tables sont dans le
+  flux depuis le premier jour, et un refus définitif du serveur passe par
+  `echecs_envoi`, qui garde la donnée et le dit.
+- Le symptôme jumeau, et plus facile à lire : le bandeau orange **« Les rôles
+  ne sont pas encore arrivés sur ce poste »**. Il ne s'affiche que si `roles`
+  n'est jamais arrivée, donc si le flux déployé est antérieur au 19 octobre.
+  À regarder en premier devant toute donnée qui ne descend pas.
+
 ### Scénarios e2e
 - Après `simulerSession(page)`, il faut **`page.goto(...)` puis
   `page.reload()`** : un simple changement de hash ne relit pas la session et
@@ -269,6 +289,33 @@ dans les 43 fichiers d'écran.
 - **La remise se négocie en francs sur la vente entière** et n'est pas
   redescendue dans `lignes_vente.total_ht`. Tout calcul par article doit la
   répartir au prorata (`margesQuery`), sinon la marge est surévaluée.
+- **L'argent d'une vente entre en caisse à la validation, pas au comptoir.**
+  L'encaissement sort le stock, enregistre le règlement du client et fixe les
+  montants ; la caisse, elle, ne reçoit qu'à la validation de journée
+  (`VentesRepository.valider`, une ligne `RECETTE/VENTE` par ticket, datée du
+  jour de la validation). Conséquences à garder en tête :
+  * une vente **en attente** n'a rien en caisse — c'est pourquoi la corriger ou
+    l'annuler ne contre-passe aucune trésorerie ;
+  * remettre un ticket validé en attente fait **ressortir** son versement
+    (`REOUVERTURE_VENTE`) ; le journal étant en ajout seul, c'est la **somme
+    signée** des lignes portant le numéro de la vente qui dit ce que la caisse
+    détient — jamais la présence d'une ligne (voir `versementNet`) ;
+  * « Encaissé » sur l'écran Ventes se lit sur les ventes, pas sur la caisse :
+    les deux divergent tant que la journée n'est pas validée, et l'indicateur
+    « En attente de validation » dit combien reste à verser.
+- **Tout mode de paiement verse en caisse**, carte et chèque compris : le solde
+  est calculé par Postgres sur toute ligne de journal portant un `caisse_id`,
+  et un filtre posé sur le poste serait effacé au premier retour du serveur.
+  C'était la divergence CHEQUE, tranchée le 2026-11-15.
+- **Une dépense sort de la caisse à son approbation, pas à sa saisie** — symétrique
+  exact de la vente (`DepensesRepository.valider`, une ligne de journal par
+  pièce sous sa propre catégorie, datée du jour de l'approbation). Une dépense
+  **en attente** n'a rien coûté : la corriger ou la refuser ne contre-passe
+  rien ; la rouvrir fait **rentrer** l'argent (`REOUVERTURE_DEPENSE`). Une
+  dépense **refusée** ne se rouvre pas — il n'y a rien à reprendre.
+  Ne pas confondre avec `Trésorerie → Dépense`, qui débite à l'enregistrement
+  et reste la voie de la dépense courante : les deux écrans coexistent
+  volontairement et se renvoient l'un à l'autre (choix du 2026-11-15).
 - **Une vente annulée ne pèse dans aucun mois.** Son CA est écarté par le
   statut ; son coût doit l'être aussi, sortie *et* retour, par la constante
   partagée `MOUVEMENT_HORS_VENTE_ANNULEE` (dans `PilotageRepository`, importée
@@ -364,8 +411,6 @@ Ne pas décider seul ; les reposer si le sujet revient.
 
 ### Dettes connues, non corrigées
 
-- Divergence **CHEQUE** : un déclencheur serveur bouge `caisses.solde_actuel`,
-  le code local non.
 - `audit.e2e.cjs:71` et quatre attentes de `horloge.e2e.cjs` sont fragiles.
   (`verrou.e2e.cjs` l'était aussi — l'assertion sur le nom de la filiale
   attend désormais ce qu'elle lit.)

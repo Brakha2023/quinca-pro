@@ -20,8 +20,14 @@ export interface RecapJournalVentes {
   annulees: number;
   en_attente: number;
   chiffre_affaires: number;
-  /** Ce qui est resté en caisse : le rendu de monnaie n'en fait pas partie. */
+  /** Ce qui a été encaissé au comptoir : le rendu de monnaie n'en fait pas partie. */
   encaisse: number;
+  /**
+   * Part de cet encaissement qui n'est **pas encore en caisse** : l'argent
+   * d'une vente y entre à la validation, pas au comptoir (voir
+   * `VentesRepository.valider`). C'est ce qu'il reste à verser.
+   */
+  encaisse_en_attente: number;
   credit: number;
   /** Encaissement ventilé par mode de paiement, dans l'ordre d'apparition. */
   par_mode: Array<{ mode: ModePaiement | string; montant: number }>;
@@ -42,6 +48,9 @@ export function recapJournalVentes(ventes: readonly LigneJournalVente[]): RecapJ
     en_attente: actives.filter((v) => (v.statut as StatutVente) === 'EN_ATTENTE').length,
     chiffre_affaires: arrondirFcfa(actives.reduce((s, v) => s + (v.total_ttc ?? 0), 0)),
     encaisse: arrondirFcfa(actives.reduce((s, v) => s + encaissementDe(v), 0)),
+    encaisse_en_attente: arrondirFcfa(
+      actives.filter((v) => (v.statut as StatutVente) === 'EN_ATTENTE').reduce((s, v) => s + encaissementDe(v), 0),
+    ),
     credit: arrondirFcfa(actives.reduce((s, v) => s + (v.reste_a_payer ?? 0), 0)),
     par_mode: [...parMode].map(([mode, montant]) => ({ mode, montant: arrondirFcfa(montant) })),
   };
