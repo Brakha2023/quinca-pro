@@ -107,7 +107,7 @@ export default function FactureAchatDocument({ facture, filiale, onClose }: Prop
           <table className="document-totaux" style={{ margin: 0, width: '100%' }}>
             <tbody>
               <tr><td>Montant brut HT</td><td className="num">{formaterFcfa(facture.totaux.brut_ht)}</td></tr>
-              <tr><td>Remise{facture.remise_percent ? ` (${facture.remise_percent} %)` : ''}</td><td className="num">{formaterFcfa(facture.totaux.remise)}</td></tr>
+              <tr><td>Remise{facture.remise_montant ? ' globale' : facture.remise_percent ? ` (${facture.remise_percent} %)` : ''}</td><td className="num">{formaterFcfa(facture.totaux.remise)}</td></tr>
               <tr><td>Montant net HT</td><td className="num">{formaterFcfa(facture.totaux.net_ht)}</td></tr>
               <tr><td>Total TVA{facture.tva_percent ? ` (${facture.tva_percent} %)` : ''}</td><td className="num">{formaterFcfa(facture.totaux.tva)}</td></tr>
               <tr><td><strong>Net à payer</strong></td><td className="num" data-testid="facture-net"><strong>{formaterFcfa(facture.totaux.net_a_payer)}</strong></td></tr>
@@ -151,6 +151,7 @@ export function FactureAchatImprimable({ commandeId, filiale, onClose }: { comma
         date_commande: commande.date_commande ?? '',
         date_reception: commande.date_reception,
         type: commande.type === 'BON_COMMANDE' ? 'BON_COMMANDE' : 'COMMANDE',
+        remise_montant: commande.remise_montant ?? 0,
         remise_percent: commande.remise_percent ?? 0,
         tva_percent: commande.tva_percent ?? 0,
         montant_paye: commande.montant_paye ?? 0,

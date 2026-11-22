@@ -257,6 +257,67 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   verifier(/désactivez la fiche|Désactivez-le/.test(await horsLigne.textContent()), 'hors ligne : le message renvoie à la mise en sommeil, qui marche sans réseau');
   await page.context().setOffline(false);
 
+  /*
+   * Reprise d'un répertoire existant. Placée en fin de scénario : elle ajoute
+   * des clients, et les comptes qui précèdent tombent juste sans elle.
+   */
+  console.log('Importer un répertoire de clients');
+  await page.context().setOffline(false);
+  await page.goto(`${BASE_URL}/#/clients/repertoire`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.getByTestId('importer-clients').click();
+  const boite = page.getByRole('dialog', { name: 'Importer des clients' });
+  const consignes = (await boite.getByTestId('consignes-import').textContent()).replace(/\s+/g, ' ');
+  // Les consignes se lisent **avant** de choisir le fichier : c'est la seule
+  // façon qu'elles servent. On vérifie qu'elles disent l'essentiel.
+  verifier(consignes.includes('Seule') && consignes.includes('Nom'),
+    'les consignes disent la seule colonne obligatoire');
+  verifier(consignes.includes('Positif') && consignes.includes('Négatif'),
+    'les consignes disent le sens du solde : positif, le client doit ; négatif, il a une avance');
+  verifier(consignes.includes('ne modifie jamais') && consignes.includes('ne double aucune créance'),
+    'les consignes disent qu’un client déjà au répertoire n’est pas touché');
+
+  const XLSX = require('xlsx');
+  const classeurClients = (() => {
+    const feuille = XLSX.utils.aoa_to_sheet([
+      ['LISTE DES CLIENTS AU 31/12/2026', null, null, null],
+      ['CODE', 'NOM', 'SOLDE', 'DATE SOLDE'],
+      ['IMP-001', 'ETS KOUAME ET FILS', '150 000', '31/12/2026'],
+      [null, 'MADAME ADJOUA', -25000, '31/12/2026'],
+      // Déjà au répertoire, écrite sans accent et en majuscules : elle doit
+      // être reconnue quand même, et sa fiche ne doit pas bouger.
+      [null, 'SARL KONE', 999999, null],
+      ['TOTAL', null, 1124999, null],
+    ]);
+    const livre = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livre, feuille, 'Clients');
+    return XLSX.write(livre, { type: 'buffer', bookType: 'xls' });
+  })();
+  await page.setInputFiles('[data-testid=fichier-clients]', { name: 'CLIENTS.xls', mimeType: 'application/vnd.ms-excel', buffer: classeurClients });
+  await page.locator('[aria-live]', { hasText: '2 client(s) repris' }).waitFor();
+  verifier(true, 'import : 2 clients repris, titre et total écartés');
+  await boite.getByTestId('lignes-ignorees').waitFor();
+  verifier((await boite.getByTestId('lignes-ignorees').textContent()).includes('déjà au répertoire'),
+    'import : le client déjà connu est écarté, et la raison est dite ligne par ligne');
+  await page.keyboard.press('Escape');
+
+  const repris = await page.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const r = await db.getAll("SELECT code, raison_sociale, solde_initial, solde_actuel, date_effet_solde FROM clients WHERE raison_sociale IN ('ETS KOUAME ET FILS', 'MADAME ADJOUA') ORDER BY raison_sociale");
+    const connue = await db.get("SELECT solde_initial FROM clients WHERE raison_sociale = 'SARL KONÉ'");
+    return { r, connue };
+  });
+  // Triés par raison sociale : « ETS KOUAME » vient avant « MADAME ADJOUA ».
+  const [kouame, adjoua] = repris.r;
+  verifier(kouame.solde_initial === 150000 && kouame.solde_actuel === 150000 && kouame.code === 'IMP-001' && kouame.date_effet_solde === '2026-12-31',
+    'import : le solde d’ouverture, son code et sa date d’arrêté sont repris');
+  // Une avance versée se garde en négatif : c'est le client qui a de l'argent
+  // chez nous, et le signe est tout le sens de la ligne.
+  verifier(adjoua.solde_initial === -25000 && adjoua.solde_actuel === -25000 && /^CLI-/.test(adjoua.code),
+    'import : l’avance reste négative, et un code est attribué quand le fichier n’en donne pas');
+  verifier(repris.connue.solde_initial === 50000,
+    'import : la fiche déjà au répertoire est reconnue malgré l’accent, et n’est pas écrasée');
+
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();
   console.log('OK');

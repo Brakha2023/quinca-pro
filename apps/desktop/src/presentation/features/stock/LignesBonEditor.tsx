@@ -1,5 +1,5 @@
 import { TrashIcon } from '@heroicons/react/24/outline';
-import type { Article } from '../../../core/articles';
+import { bonPorteUnPoids, formaterTonnage, poidsLigne, tonnageBon, tonnagePartiel, type Article } from '../../../core/articles';
 import { inputClass } from '../../components/ui/FormField';
 import { arrondirMontant } from '../../../core/commun/prix';
 import { totalBrutBon, totalNetBon } from '../../../core/stock';
@@ -55,8 +55,17 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
   const brut = totalBrutBon(lignes);
   const remise = Math.min(Math.max(remiseGlobale, 0), brut);
   const net = totalNetBon(lignes, remise);
+  /*
+   * La colonne « Poids » n'est pas une option à cocher : elle paraît dès qu'un
+   * article du bon porte un poids, et disparaît quand on le retire. Un bon de
+   * visserie n'a aucune raison de montrer une colonne vide, un bon de ciment
+   * n'a aucune raison de la cacher.
+   */
+  const pese = bonPorteUnPoids(lignes);
+  const tonnage = tonnageBon(lignes);
+  const partiel = tonnagePartiel(lignes);
   /** Nombre de colonnes du tableau : le pied s'y adosse. */
-  const colonnes = avecCout ? 6 : 4;
+  const colonnes = (avecCout ? 6 : 4) + (pese ? 1 : 0);
 
   return (
     <div className="space-y-3">
@@ -68,6 +77,7 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
               <th className="px-3 py-2 text-left">Article</th>
               <th className="px-3 py-2 text-right">Stock dispo</th>
               <th className="px-3 py-2 text-right w-32">Quantité</th>
+              {pese && <th className="px-3 py-2 text-right w-24">Poids</th>}
               {avecCout && <th className="px-3 py-2 text-right w-36">Coût unitaire</th>}
               {avecCout && <th className="px-3 py-2 text-right">Montant</th>}
               <th className="px-3 py-2 w-10" />
@@ -75,7 +85,7 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {lignes.map((l, i) => (
-              <tr key={l.article.id}>
+              <tr key={l.article.id} data-testid="ligne-bon">
                 <td className="px-3 py-2 text-sm">
                   <span className="font-mono text-primary-700 mr-2">{l.article.code}</span>{l.article.designation}
                   <span className="text-neutral-400 text-xs ml-2">{l.article.unite}</span>
@@ -86,6 +96,11 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
                 <td className="px-3 py-2">
                   <input type="number" min="0" step="any" value={l.quantite} onChange={(e) => modifier(i, { quantite: Number(e.target.value) })} className={`${inputClass} text-right font-mono`} />
                 </td>
+                {pese && (
+                  <td className="px-3 py-2 text-right font-mono text-sm text-neutral-600" data-testid={`poids-${l.article.code}`}>
+                    {formaterTonnage(poidsLigne(l))}
+                  </td>
+                )}
                 {avecCout && (
                   <td className="px-3 py-2">
                     <input type="number" min="0" step="1" value={l.cout_unitaire} onChange={(e) => modifier(i, { cout_unitaire: e.target.value === '' ? '' : Number(e.target.value) })} className={`${inputClass} text-right font-mono`} data-testid={`cout-${l.article.code}`} />
@@ -103,9 +118,20 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
               <tr><td colSpan={colonnes} className="px-3 py-6 text-center text-sm text-neutral-400">Aucune ligne — recherchez un article ci-dessus.</td></tr>
             )}
           </tbody>
-          {avecCout && lignes.length > 0 && (
+          {(avecCout || pese) && lignes.length > 0 && (
             <tfoot className="bg-neutral-50 text-sm">
-              {remise > 0 && (
+              {/* Le tonnage se lit avant l'argent : c'est lui qui dit s'il
+                  faut un camion, et il intéresse même un bon sans coûts. */}
+              {pese && (
+                <tr>
+                  <td colSpan={colonnes - 2} className="px-3 py-2 text-right text-neutral-600">
+                    Poids total{partiel && <span className="text-xs text-orange-600 ml-1">(articles pesés seulement)</span>}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-neutral-600" data-testid="tonnage-bon">{formaterTonnage(tonnage)}</td>
+                  <td />
+                </tr>
+              )}
+              {avecCout && remise > 0 && (
                 <>
                   <tr>
                     <td colSpan={colonnes - 2} className="px-3 py-2 text-right text-neutral-600">Total brut</td>
@@ -119,11 +145,13 @@ export default function LignesBonEditor({ filialeId, depotId, lignes, onChange, 
                   </tr>
                 </>
               )}
-              <tr className="font-semibold">
-                <td colSpan={colonnes - 2} className="px-3 py-2 text-right">{remise > 0 ? 'Net à payer' : 'Total du bon'}</td>
-                <td className="px-3 py-2 text-right font-mono" data-testid="total-bon">{formaterFcfa(net)}</td>
-                <td />
-              </tr>
+              {avecCout && (
+                <tr className="font-semibold">
+                  <td colSpan={colonnes - 2} className="px-3 py-2 text-right">{remise > 0 ? 'Net à payer' : 'Total du bon'}</td>
+                  <td className="px-3 py-2 text-right font-mono" data-testid="total-bon">{formaterFcfa(net)}</td>
+                  <td />
+                </tr>
+              )}
             </tfoot>
           )}
         </table>

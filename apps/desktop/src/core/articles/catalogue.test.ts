@@ -5,7 +5,7 @@ import type { Article } from './article';
 const article = (over: Partial<Article> = {}): Article => ({
   id: 'a', code: 'A-1', designation: 'Article', famille_id: null, sous_famille: null,
   prix_achat: 1000, prix_vente: 1500, prix_vip: null, tva: 18, stock_min: 0, stock_max: 0,
-  unite: 'PIECE', image_url: null, filiale_id: 'f', est_actif: true, ...over,
+  unite: 'PIECE', poids_tonnes: null, image_url: null, filiale_id: 'f', est_actif: true, ...over,
 });
 
 describe('recapCatalogue', () => {

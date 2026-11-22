@@ -1,5 +1,6 @@
 import type { TypeMouvementStock } from '@quinca/shared-types';
 import { arrondirFcfa } from '../commun/prix';
+import { arrondirTonnage } from '../articles/poids';
 import { LIBELLES_MOUVEMENT, SENS_MOUVEMENT } from './mouvement';
 
 /** Mouvement tel qu'il est relu pour rééditer son bon. */
@@ -9,6 +10,8 @@ export interface MouvementDuBon {
   article_code: string;
   article_designation: string;
   article_unite: string;
+  /** Poids unitaire de l'article en tonnes ; null s'il n'est pas renseigné. */
+  article_poids_tonnes: number | null;
   depot_nom: string;
   quantite: number;
   quantite_avant: number;
@@ -41,6 +44,8 @@ export interface LigneBonImprime {
   remise_montant: number;
   /** Quantité × coût unitaire net ; null quand le coût n'est pas renseigné (sorties). */
   valeur: number | null;
+  /** Poids de la ligne en tonnes ; null quand l'article n'est pas pesé. */
+  poids: number | null;
 }
 
 export interface BonStock {
@@ -72,6 +77,12 @@ export interface BonStock {
   valorise: boolean;
   /** Au moins une remise a été accordée : la colonne n'est affichée que dans ce cas. */
   avec_remise: boolean;
+  /** Tonnage du bon, somme des lignes pesées ; 0 si aucune ne l'est. */
+  tonnage: number;
+  /** Au moins un article est pesé : la colonne « Poids » n'est imprimée que dans ce cas. */
+  pese: boolean;
+  /** Une partie seulement des lignes est pesée : le tonnage imprimé est partiel. */
+  tonnage_partiel: boolean;
 }
 
 const TITRES: Partial<Record<TypeMouvementStock, string>> = {
@@ -112,6 +123,9 @@ export function construireBon(reference: string, mouvements: MouvementDuBon[]): 
     remise_percent: m.remise_percent,
     remise_montant: m.remise_montant,
     valeur: m.cout_unitaire == null ? null : arrondirFcfa(Math.abs(m.quantite) * m.cout_unitaire),
+    // Au poids du bon : la quantité signée garde son signe, pour qu'une
+    // contre-passation retire son tonnage au lieu de l'ajouter.
+    poids: m.article_poids_tonnes == null ? null : arrondirTonnage(m.article_poids_tonnes * m.quantite),
   }));
 
   return {
@@ -130,5 +144,8 @@ export function construireBon(reference: string, mouvements: MouvementDuBon[]): 
     remise_globale: arrondirFcfa(lignes.reduce((s, l) => s + l.remise_montant, 0)),
     valorise: lignes.some((l) => l.valeur != null),
     avec_remise: lignes.some((l) => l.remise_percent > 0 || l.remise_montant > 0),
+    tonnage: arrondirTonnage(lignes.reduce((s, l) => s + (l.poids ?? 0), 0)),
+    pese: lignes.some((l) => l.poids != null),
+    tonnage_partiel: lignes.some((l) => l.poids != null) && lignes.some((l) => l.poids == null),
   };
 }

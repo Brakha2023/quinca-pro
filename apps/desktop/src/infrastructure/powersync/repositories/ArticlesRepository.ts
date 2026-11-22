@@ -146,12 +146,14 @@ export class ArticlesRepository extends BaseRepository {
     const now = this.maintenant();
     await this.db.execute(
       `INSERT INTO articles (id, code, designation, famille_id, sous_famille, prix_achat, prix_vente, prix_vip, tva,
-                             stock_min, stock_max, unite, filiale_id, est_actif, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+                             stock_min, stock_max, unite, poids_tonnes, filiale_id, est_actif, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
       [
         id, form.code, form.designation, form.famille_id, form.sous_famille || null,
         form.prix_achat, form.prix_vente, form.prix_vip === '' ? null : form.prix_vip, form.tva,
-        form.stock_min, form.stock_max, form.unite, filialeId, now, now,
+        // Non renseigné reste `null` : un article sans poids ne pèse pas zéro.
+        form.stock_min, form.stock_max, form.unite, form.poids_tonnes === '' ? null : form.poids_tonnes,
+        filialeId, now, now,
       ],
     );
     return id;
@@ -170,6 +172,7 @@ export class ArticlesRepository extends BaseRepository {
       stock_min: form.stock_min,
       stock_max: form.stock_max,
       unite: form.unite,
+      poids_tonnes: form.poids_tonnes === '' ? null : form.poids_tonnes,
     });
   }
 

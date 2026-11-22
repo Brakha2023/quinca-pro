@@ -5,7 +5,7 @@ import type { Fournisseur, LigneCommandeFournisseur } from './fournisseur';
 const ligne = (p: Partial<LigneCommandeFournisseur> = {}): LigneCommandeFournisseur => ({
   id: 'l1', commande_id: 'c1', article_id: 'a1', code_article: 'TOLL-7',
   designation: 'Feuille de tôle 7/10', unite: 'PIECE',
-  quantite: 10, quantite_recue: 10, prix_unitaire_ht: 4800, remise_percent: 0, total_ht: 48000,
+  quantite: 10, quantite_recue: 10, prix_unitaire_ht: 4800, remise_montant: 0, remise_percent: 0, total_ht: 48000,
   ...p,
 });
 
@@ -15,6 +15,7 @@ const entete = (p: Partial<EnteteFacture['commande']> = {}): EnteteFacture => ({
     date_commande: '2026-10-07T15:41:00.000Z',
     date_reception: '2026-10-07T15:41:00.000Z',
     type: 'COMMANDE',
+    remise_montant: 0,
     remise_percent: 0,
     tva_percent: 0,
     montant_paye: 0,

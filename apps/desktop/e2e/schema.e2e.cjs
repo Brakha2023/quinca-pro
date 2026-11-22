@@ -34,7 +34,7 @@ const ACCEPTE = { status: 200, contentType: 'application/json', body: '[]' };
   await page.route('**/rest/v1/**', (route) => {
     const url = route.request().url();
     const table = (/\/rest\/v1\/(\w+)/.exec(url) || [])[1];
-    sondes.push({ table, url });
+    sondes.push({ table, url, methode: route.request().method() });
     route.fulfill(refus.get(table) ?? ACCEPTE);
   });
 
@@ -49,6 +49,26 @@ const ACCEPTE = { status: 200, contentType: 'application/json', body: '[]' };
   const sondeVentes = sondes.find((s) => s.table === 'ventes');
   verifier(/select=/.test(sondeVentes.url) && /numero/.test(sondeVentes.url), 'la sonde demande nommément les colonnes attendues');
   verifier(/limit=0/.test(sondeVentes.url), 'la sonde ne ramène aucune ligne : elle ne coûte que l’aller-retour');
+  /*
+   * En `HEAD`, la réponse n'a pas de corps — et le refus de PostgREST *est* un
+   * corps JSON. Le poste recevait alors un 400 nu, sans code ni message : ni
+   * « colonne absente », ni nom de colonne, et un bandeau qui ne disait rien.
+   * Le simulateur, lui, fournissait un corps même sur un `HEAD` : le défaut ne
+   * se voyait qu'en vrai. D'où cette assertion, qui tient la porte fermée.
+   */
+  /*
+   * En `HEAD`, la réponse n'a pas de corps — et le refus de PostgREST *est* un
+   * corps JSON. Le poste recevait alors un 400 nu, sans code ni message : ni
+   * « colonne absente », ni nom de colonne, et un bandeau qui ne disait rien.
+   * Le simulateur, lui, fournissait un corps même sur un `HEAD` : le défaut ne
+   * se voyait qu'en vrai. D'où cette assertion, qui tient la porte fermée.
+   *
+   * On ne retient que les sondes (`limit=0`) : la file d'envoi de PowerSync
+   * passe par la même route, en POST.
+   */
+  const requetesSonde = sondes.filter((s) => /limit=0/.test(s.url));
+  verifier(requetesSonde.length >= 20 && requetesSonde.every((s) => s.methode === 'GET'),
+    'la sonde interroge en GET : un refus sans corps ne nommerait pas la colonne manquante');
 
   console.log('Migration oubliée : une colonne manque');
   refus.set('mouvements_stock', REFUS_COLONNE);
@@ -87,10 +107,16 @@ const ACCEPTE = { status: 200, contentType: 'application/json', body: '[]' };
   };
   await flotTari();
   await page.context().setOffline(true);
-  const avant = sondes.length;
+  /*
+   * On ne compte que les sondes (`limit=0`). La file d'envoi de PowerSync
+   * passe par la même route et réessaie pendant la coupure : la compter ferait
+   * échouer ce contrôle au hasard du calendrier, ce qui est arrivé.
+   */
+  const sondesTentees = () => sondes.filter((x) => /limit=0/.test(x.url)).length;
+  const avant = sondesTentees();
   await page.locator('[data-testid=reverifier-schema]').click();
   await page.waitForTimeout(1200);
-  verifier(sondes.length === avant, 'hors ligne : aucune sonde tentée');
+  verifier(sondesTentees() === avant, 'hors ligne : aucune sonde tentée');
   verifier((await bandeau.count()) === 1 && (await bandeau.textContent()).includes('productions'),
     'hors ligne : le désaccord connu reste affiché — ce n’est pas le réseau qui l’a créé');
   await page.context().setOffline(false);

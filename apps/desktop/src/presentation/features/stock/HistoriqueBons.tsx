@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { PrinterIcon } from '@heroicons/react/24/outline';
+import { ArrowUturnLeftIcon, PencilSquareIcon, PrinterIcon } from '@heroicons/react/24/outline';
 import type { TypeMouvementStock } from '@quinca/shared-types';
 import Bouton from '../../components/ui/Bouton';
 import Pagination from '../../components/ui/Pagination';
@@ -31,6 +31,13 @@ interface Props {
   avecDestination?: boolean;
   /** L'arrivée réelle de la marchandise et la remise obtenue : propres aux entrées. */
   avecLivraison?: boolean;
+  /**
+   * Reprendre ou annuler un bon. Fournis seulement par les onglets qui savent
+   * le défaire — pour l'instant les entrées : une contre-passation doit aussi
+   * défaire la pièce du fournisseur, et chaque nature a la sienne.
+   */
+  onCorriger?: (reference: string) => void;
+  onAnnuler?: (reference: string) => void;
   videMessage: string;
 }
 
@@ -42,7 +49,7 @@ interface Props {
  * signée. Le journal ligne par ligne reste l'onglet « Mouvements », qui lui
  * mélange toutes les natures — y compris les ventes.
  */
-export default function HistoriqueBons({ filialeId, filiale, types, libelleQuantite = 'Quantité', quantiteSignee, avecFournisseur, avecDestination, avecLivraison, videMessage }: Props) {
+export default function HistoriqueBons({ filialeId, filiale, types, libelleQuantite = 'Quantité', quantiteSignee, avecFournisseur, avecDestination, avecLivraison, onCorriger, onAnnuler, videMessage }: Props) {
   const { depots } = useDepots(filialeId);
   const [depotId, setDepotId] = useState('');
   const [recherche, setRecherche] = useState('');
@@ -93,6 +100,7 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
               <th className={`${cellule} text-right`}>Valeur</th>
               <th className={`${cellule} text-left`}>Par</th>
               <th className={`${cellule} text-center print:hidden`}>Bon</th>
+              {(onCorriger || onAnnuler) && <th className={`${cellule} text-center print:hidden`}>Corriger</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
@@ -116,6 +124,16 @@ export default function HistoriqueBons({ filialeId, filiale, types, libelleQuant
                 <td className={`${cellule} text-center print:hidden`}>
                   <Bouton onClick={() => setApercu(b.reference)} icone={PrinterIcon} className="p-1.5 rounded text-primary-700 hover:bg-primary-50" title={`Imprimer le bon ${b.reference}`} data-testid={`imprimer-bon-${b.reference}`}></Bouton>
                 </td>
+                {(onCorriger || onAnnuler) && (
+                  <td className={`${cellule} text-center print:hidden whitespace-nowrap`}>
+                    {onCorriger && (
+                      <Bouton onClick={() => onCorriger(b.reference)} icone={PencilSquareIcon} className="p-1.5 rounded text-neutral-700 hover:bg-neutral-100" title={`Reprendre le bon ${b.reference} pour le corriger`} data-testid={`corriger-bon-${b.reference}`}></Bouton>
+                    )}
+                    {onAnnuler && (
+                      <Bouton onClick={() => onAnnuler(b.reference)} icone={ArrowUturnLeftIcon} className="p-1.5 rounded text-red-600 hover:bg-red-50" title={`Annuler le bon ${b.reference}`} data-testid={`annuler-bon-${b.reference}`}></Bouton>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

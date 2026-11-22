@@ -1,6 +1,6 @@
 import { montantEnLettres } from '../commun/montantEnLettres';
 import type { CommandeFournisseur, Fournisseur, LigneCommandeFournisseur, TotauxCommande } from './fournisseur';
-import { totalLigneCommande, totauxCommande } from './fournisseur';
+import { partRemiseRecue, totalLigneCommande, totauxCommande } from './fournisseur';
 
 /**
  * Facture d'achat fournisseur : la pièce qui constate la dette.
@@ -27,8 +27,11 @@ export interface LigneFactureAchat {
   /** Quantité facturée : la quantité reçue. */
   quantite: number;
   prix_unitaire_ht: number;
+  /** Part de la remise du bon portée par la ligne, ramenée au reçu, en francs. */
+  remise_montant: number;
+  /** Remise de ligne en %, pour les pièces d'avant la remise en francs. */
   remise_percent: number;
-  /** Montant HT de la ligne, net de sa propre remise. */
+  /** Montant HT de la ligne, net de la remise qu'elle porte. */
   total_ht: number;
 }
 
@@ -47,6 +50,9 @@ export interface FactureAchat {
   };
   lignes: LigneFactureAchat[];
   totaux: TotauxCommande;
+  /** Remise du bon ramenée au reçu, en francs : ce que la facture déduit. */
+  remise_montant: number;
+  /** Remise globale en %, pour les pièces d'avant. */
   remise_percent: number;
   tva_percent: number;
   /** Net à payer en toutes lettres : c'est lui qui fait foi en cas de rature. */
@@ -73,7 +79,7 @@ export function documentsCommande(c: Pick<CommandeFournisseur, 'type' | 'total_r
 }
 
 export interface EnteteFacture {
-  commande: Pick<CommandeFournisseur, 'numero' | 'date_commande' | 'date_reception' | 'type' | 'remise_percent' | 'tva_percent' | 'montant_paye' | 'reste_a_payer' | 'notes'>;
+  commande: Pick<CommandeFournisseur, 'numero' | 'date_commande' | 'date_reception' | 'type' | 'remise_montant' | 'remise_percent' | 'tva_percent' | 'montant_paye' | 'reste_a_payer' | 'notes'>;
   depot: string | null;
   operateur: string | null;
   /**
@@ -106,15 +112,26 @@ export function construireFactureAchat(
       quantite: l.quantite_recue,
       prix_unitaire_ht: l.prix_unitaire_ht,
       remise_percent: l.remise_percent,
+      // La part de remise de la ligne, ramenée à ce qui a été reçu : la facture
+      // ne porte que la marchandise arrivée, remise comprise.
+      remise_montant: partRemiseRecue(l, l.quantite_recue),
       // Le même calcul que les totaux ci-dessous : une ligne et son total ne
       // peuvent pas être obtenus de deux façons différentes.
-      total_ht: totalLigneCommande({ quantite: l.quantite_recue, prix_unitaire_ht: l.prix_unitaire_ht, remise_percent: l.remise_percent }),
+      total_ht: totalLigneCommande({
+        quantite: l.quantite_recue,
+        prix_unitaire_ht: l.prix_unitaire_ht,
+        remise_montant: partRemiseRecue(l, l.quantite_recue),
+        remise_percent: l.remise_percent,
+      }),
     }));
 
   const totaux = totauxCommande({
+    // La remise du bon, ramenée elle aussi au reçu : c'est la somme des parts
+    // des lignes facturées.
+    remise_montant: facturees.reduce((s, l) => s + l.remise_montant, 0),
     remise_percent: commande.remise_percent,
     tva_percent: commande.tva_percent,
-    lignes: facturees.map((l) => ({ quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht, remise_percent: l.remise_percent })),
+    lignes: facturees.map((l) => ({ quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht, remise_montant: l.remise_montant, remise_percent: l.remise_percent })),
   });
 
   return {
@@ -133,6 +150,7 @@ export function construireFactureAchat(
     },
     lignes: facturees,
     totaux,
+    remise_montant: facturees.reduce((s, l) => s + l.remise_montant, 0),
     remise_percent: commande.remise_percent,
     tva_percent: commande.tva_percent,
     montant_en_lettres: `${montantEnLettres(totaux.net_a_payer)} francs CFA`,

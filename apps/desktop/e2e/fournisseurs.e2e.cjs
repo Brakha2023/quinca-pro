@@ -32,8 +32,8 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
 
     // Bon de commande : rien en stock ni en dette ; réception partielle puis solde.
     const { bonCommandeSchema, receptionSchema, construireReleve, commandeFromRow, reglementFournisseurFromRow } = await import('/src/core/fournisseurs/index.ts');
-    const a2 = await new ArticlesRepository(db).create(F, articleFormSchema.parse({ code: 'PJAV', designation: 'Pied de lavabo', prix_achat: 5500, prix_vente: 8000 }));
-    const bon = await repo.creerBonCommande(ctx, bonCommandeSchema.parse({ fournisseur_id: fid, depot_id: depotId, remise_percent: 10, tva_percent: 0, notes: 'Livraison le matin', lignes: [{ article_id: a2, quantite: 20, prix_unitaire_ht: 5500 }] }));
+    const a2 = await new ArticlesRepository(db).create(F, articleFormSchema.parse({ code: 'PJAV', designation: 'Pied de lavabo', prix_achat: 5500, prix_vente: 8000, poids_tonnes: 0.025 }));
+    const bon = await repo.creerBonCommande(ctx, bonCommandeSchema.parse({ fournisseur_id: fid, depot_id: depotId, remise_montant: 11000, tva_percent: 0, notes: 'Livraison le matin', lignes: [{ article_id: a2, quantite: 20, prix_unitaire_ht: 5500 }] }));
     const bon1 = await db.get('SELECT statut, total_ttc, total_recu_ttc, reste_a_payer FROM commandes_fournisseurs WHERE id = ?', [bon.id]);
     const stockPjavAvant = await db.getOptional('SELECT quantite FROM stocks WHERE article_id = ?', [a2]);
     const detteAvantReception = (await db.get('SELECT solde_actuel FROM fournisseurs WHERE id = ?', [fid])).solde_actuel;
@@ -155,10 +155,26 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('ul li button', { hasText: 'PJAV' }).click();
   await page.locator('[data-testid=bon-lignes] input[type=number]').first().fill('10');
 
-  // Remise négociée sur cet article seulement : 10 × 5 500 − 10 % = 49 500.
-  await page.locator('[data-testid="remise-PJAV"]').fill('10');
+  /*
+    * La remise se négocie en francs sur le bon entier : 5 500 sur 55 000, et
+    * non « 10 % », que personne n'annonce au téléphone. Elle est répartie au
+    * prorata des lignes, qui n'ont plus de remise à elles.
+    */
+  await page.getByTestId('remise-globale').fill('5500');
   await page.locator('[data-testid=remise-totale]', { hasText: '5 500 F' }).waitFor();
-  verifier(true, 'bon de commande : remise de ligne reportée dans le récapitulatif');
+  verifier(true, 'bon de commande : la remise se saisit en francs sur le bon entier');
+  verifier((await page.getByTestId('part-remise-PJAV').textContent()).replace(/\s/g, '') === '5500F',
+    'bon de commande : la part portée par la ligne se lit, sans se saisir');
+
+  /*
+   * Le poids de l'article fait paraître de lui-même la colonne et le tonnage
+   * du bon : 10 pieds de lavabo à 25 kg, soit 0,25 t. C'est le chiffre que le
+   * transporteur réclame, et personne n'a de case à cocher pour l'obtenir.
+   */
+  verifier((await page.getByTestId('poids-PJAV').textContent()).replace(/\s/g, '') === '0,25t',
+    'bon de commande : la colonne Poids paraît et pèse la ligne (10 × 25 kg)');
+  verifier((await page.getByTestId('tonnage-commande').textContent()).replace(/\s/g, '') === '0,25t',
+    'bon de commande : le tonnage du bon est récapitulé avec les montants');
 
   const telechargement = page.waitForEvent('download');
   await page.getByTestId('exporter-excel').click();
@@ -166,7 +182,9 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   const xlsx = require('xlsx');
   const classeur = xlsx.readFile(await fichier.path());
   const feuille = xlsx.utils.sheet_to_json(classeur.Sheets[classeur.SheetNames[0]]);
-  verifier(feuille.length === 1 && feuille[0]['Remise %'] === 10 && feuille[0]['Total HT'] === 49500, `export Excel du bon : ${fichier.suggestedFilename()}`);
+  verifier(feuille.length === 1 && feuille[0]['Part de remise'] === 5500 && feuille[0].Montant === 55000 && feuille[0]['Total HT'] === 49500,
+    `export Excel du bon : la part de remise et le net, en francs (${fichier.suggestedFilename()})`);
+  verifier(feuille[0]['Poids (t)'] === 0.25, `export Excel du bon : le poids de la ligne suit (${feuille[0]['Poids (t)']} t)`);
 
   await page.getByRole('button', { name: 'Créer le bon' }).click();
   await page.locator('[aria-live]', { hasText: 'Bon de commande BC-' }).waitFor();
@@ -175,7 +193,10 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('tbody tr', { hasText: 'Envoyée' }).getByTitle('Imprimer le bon').click();
   await page.locator('#zone-impression .document-titre', { hasText: 'Bon de commande fournisseur' }).waitFor();
   await page.locator('#zone-impression', { hasText: 'CI-ABJ-2020-B-1234' }).locator('text=49 500 F').first().waitFor();
-  verifier(true, 'bon imprimable : total de ligne net de la remise négociée');
+  verifier(true, 'bon imprimable : total de ligne net de la part de remise');
+  const papierBc = (await page.locator('#zone-impression').textContent()).replace(/\s+/g, ' ');
+  verifier(papierBc.includes('Poids') && papierBc.includes('0,25 t'),
+    'bon imprimable : le tonnage est sur la feuille, pour le transporteur');
   await page.keyboard.press('Escape');
   await page.locator('tbody tr', { hasText: 'Envoyée' }).getByTitle('Réceptionner').click();
   await page.getByRole('dialog').locator('input[type=number]').fill('4');
@@ -273,6 +294,67 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await boutonsRendus();
   verifier((await refusServeur.textContent()).includes('4 commande(s) ou achat(s)') && (await page.getByRole('dialog').count()) === 0,
     'le serveur retient une fiche dont le poste n’a plus la trace, sans même demander confirmation');
+
+  /*
+   * Reprise d'un répertoire existant. Placée en fin de scénario : elle ajoute
+   * des fiches, et les comptes qui précèdent tombent juste sans elle.
+   */
+  console.log('Importer un répertoire de fournisseurs');
+  await page.context().setOffline(false);
+  await page.goto(`${BASE_URL}/#/fournisseurs/repertoire`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.getByTestId('importer-fournisseurs').click();
+  const boiteImport = page.getByRole('dialog', { name: 'Importer des fournisseurs' });
+  const consignes = (await boiteImport.getByTestId('consignes-import').textContent()).replace(/\s+/g, ' ');
+  // Le sens du solde est l'inverse de celui des clients : c'est le piège de
+  // cet écran, et les consignes doivent le dire sans ambiguïté.
+  verifier(consignes.includes('la maison doit'),
+    'les consignes disent qu’un solde positif est ce que la maison doit au fournisseur');
+  verifier(consignes.includes('avance déjà versée'),
+    'les consignes disent qu’un solde négatif est une avance versée chez lui');
+  verifier(consignes.includes('ne modifie jamais') && consignes.includes('ne double aucune dette'),
+    'les consignes disent qu’une fiche déjà au répertoire n’est pas touchée');
+
+  const XLSX = require('xlsx');
+  const classeurFournisseurs = (() => {
+    const feuille = XLSX.utils.aoa_to_sheet([
+      ['BALANCE FOURNISSEURS AU 31/12/2026', null, null, null, null],
+      ['CODE', 'RAISON SOCIALE', 'A PAYER', 'ARRETE AU', 'REPRESENTANT'],
+      ['IMP-F1', 'SOCIMAT CI', '425 000', '31/12/2026', 'M. Diarra'],
+      [null, 'QUINCAILLERIE DU PONT', -50000, '31/12/2026', null],
+      // Déjà au répertoire : la fiche existante ne doit pas bouger.
+      [null, 'SODIPRO', 999999, null, null],
+      ['TOTAL', null, 1374999, null, null],
+    ]);
+    const livre = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livre, feuille, 'Fournisseurs');
+    return XLSX.write(livre, { type: 'buffer', bookType: 'xls' });
+  })();
+  await page.setInputFiles('[data-testid=fichier-fournisseurs]', { name: 'FOURNISSEURS.xls', mimeType: 'application/vnd.ms-excel', buffer: classeurFournisseurs });
+  await page.locator('[aria-live]', { hasText: '2 fournisseur(s) repris' }).waitFor();
+  verifier(true, 'import : 2 fournisseurs repris, titre et total écartés');
+  await boiteImport.getByTestId('lignes-ignorees').waitFor();
+  verifier((await boiteImport.getByTestId('lignes-ignorees').textContent()).includes('déjà au répertoire'),
+    'import : la fiche déjà connue est écartée, et la raison est dite ligne par ligne');
+  await page.keyboard.press('Escape');
+
+  const reprisF = await page.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const r = await db.getAll("SELECT code, raison_sociale, solde_initial, solde_actuel, date_effet_solde, interlocuteur FROM fournisseurs WHERE raison_sociale IN ('SOCIMAT CI', 'QUINCAILLERIE DU PONT') ORDER BY raison_sociale");
+    const connue = await db.get("SELECT solde_initial FROM fournisseurs WHERE raison_sociale = 'SODIPRO'");
+    return { r, connue };
+  });
+  // Triés par raison sociale : « QUINCAILLERIE » vient avant « SOCIMAT ».
+  const [pont, socimat] = reprisF.r;
+  verifier(socimat.solde_initial === 425000 && socimat.solde_actuel === 425000 && socimat.code === 'IMP-F1'
+    && socimat.date_effet_solde === '2026-12-31' && socimat.interlocuteur === 'M. Diarra',
+    'import : la dette d’ouverture, le code, la date d’arrêté et l’interlocuteur sont repris');
+  // Une avance déjà versée se garde en négatif : c'est de l'argent que la
+  // maison a chez le fournisseur, et le signe est tout le sens de la ligne.
+  verifier(pont.solde_initial === -50000 && pont.solde_actuel === -50000 && /^FOU-/.test(pont.code),
+    'import : l’avance reste négative, et un code est attribué quand le fichier n’en donne pas');
+  verifier(reprisF.connue.solde_initial === 20000,
+    'import : la fiche déjà au répertoire n’a pas été écrasée');
 
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();

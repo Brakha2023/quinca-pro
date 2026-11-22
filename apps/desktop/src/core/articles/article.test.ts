@@ -36,7 +36,7 @@ describe('articleFromRow', () => {
     const article = articleFromRow({
       id: '1', code: 'X', designation: 'X', famille_id: null, sous_famille: null,
       prix_achat: null, prix_vente: null, prix_vip: null, tva: null, stock_min: null, stock_max: null,
-      unite: null, image_url: null, filiale_id: 'f', est_actif: null, created_at: null, updated_at: null,
+      unite: null, poids_tonnes: null, image_url: null, filiale_id: 'f', est_actif: null, created_at: null, updated_at: null,
     });
     expect(article.prix_achat).toBe(0);
     expect(article.tva).toBe(18);

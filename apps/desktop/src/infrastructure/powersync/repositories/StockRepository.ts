@@ -1,5 +1,6 @@
 import type { Transaction } from '@powersync/web';
-import type { StockRow, TypeMouvementStock } from '@quinca/shared-types';
+import type { ArticleRow, StockRow, TypeMouvementStock } from '@quinca/shared-types';
+import { articleFromRow, type Article } from '../../../core/articles';
 import {
   STOCK_VIDE,
   appliquerMouvement,
@@ -10,11 +11,26 @@ import {
   type EtatStock,
   type Inventaire,
   type SortieStock,
+  type ImpactCorrection,
   type TransfertStock,
 } from '../../../core/stock';
+import { coutBrutDepuisLigne, motifNonCorrigeable } from '../../../core/stock';
 import { numeroCourt, numeroPiece } from '../../desktop/identitePoste';
 import { BaseRepository } from './BaseRepository';
-import { porterLivraisonAuCompte } from './compteFournisseur';
+import { mouvementerDetteFournisseur, porterLivraisonAuCompte } from './compteFournisseur';
+
+/** Un bon d'entrée relu pour être rouvert dans le formulaire de saisie. */
+export interface BonEntreeRelu {
+  reference: string;
+  depot_id: string;
+  type: 'ENTREE_ACHAT' | 'RETOUR_CLIENT';
+  fournisseur_id: string;
+  motif: string;
+  date_livraison: string | null;
+  /** Remise globale du bon, recomposée depuis les parts portées par les lignes. */
+  remise: number;
+  lignes: Array<{ article: Article; quantite: number; cout_unitaire: number | '' }>;
+}
 
 export interface ContexteMouvement {
   filialeId: string;
@@ -206,7 +222,8 @@ export function mouvementsQuery(filialeId: string | null, filtres: FiltresMouvem
   if (filtres.reference) { conditions.push('m.reference = ?'); params.push(filtres.reference); }
   params.push(filtres.limite ?? 200);
   return {
-    sql: `SELECT m.*, a.code AS article_code, a.designation AS article_designation, a.unite AS article_unite, d.nom AS depot_nom,
+    sql: `SELECT m.*, a.code AS article_code, a.designation AS article_designation, a.unite AS article_unite,
+                 a.poids_tonnes AS article_poids_tonnes, d.nom AS depot_nom,
                  u.nom AS utilisateur_nom, u.prenom AS utilisateur_prenom, f.raison_sociale AS fournisseur_nom
           FROM mouvements_stock m
           JOIN articles a ON a.id = m.article_id
@@ -357,8 +374,27 @@ export class StockRepository extends BaseRepository {
    */
   enregistrerEntree(ctx: ContexteMouvement, entree: EntreeStock): Promise<string> {
     const { reference, referenceCourte } = numerosDuBon(entree.reference, 'ENT');
-    const dateLivraison = entree.date_livraison ? new Date(entree.date_livraison).toISOString() : null;
     return this.db.writeTransaction(async (tx) => {
+      await this.ecrireBonEntree(tx, ctx, entree, reference, referenceCourte);
+      return reference;
+    });
+  }
+
+  /**
+   * Le corps d'un bon d'entrée, dans une transaction ouverte par l'appelant :
+   * écrit par l'enregistrement comme par la correction, qui doit produire
+   * exactement le même bon — mêmes numéros, même pièce au compte du
+   * fournisseur.
+   */
+  private async ecrireBonEntree(
+    tx: Transaction,
+    ctx: ContexteMouvement,
+    entree: EntreeStock,
+    reference: string,
+    referenceCourte: string | null,
+  ): Promise<void> {
+    const dateLivraison = entree.date_livraison ? new Date(entree.date_livraison).toISOString() : null;
+    {
       const parts = repartirRemiseGlobale(fusionnerLignes(entree.lignes), entree.remise);
       for (const { ligne, remise, cout_unitaire_net } of parts) {
         await this.appliquer(tx, ctx, entree.depot_id, entree.type, {
@@ -387,8 +423,218 @@ export class StockRepository extends BaseRepository {
           lignes: dues,
         });
       }
-      return reference;
+    }
+  }
+
+  /**
+   * Ce qu'un bon d'entrée a mis en stock **et qui y est encore**, article par
+   * article, avec l'état du dépôt aujourd'hui.
+   *
+   * On lit le net signé de tous les mouvements du bon, et non ses lignes
+   * d'origine : un bon déjà corrigé une fois porte son entrée, sa
+   * contre-passation et sa nouvelle entrée. Le net dit ce qui reste en vigueur
+   * — c'est cela qu'une annulation doit retirer, pas la saisie du premier jour.
+   *
+   * Pour l'écran, qui ne fait que demander ce que coûterait la correction. La
+   * contre-passation, elle, passe par `impactsDuBon` avec sa propre
+   * transaction : voir le cartouche de cette méthode.
+   */
+  async impactCorrectionEntree(filialeId: string, reference: string): Promise<ImpactCorrection[]> {
+    return this.impactsDuBon(this.db, filialeId, reference);
+  }
+
+  /**
+   * Le même calcul, mais sur le lecteur qu'on lui donne.
+   *
+   * **Le lecteur se passe, il ne se suppose pas.** Appelée depuis l'intérieur
+   * d'un `writeTransaction`, cette lecture ne doit pas repartir par `this.db` :
+   * la transaction tient le verrou d'écriture, la nouvelle lecture l'attend, et
+   * le poste se fige — c'est exactement ce qui gelait la correction d'un bon.
+   * Et même si elle passait, elle lirait l'état d'avant la transaction : une
+   * correction écrirait alors ses mouvements sur un stock périmé.
+   */
+  private async impactsDuBon(
+    lecteur: Pick<Transaction, 'getAll' | 'getOptional'>,
+    filialeId: string,
+    reference: string,
+  ): Promise<ImpactCorrection[]> {
+    const lignes = await lecteur.getAll<{
+      article_id: string; depot_id: string; net: number; code: string | null; designation: string | null;
+    }>(
+      `SELECT m.article_id, m.depot_id, SUM(m.quantite_apres - m.quantite_avant) AS net,
+              a.code, a.designation
+         FROM mouvements_stock m
+         JOIN articles a ON a.id = m.article_id
+        WHERE m.reference = ? AND m.filiale_id = ?
+        GROUP BY m.article_id, m.depot_id
+       HAVING SUM(m.quantite_apres - m.quantite_avant) <> 0`,
+      [reference, filialeId],
+    );
+    const impacts: ImpactCorrection[] = [];
+    for (const l of lignes) {
+      const etat = await this.lireEtat(lecteur, l.article_id, l.depot_id);
+      impacts.push({
+        article_id: l.article_id,
+        depot_id: l.depot_id,
+        code: l.code ?? '',
+        designation: l.designation ?? '',
+        quantite_retiree: l.net,
+        quantite_avant: etat.quantite,
+        quantite_apres: etat.quantite - l.net,
+      });
+    }
+    return impacts;
+  }
+
+  /**
+   * Un bon d'entrée relu tel qu'il est **en vigueur**, pour le rouvrir dans le
+   * formulaire de saisie.
+   *
+   * On prend la dernière ligne d'entrée de chaque article : un bon déjà
+   * corrigé porte son entrée d'origine, sa contre-passation et la nouvelle —
+   * c'est cette dernière qui dit le contenu du bon aujourd'hui. Le coût est
+   * remis au brut (voir `coutBrutDepuisLigne`), et la remise globale est la
+   * somme des parts portées par les lignes.
+   */
+  async lireBonEntree(filialeId: string, reference: string): Promise<BonEntreeRelu | null> {
+    const lignes = await this.db.getAll<ArticleRow & {
+      article_id: string;
+      quantite: number | null; cout_unitaire: number | null; remise_montant: number | null;
+      depot_id: string; type: string; fournisseur_id: string | null; motif: string | null; date_livraison: string | null;
+    }>(
+      // L'article entier : le formulaire de saisie travaille sur la fiche, pas
+      // sur un code et une désignation.
+      `SELECT a.*, m.article_id,
+              m.quantite, m.cout_unitaire, m.remise_montant,
+              m.depot_id, m.type, m.fournisseur_id, m.motif, m.date_livraison
+         FROM mouvements_stock m
+         JOIN articles a ON a.id = m.article_id
+        WHERE m.reference = ? AND m.filiale_id = ? AND m.type IN ('ENTREE_ACHAT', 'RETOUR_CLIENT')
+          AND m.created_at = (SELECT MAX(x.created_at) FROM mouvements_stock x
+                               WHERE x.reference = m.reference AND x.article_id = m.article_id
+                                 AND x.type IN ('ENTREE_ACHAT', 'RETOUR_CLIENT'))
+        ORDER BY a.code`,
+      [reference, filialeId],
+    );
+    if (lignes.length === 0) return null;
+    const tete = lignes[0]!;
+    return {
+      reference,
+      depot_id: tete.depot_id,
+      type: tete.type === 'RETOUR_CLIENT' ? 'RETOUR_CLIENT' : 'ENTREE_ACHAT',
+      fournisseur_id: tete.fournisseur_id ?? '',
+      motif: tete.motif ?? '',
+      date_livraison: tete.date_livraison,
+      remise: lignes.reduce((s, l) => s + (l.remise_montant ?? 0), 0),
+      lignes: lignes.map((l) => ({
+        article: articleFromRow({ ...l, id: l.article_id }),
+        quantite: l.quantite ?? 0,
+        cout_unitaire: coutBrutDepuisLigne({
+          quantite: l.quantite ?? 0,
+          cout_unitaire: l.cout_unitaire,
+          remise_montant: l.remise_montant ?? 0,
+        }),
+      })),
+    };
+  }
+
+  /**
+   * Annule un bon d'entrée : la marchandise ressort du stock, et la pièce
+   * portée au compte du fournisseur est annulée avec elle.
+   *
+   * Rien n'est effacé — ni le bon, ni ses mouvements, ni la pièce : c'est une
+   * contre-passation (voir le cartouche de `core/stock/correction.ts`). Le
+   * stock peut passer sous zéro si la marchandise est déjà partie : c'est la
+   * vérité du moment, et l'écran l'annonce avant de confirmer.
+   */
+  async annulerEntree(ctx: ContexteMouvement, reference: string, motif: string): Promise<void> {
+    await this.db.writeTransaction(async (tx) => {
+      await this.contrePasserEntree(tx, ctx, reference, motif ? `Annulation du bon ${reference} : ${motif}` : `Annulation du bon ${reference}`);
     });
+  }
+
+  /**
+   * Corrige un bon d'entrée : l'ancien est contre-passé, le nouveau écrit sous
+   * **les mêmes numéros** — c'est le même papier, corrigé, et non un second
+   * bon qui ferait double emploi dans les achats du fournisseur.
+   */
+  async modifierEntree(ctx: ContexteMouvement, reference: string, entree: EntreeStock): Promise<void> {
+    await this.db.writeTransaction(async (tx) => {
+      const courte = await tx.getOptional<{ reference_courte: string | null }>(
+        'SELECT reference_courte FROM mouvements_stock WHERE reference = ? AND filiale_id = ? AND reference_courte IS NOT NULL LIMIT 1',
+        [reference, ctx.filialeId],
+      );
+      await this.contrePasserEntree(tx, ctx, reference, `Correction du bon ${reference}`);
+      await this.ecrireBonEntree(tx, ctx, { ...entree, reference }, reference, courte?.reference_courte ?? null);
+    });
+  }
+
+  /**
+   * Le cœur commun de l'annulation et de la correction : sortir du stock ce
+   * que le bon y a mis, et défaire la pièce du fournisseur.
+   *
+   * La contre-passation est un `AJUSTEMENT` de quantité négative : c'est la
+   * nature prévue pour une écriture qui corrige les registres, et non un
+   * déstockage — la marchandise ne quitte pas le magasin, elle n'y est jamais
+   * entrée. Le coût moyen n'est pas déplacé, un delta négatif ne le touchant
+   * pas (côté serveur comme côté poste).
+   */
+  private async contrePasserEntree(
+    tx: Transaction,
+    ctx: ContexteMouvement,
+    reference: string,
+    motif: string,
+  ): Promise<void> {
+    const impacts = await this.impactsDuBon(tx, ctx.filialeId, reference);
+    const piece = await this.pieceFournisseurDuBon(tx, ctx.filialeId, reference);
+    const refus = motifNonCorrigeable({
+      netEnStock: impacts.reduce((s, i) => s + i.quantite_retiree, 0),
+      montantPaye: piece?.montant_paye ?? 0,
+      numeroPiece: piece?.numero ?? null,
+    });
+    if (refus) throw new Error(refus);
+
+    for (const i of impacts) {
+      await this.appliquer(
+        tx, ctx, i.depot_id, 'AJUSTEMENT',
+        { article_id: i.article_id, quantite: -i.quantite_retiree, cout_unitaire: null },
+        reference, motif,
+      );
+    }
+
+    if (piece) {
+      const now = this.maintenant();
+      await tx.execute(
+        `UPDATE commandes_fournisseurs SET statut = 'ANNULEE', notes = ?, updated_at = ? WHERE id = ?`,
+        [[piece.notes, motif].filter(Boolean).join(' · '), now, piece.id],
+      );
+      // La dette du fournisseur se défait ici en projection ; le déclencheur
+      // serveur la refait à partir du statut (voir `cumuls_tiers`).
+      if (piece.fournisseur_id) {
+        await mouvementerDetteFournisseur(tx, piece.fournisseur_id, -(piece.total_recu_ttc ?? 0), 0, now);
+      }
+    }
+  }
+
+  /**
+   * La pièce portée au compte du fournisseur par un bon d'entrée.
+   *
+   * Elle porte le numéro du bon quand il était libre, et le sien sinon (voir
+   * `numeroLibre`) — mais elle cite toujours le bon en note. On cherche donc
+   * par les deux, et jamais une pièce déjà annulée.
+   */
+  private async pieceFournisseurDuBon(tx: Transaction, filialeId: string, reference: string) {
+    return tx.getOptional<{
+      id: string; numero: string | null; fournisseur_id: string | null;
+      total_recu_ttc: number | null; montant_paye: number | null; notes: string | null;
+    }>(
+      `SELECT id, numero, fournisseur_id, total_recu_ttc, montant_paye, notes
+         FROM commandes_fournisseurs
+        WHERE filiale_id = ? AND statut <> 'ANNULEE'
+          AND (numero = ? OR notes LIKE ?)
+        LIMIT 1`,
+      [filialeId, reference, `%Entrée en stock ${reference}%`],
+    );
   }
 
   enregistrerSortie(ctx: ContexteMouvement, sortie: SortieStock): Promise<string> {
@@ -445,7 +691,12 @@ export class StockRepository extends BaseRepository {
     });
   }
 
-  private async lireEtat(tx: Transaction, articleId: string, depotId: string): Promise<EtatStock & { id: string | null }> {
+  /**
+   * L'état d'un article dans un dépôt. Prend n'importe quel lecteur — une
+   * transaction ouverte, ou la base elle-même quand on ne fait que lire
+   * (`impactCorrectionEntree` renseigne un écran, il n'écrit rien).
+   */
+  private async lireEtat(tx: Pick<Transaction, 'getOptional'>, articleId: string, depotId: string): Promise<EtatStock & { id: string | null }> {
     const row = await tx.getOptional<StockRow>('SELECT * FROM stocks WHERE article_id = ? AND depot_id = ?', [articleId, depotId]);
     if (!row) return { ...STOCK_VIDE, id: null };
     return {

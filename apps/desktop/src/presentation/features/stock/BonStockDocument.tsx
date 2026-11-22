@@ -1,4 +1,5 @@
 import { montantEnLettresFcfa } from '../../../core/commun/montantEnLettres';
+import { formaterTonnage } from '../../../core/articles';
 import type { BonStock } from '../../../core/stock';
 import CodeBarres from '../../components/print/CodeBarres';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -30,7 +31,9 @@ const dateHeure = (valeur: string) => new Date(valeur).toLocaleString('fr-FR');
  */
 export default function BonStockDocument({ bon, filiale, onClose }: Props) {
   /** Colonnes que le libellé d'un total enjambe, avant les deux colonnes de chiffres. */
-  const colonnesLibelle = (bon.avec_remise ? 6 : 5) + 1;
+  // Les colonnes qui précèdent les deux dernières (valeur et sa voisine) :
+  // le pied s'y adosse, et la colonne « Poids » les décale d'un cran.
+  const colonnesLibelle = (bon.avec_remise ? 6 : 5) + (bon.pese ? 1 : 0) + 1;
   return (
     <DocumentImprimable titre={bon.titre} filiale={filiale} onClose={onClose}>
       {/* Le numéro court en tête, le long dans le code-barres : l'un se dicte
@@ -63,7 +66,11 @@ export default function BonStockDocument({ bon, filiale, onClose }: Props) {
       <table>
         <thead>
           <tr>
-            <th>N°</th><th>Code</th><th>Désignation</th><th>Quantité</th><th>Avant</th><th>Après</th>
+            <th>N°</th><th>Code</th><th>Désignation</th><th>Quantité</th>
+            {/* Le tonnage s'imprime pour le transporteur : il ne paraît que si
+                la marchandise est pesée. */}
+            {bon.pese && <th>Poids</th>}
+            <th>Avant</th><th>Après</th>
             {bon.avec_remise && <th>Remise</th>}
             {bon.valorise && <><th>Coût unit. net</th><th>Valeur</th></>}
           </tr>
@@ -75,6 +82,7 @@ export default function BonStockDocument({ bon, filiale, onClose }: Props) {
               <td>{l.code}</td>
               <td>{l.designation}</td>
               <td className="num">{l.quantite > 0 ? '+' : ''}{quantite(l.quantite, l.unite)}</td>
+              {bon.pese && <td className="num">{formaterTonnage(l.poids)}</td>}
               <td className="num">{l.quantite_avant}</td>
               <td className="num">{l.quantite_apres}</td>
               {bon.avec_remise && <td className="num">{l.remise_montant > 0 ? formaterFcfa(l.remise_montant) : l.remise_percent > 0 ? `${l.remise_percent} %` : '—'}</td>}
@@ -87,12 +95,21 @@ export default function BonStockDocument({ bon, filiale, onClose }: Props) {
             </tr>
           ))}
         </tbody>
-        {bon.valorise && (
+        {(bon.valorise || bon.pese) && (
           <tfoot>
+            {bon.pese && (
+              <tr>
+                <th colSpan={colonnesLibelle}>
+                  Poids total{bon.tonnage_partiel && ' (articles pesés seulement)'}
+                </th>
+                <th />
+                <th className="num" data-testid="bon-tonnage">{formaterTonnage(bon.tonnage)}</th>
+              </tr>
+            )}
             {/* Le brut et la remise ne s'affichent que si une remise a été
                 accordée : ailleurs, trois lignes de total pour un seul chiffre
                 ne feraient que brouiller la lecture du bon. */}
-            {bon.remise_globale > 0 && (
+            {bon.valorise && bon.remise_globale > 0 && (
               <>
                 <tr>
                   <th colSpan={colonnesLibelle}>Total brut</th>
@@ -106,11 +123,13 @@ export default function BonStockDocument({ bon, filiale, onClose }: Props) {
                 </tr>
               </>
             )}
-            <tr>
-              <th colSpan={colonnesLibelle}>{bon.remise_globale > 0 ? 'Net du bon' : 'Total du bon'}</th>
-              <th />
-              <th className="num" data-testid="bon-total">{formaterFcfa(bon.total_valeur)}</th>
-            </tr>
+            {bon.valorise && (
+              <tr>
+                <th colSpan={colonnesLibelle}>{bon.remise_globale > 0 ? 'Net du bon' : 'Total du bon'}</th>
+                <th />
+                <th className="num" data-testid="bon-total">{formaterFcfa(bon.total_valeur)}</th>
+              </tr>
+            )}
           </tfoot>
         )}
       </table>

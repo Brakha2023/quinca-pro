@@ -38,6 +38,7 @@ export interface MouvementVue extends MouvementStockRow {
   article_code: string | null;
   article_designation: string | null;
   article_unite: string | null;
+  article_poids_tonnes: number | null;
   depot_nom: string | null;
   utilisateur_nom: string | null;
   utilisateur_prenom: string | null;
@@ -139,6 +140,7 @@ export function useBonStock(filialeId: string | null, reference: string | null) 
               article_code: m.article_code ?? '',
               article_designation: m.article_designation ?? '',
               article_unite: m.article_unite ?? '',
+              article_poids_tonnes: m.article_poids_tonnes,
               depot_nom: m.depot_nom ?? '',
               quantite: m.quantite ?? 0,
               quantite_avant: m.quantite_avant ?? 0,

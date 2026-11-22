@@ -104,6 +104,9 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   await page.locator('#article-form input[name=prix_vente]').fill('42000');
   await page.locator('#article-form input[name=stock_min]').fill('5');
   await page.locator('#article-form input[name=stock_max]').fill('2');
+  // Un bidon de 20 L pèse 20 kg, soit 0,02 t. Facultatif, mais renseigné ici :
+  // c'est lui qui fera apparaître le tonnage sur les bons.
+  await page.getByTestId('poids-article').fill('0.02');
   await page.getByRole('button', { name: 'Créer' }).click();
   verifier((await page.textContent('#article-form p.text-red-600')).includes('stock maximum'), 'validation stock max < min');
   await page.locator('#article-form input[name=stock_max]').fill('40');
@@ -111,6 +114,19 @@ const texteContient = async (locator, attendu) => (await texteDe(locator)).inclu
   await page.locator('[aria-live]', { hasText: 'PEI-20L créé' }).waitFor();
   await page.locator('tbody tr', { hasText: 'PEI-20L' }).waitFor();
   verifier((await page.locator('tbody tr').count()) === 3, 'création via formulaire');
+
+  /*
+   * Le poids est facultatif et s'exprime en tonnes. Non renseigné, il reste
+   * `null` — et non zéro : c'est cette distinction qui décide si la colonne
+   * « Poids » paraît sur un bon d'entrée ou de commande.
+   */
+  const poids = await page.evaluate(async () => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const lu = async (code) => (await db.get('SELECT poids_tonnes FROM articles WHERE code = ?', [code])).poids_tonnes;
+    return { peinture: await lu('PEI-20L'), robinet: await lu('ROB-01') };
+  });
+  verifier(poids.peinture === 0.02, `poids : la tonne saisie est enregistrée telle quelle (${poids.peinture} t)`);
+  verifier(poids.robinet === null, `poids : non renseigné reste nul, et non zéro (${JSON.stringify(poids.robinet)})`);
 
   await page.getByRole('button', { name: 'Nouvel article' }).click();
   await page.locator('#article-form input[name=code]').fill('pei-20l');

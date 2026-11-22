@@ -39,11 +39,13 @@ export function SelectDepot({ label, depots, value, onChange, erreur }: { label:
   );
 }
 
-export function ChampsReferenceMotif({ reference, motif, onReference, onMotif, placeholderMotif = 'Motif / commentaire' }: { reference: string; motif: string; onReference: (v: string) => void; onMotif: (v: string) => void; placeholderMotif?: string }) {
+export function ChampsReferenceMotif({ reference, motif, onReference, onMotif, placeholderMotif = 'Motif / commentaire', referenceFigee = false }: { reference: string; motif: string; onReference: (v: string) => void; onMotif: (v: string) => void; placeholderMotif?: string; referenceFigee?: boolean }) {
   return (
     <>
-      <FormField label="Référence (bon, BL…)">
-        <input value={reference} onChange={(e) => onReference(e.target.value)} placeholder="Générée automatiquement si vide" className={`${inputClass} font-mono`} maxLength={40} />
+      {/* Pendant une correction, la référence ne se change pas : c'est le même
+          papier qu'on reprend, et la rouvrir irait créer un second bon. */}
+      <FormField label="Référence (bon, BL…)" aide={referenceFigee ? 'Celle du bon corrigé : elle ne change pas.' : undefined}>
+        <input value={reference} onChange={(e) => onReference(e.target.value)} readOnly={referenceFigee} placeholder="Générée automatiquement si vide" className={`${inputClass} font-mono ${referenceFigee ? 'bg-neutral-100 text-neutral-500' : ''}`} maxLength={40} data-testid="reference-bon" />
       </FormField>
       <FormField label="Motif">
         <input value={motif} onChange={(e) => onMotif(e.target.value)} placeholder={placeholderMotif} className={inputClass} maxLength={200} />

@@ -17,7 +17,7 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
     const d1 = await depots.create(F, { code: 'D1', nom: 'Principal', adresse: '', responsable: '' });
     const d2 = await depots.create(F, { code: 'D2', nom: 'Annexe', adresse: '', responsable: '' });
     const articles = new ArticlesRepository(db);
-    const a1 = await articles.create(F, articleFormSchema.parse({ code: 'CIM-50', designation: 'Ciment 50kg', prix_achat: 4500, prix_vente: 5500, stock_min: 20 }));
+    const a1 = await articles.create(F, articleFormSchema.parse({ code: 'CIM-50', designation: 'Ciment 50kg', prix_achat: 4500, prix_vente: 5500, stock_min: 20, poids_tonnes: 0.05 }));
     const a2 = await articles.create(F, articleFormSchema.parse({ code: 'VIS-50', designation: 'Vis 50mm', prix_achat: 2500, prix_vente: 3500, stock_min: 5 }));
     const stock = new StockRepository(db);
     const ctx = { filialeId: F, utilisateurId: U };
@@ -144,6 +144,15 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   await page.locator('[data-testid=remise-bon]', { hasText: '2 500 F' }).waitFor();
   await page.locator('[data-testid=total-bon]', { hasText: '10 000 F' }).waitFor();
   verifier(true, 'entrée : remise globale en francs, brut et net affichés (12 500 − 2 500)');
+
+  /*
+   * Le poids ne s'invite pas : la vis n'en porte pas, le bon n'a donc ni
+   * colonne « Poids » ni tonnage. C'est l'assertion qui compte le plus — une
+   * colonne vide sur tous les bons serait pire que pas de colonne du tout.
+   */
+  verifier((await page.getByTestId('tonnage-bon').count()) === 0
+    && (await page.locator('thead th', { hasText: 'Poids' }).count()) === 0,
+    'poids : rien sur un bon de visserie, ni colonne ni total');
 
   // Export Excel : hors Tauri, le repli navigateur télécharge le classeur.
   const telechargement = page.waitForEvent('download');
@@ -577,6 +586,150 @@ const { ouvrirNavigateur, simulerSession, verifier, BASE_URL } = require('./brow
   const envoi = feuilleTsf.find((l) => l['Bon n°'] === t.numero);
   verifier(feuilleTsf.length === 2 && envoi.Sens === 'Envoi' && envoi.Statut === 'Reçu' && envoi.Valeur === 54000 && envoi.Articles === 2,
     'export Excel : sens, statut et valeur relus depuis le classeur');
+
+  /*
+   * Corriger et annuler un bon d'entrée. Placé en fin de scénario : une
+   * correction déplace le stock et le compte du fournisseur, et les assertions
+   * qui précèdent comptent dessus.
+   */
+  console.log('Corriger, puis annuler un bon d’entrée');
+  const c = await page.evaluate(async ({ F, U }) => {
+    const { db } = await import('/src/infrastructure/powersync/database.ts');
+    const { StockRepository } = await import('/src/infrastructure/powersync/repositories/StockRepository.ts');
+    const { entreeStockSchema } = await import('/src/core/stock/index.ts');
+    const stock = new StockRepository(db);
+    const depot = await db.get("SELECT id FROM depots WHERE filiale_id = ? ORDER BY nom LIMIT 1", [F]);
+    const article = await db.get("SELECT id FROM articles WHERE code = 'CIM-50' AND filiale_id = ?", [F]);
+    const f = await db.get("SELECT id FROM fournisseurs WHERE raison_sociale = 'SOCIMAT CI'");
+    const ctx = { filialeId: F, utilisateurId: U };
+    const out = {};
+    const etat = async () => {
+      const s = await db.get('SELECT quantite, cout_moyen FROM stocks WHERE article_id = ? AND depot_id = ?', [article.id, depot.id]);
+      const d = await db.get('SELECT solde_actuel FROM fournisseurs WHERE id = ?', [f.id]);
+      return { quantite: s.quantite, cout_moyen: s.cout_moyen, dette: d.solde_actuel };
+    };
+
+    // Un bon de 20 sacs à 4 000, porté au compte du fournisseur.
+    const avant = await etat();
+    await stock.enregistrerEntree(ctx, entreeStockSchema.parse({
+      depot_id: depot.id, type: 'ENTREE_ACHAT', fournisseur_id: f.id, reference: 'BL-CORR',
+      lignes: [{ article_id: article.id, quantite: 20, cout_unitaire: 4000 }],
+    }));
+    out.apresSaisie = await etat();
+
+    // Relu pour correction : le bon revient tel qu'il a été saisi.
+    const relu = await stock.lireBonEntree(F, 'BL-CORR');
+    out.relu = { reference: relu.reference, quantite: relu.lignes[0].quantite, cout: relu.lignes[0].cout_unitaire, fournisseur: relu.fournisseur_id === f.id };
+
+    // Corrigé à 8 sacs : 20 sacs sortent, 8 rentrent.
+    await stock.modifierEntree(ctx, 'BL-CORR', entreeStockSchema.parse({
+      depot_id: depot.id, type: 'ENTREE_ACHAT', fournisseur_id: f.id, reference: 'BL-CORR',
+      lignes: [{ article_id: article.id, quantite: 8, cout_unitaire: 4000 }],
+    }));
+    out.apresCorrection = await etat();
+    out.piecesApresCorrection = await db.getAll(
+      "SELECT statut, total_recu_ttc FROM commandes_fournisseurs WHERE numero LIKE 'BL-CORR%' OR notes LIKE '%BL-CORR%' ORDER BY created_at");
+    out.journal = (await db.getAll(
+      "SELECT type, quantite, quantite_avant, quantite_apres FROM mouvements_stock WHERE reference = 'BL-CORR' ORDER BY created_at"))
+      .map((m) => `${m.type} ${m.quantite_avant}→${m.quantite_apres}`);
+
+    // Annulé : les 8 sacs ressortent, la pièce est annulée, le compte revient.
+    await stock.annulerEntree(ctx, 'BL-CORR', 'Bon en double');
+    out.apresAnnulation = await etat();
+    out.attendu = avant;
+    out.piecesApresAnnulation = (await db.getAll(
+      "SELECT statut FROM commandes_fournisseurs WHERE numero LIKE 'BL-CORR%' OR notes LIKE '%BL-CORR%'")).map((x) => x.statut);
+
+    // Deux fois annulé serait deux fois sorti du stock.
+    try { await stock.annulerEntree(ctx, 'BL-CORR', ''); out.refusDouble = 'NON'; }
+    catch (e) { out.refusDouble = e.message; }
+
+    // Et un bon dont la pièce a été réglée ne se défait pas sans défaire le règlement.
+    await stock.enregistrerEntree(ctx, entreeStockSchema.parse({
+      depot_id: depot.id, type: 'ENTREE_ACHAT', fournisseur_id: f.id, reference: 'BL-PAYE',
+      lignes: [{ article_id: article.id, quantite: 5, cout_unitaire: 4000 }],
+    }));
+    await db.execute("UPDATE commandes_fournisseurs SET montant_paye = 20000 WHERE numero = 'BL-PAYE' OR notes LIKE '%BL-PAYE%'");
+    try { await stock.annulerEntree(ctx, 'BL-PAYE', ''); out.refusPaye = 'NON'; }
+    catch (e) { out.refusPaye = e.message; }
+    out.apresRefusPaye = (await etat()).quantite;
+    return out;
+  }, { F: filialeId, U: userId });
+
+  verifier(c.apresSaisie.quantite === c.attendu.quantite + 20 && c.apresSaisie.dette === c.attendu.dette + 80000,
+    'bon de 20 sacs : stock et compte du fournisseur suivent');
+  verifier(c.relu.reference === 'BL-CORR' && c.relu.quantite === 20 && c.relu.cout === 4000 && c.relu.fournisseur,
+    'relu pour correction : le bon revient tel qu’il a été saisi, fournisseur compris');
+  verifier(c.apresCorrection.quantite === c.attendu.quantite + 8 && c.apresCorrection.dette === c.attendu.dette + 32000,
+    `corrigé à 8 sacs : le stock et la dette tombent à la nouvelle valeur (${c.apresCorrection.quantite - c.attendu.quantite} sacs, ${c.apresCorrection.dette - c.attendu.dette} F)`);
+  verifier(c.piecesApresCorrection.length === 2
+    && c.piecesApresCorrection[0].statut === 'ANNULEE' && c.piecesApresCorrection[1].total_recu_ttc === 32000,
+    'corrigé : l’ancienne pièce du fournisseur est annulée, la nouvelle porte le net corrigé');
+  // Entrée, contre-passation, nouvelle entrée : rien n'est effacé du journal.
+  verifier(c.journal.length === 3 && c.journal[1].startsWith('AJUSTEMENT'),
+    `corrigé : le journal garde les trois lignes (${c.journal.join(' | ')})`);
+  verifier(c.apresAnnulation.quantite === c.attendu.quantite && c.apresAnnulation.dette === c.attendu.dette,
+    'annulé : le stock et le compte du fournisseur reviennent où ils étaient');
+  verifier(c.piecesApresAnnulation.length === 2 && c.piecesApresAnnulation.every((st) => st === 'ANNULEE'),
+    'annulé : aucune pièce ne reste au compte du fournisseur');
+  verifier(/déjà été annulé/.test(c.refusDouble), `deux fois annulé, non : « ${String(c.refusDouble).slice(0, 40)}… »`);
+  verifier(/Règlements/.test(c.refusPaye) && c.apresRefusPaye === c.attendu.quantite + 5,
+    `un bon réglé ne se défait pas, et rien n’a bougé : « ${String(c.refusPaye).slice(0, 50)}… »`);
+
+  console.log('Depuis l’historique de l’onglet Entrée');
+  await page.goto(`${BASE_URL}/#/stock/entree`);
+  await page.reload({ waitUntil: 'networkidle' });
+  // Par son testid : « Historique » nomme aussi le déplieur de la barre latérale.
+  await page.locator('main').getByTestId('vue-historique').click();
+  await page.locator('[data-testid=bons-recherche]').fill('BL-PAYE');
+  await page.locator('[data-testid="corriger-bon-BL-PAYE"]').waitFor();
+  verifier(true, 'l’historique des entrées offre de corriger et d’annuler chaque bon');
+  await page.locator('[data-testid="corriger-bon-BL-PAYE"]').click();
+  // La reprise relit le bon : attendre le titre de la correction, et non « un
+  // titre » — l'historique en a déjà un, et on relirait sa page.
+  await page.locator('main').getByText('Correction du bon BL-PAYE').waitFor();
+  const enCorrection = (await page.locator('main').textContent()).replace(/\s+/g, ' ');
+  verifier(enCorrection.includes('Correction du bon BL-PAYE') && enCorrection.includes('contre-passé'),
+    'le bon repris s’annonce comme une correction, et dit ce qu’elle fera');
+  verifier(await page.getByTestId('reference-bon').inputValue() === 'BL-PAYE'
+    && await page.getByTestId('reference-bon').getAttribute('readonly') !== null,
+    'la référence du bon corrigé est reprise et verrouillée : c’est le même papier');
+  verifier((await page.locator('[data-testid=ligne-bon]').count()) === 1, 'ses lignes sont revenues dans le formulaire');
+
+  /*
+   * Le poids des articles sur un bon d'entrée : la colonne et le tonnage
+   * paraissent d'eux-mêmes dès qu'un article pesé entre dans le bon, et
+   * s'effacent quand il en sort. C'est tout l'intérêt du champ — personne n'a
+   * de case à cocher pour l'obtenir.
+   */
+  console.log('Le poids apparaît de lui-même sur les bons');
+  await page.goto(`${BASE_URL}/#/stock/entree`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('input[placeholder^="Ajouter un article"]').fill('vis');
+  await page.locator('ul li button', { hasText: 'VIS-50' }).click();
+  await page.locator('[data-testid=ligne-bon]').first().waitFor();
+  verifier((await page.getByTestId('tonnage-bon').count()) === 0,
+    'poids : la vis seule ne fait apparaître aucun tonnage');
+
+  await page.locator('input[placeholder^="Ajouter un article"]').fill('cim');
+  await page.locator('ul li button', { hasText: 'CIM-50' }).click();
+  // 400 sacs de 50 kg : les 20 tonnes d'un camion.
+  await page.getByTestId('poids-CIM-50').waitFor();
+  await page.locator('[data-testid=ligne-bon]').nth(1).locator('input[type=number]').first().fill('400');
+  await page.locator('[data-testid=poids-CIM-50]', { hasText: '20 t' }).waitFor();
+  verifier(true, 'poids : le ciment entre, la colonne paraît et pèse la ligne (400 sacs = 20 t)');
+
+  const pied = (await page.getByTestId('tonnage-bon').textContent()).replace(/\s+/g, ' ');
+  verifier(pied.includes('20 t'), `poids : le tonnage du bon ignore la ligne non pesée (${pied})`);
+  const libellePoids = (await page.locator('tfoot tr', { hasText: 'Poids total' }).textContent()).replace(/\s+/g, ' ');
+  verifier(libellePoids.includes('articles pesés seulement'),
+    `poids : un bon à moitié pesé annonce son total comme partiel (${libellePoids.trim()})`);
+
+  // Le ciment retiré, la colonne disparaît : elle suit les articles, pas un réglage.
+  await page.locator('[data-testid=ligne-bon]').nth(1).getByTitle('Retirer').click();
+  await page.getByTestId('poids-CIM-50').waitFor({ state: 'detached' });
+  verifier((await page.getByTestId('tonnage-bon').count()) === 0,
+    'poids : le ciment retiré, la colonne s’efface d’elle-même');
 
   verifier(erreurs.length === 0, `aucune erreur console${erreurs.length ? ' : ' + erreurs.join(' | ') : ''}`);
   await browser.close();

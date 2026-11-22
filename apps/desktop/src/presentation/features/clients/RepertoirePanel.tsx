@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BanknotesIcon, BookOpenIcon, DocumentDuplicateIcon, DocumentTextIcon, EnvelopeIcon, ExclamationTriangleIcon,
+  ArrowUpTrayIcon, BanknotesIcon, BookOpenIcon, DocumentDuplicateIcon, DocumentTextIcon, EnvelopeIcon, ExclamationTriangleIcon,
   EyeIcon, MagnifyingGlassIcon, PencilSquareIcon, PrinterIcon, ScaleIcon, TrashIcon, WalletIcon,
 } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
@@ -21,10 +21,11 @@ import { useNotifier } from '../../notifications/useNotifier';
 import { cheminClients } from '../../pages/Clients/onglets';
 import ClientDetailsModal, { STATUT_CREDIT_STYLE } from './ClientDetailsModal';
 import ClientFormModal from './ClientFormModal';
+import ImportClientsModal from './ImportClientsModal';
 import ReglementModal from './ReglementModal';
 import { useClients, useGroupesClients } from './hooks';
 
-type ModalState = { type: 'details'; id: string } | { type: 'modifier'; client: Client } | { type: 'reglement'; client: Client } | { type: 'tableau' } | null;
+type ModalState = { type: 'details'; id: string } | { type: 'modifier'; client: Client } | { type: 'reglement'; client: Client } | { type: 'tableau' } | { type: 'import' } | null;
 
 interface Props {
   filialeId: string;
@@ -122,7 +123,12 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         <select value={groupe} onChange={(e) => setGroupe(e.target.value)} className={controleInlineClass} aria-label="Groupe"><option value="">Tous les groupes</option>{groupes.map((g) => <option key={g} value={g}>{g}</option>)}</select>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={avecCreance} onChange={(e) => setAvecCreance(e.target.checked)} className="rounded" /> Avec créance</label>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={inclureInactifs} onChange={(e) => setInclureInactifs(e.target.checked)} className="rounded" /> Inclure en sommeil</label>
-        <Bouton onClick={() => setModal({ type: 'tableau' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg">Imprimer le tableau</Bouton>
+        {/* Reprendre un répertoire existant demande le même droit que créer une
+            fiche : c'est en créer cent d'un coup. */}
+        {peut('clients.ecrire') && (
+          <Bouton onClick={() => setModal({ type: 'import' })} icone={ArrowUpTrayIcon} tailleIcone="w-5 h-5" className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="importer-clients">Importer des clients</Bouton>
+        )}
+        <Bouton onClick={() => setModal({ type: 'tableau' })} icone={PrinterIcon} tailleIcone="w-5 h-5" className={`${peut('clients.ecrire') ? '' : 'ml-auto '}flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg`}>Imprimer le tableau</Bouton>
       </div>
 
       <Carte
@@ -206,6 +212,8 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
       {modal?.type === 'details' && <ClientDetailsModal filialeId={filialeId} clientId={modal.id} onClose={() => setModal(null)} />}
       {modal?.type === 'modifier' && <ClientFormModal filialeId={filialeId} client={modal.client} onClose={() => setModal(null)} />}
       {modal?.type === 'reglement' && <ReglementModal filialeId={filialeId} client={modal.client} onClose={() => setModal(null)} />}
+      {modal?.type === 'import' && <ImportClientsModal filialeId={filialeId} onClose={() => setModal(null)} />}
+
       {modal?.type === 'tableau' && (
         <DocumentImprimable titre="Situation des comptes clients" filiale={filiale} onClose={() => setModal(null)}>
           <p>Arrêtée au {new Date().toLocaleDateString('fr-FR')} · {clients.length} client(s){groupe ? ` · groupe ${groupe}` : ''}</p>

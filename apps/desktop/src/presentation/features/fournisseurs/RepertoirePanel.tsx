@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BanknotesIcon, BookOpenIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon,
+  ArrowUpTrayIcon, BanknotesIcon, BookOpenIcon, DocumentTextIcon, EnvelopeIcon, EyeIcon, MagnifyingGlassIcon,
   PencilSquareIcon, ScaleIcon, TruckIcon, TrashIcon, UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import Bouton from '../../components/ui/Bouton';
@@ -10,6 +10,7 @@ import Indicateur from '../../components/ui/Indicateur';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
 import type { Fournisseur } from '../../../core/fournisseurs';
+import ImportFournisseursModal from './ImportFournisseursModal';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 import { controleInlineClass, inputClass } from '../../components/ui/FormField';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
@@ -25,7 +26,7 @@ import FournisseurFormModal from './FournisseurFormModal';
 import ReglementFournisseurModal from './ReglementFournisseurModal';
 import { useFournisseurs } from './hooks';
 
-type ModalState = { type: 'details'; id: string } | { type: 'modifier'; f: Fournisseur } | { type: 'achat'; f: Fournisseur } | { type: 'reglement'; f: Fournisseur } | { type: 'balance' } | null;
+type ModalState = { type: 'details'; id: string } | { type: 'modifier'; f: Fournisseur } | { type: 'achat'; f: Fournisseur } | { type: 'reglement'; f: Fournisseur } | { type: 'balance' } | { type: 'import' } | null;
 
 interface Props {
   filialeId: string;
@@ -108,7 +109,12 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
         <div className="relative flex-1 min-w-[16rem] max-w-md"><MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" /><input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="N° compte, code, raison sociale ou téléphone…" className={`${inputClass} pl-10`} /></div>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={avecDette} onChange={(e) => setAvecDette(e.target.checked)} className="rounded" /> Avec dette</label>
         <label className={`${controleInlineClass} flex items-center gap-2 cursor-pointer`}><input type="checkbox" checked={inclureInactifs} onChange={(e) => setInclureInactifs(e.target.checked)} className="rounded" /> Inclure les inactifs</label>
-        <button type="button" onClick={() => setModal({ type: 'balance' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg"><ScaleIcon className="w-5 h-5" /> Balance générale</button>
+        {/* Reprendre un répertoire existant demande le même droit que créer une
+            fiche : c'est en créer cent d'un coup. */}
+        {peut('fournisseurs.ecrire') && (
+          <button type="button" onClick={() => setModal({ type: 'import' })} className="ml-auto flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg" data-testid="importer-fournisseurs"><ArrowUpTrayIcon className="w-5 h-5" /> Importer des fournisseurs</button>
+        )}
+        <button type="button" onClick={() => setModal({ type: 'balance' })} className={`${peut('fournisseurs.ecrire') ? '' : 'ml-auto '}flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-medium rounded-lg`}><ScaleIcon className="w-5 h-5" /> Balance générale</button>
       </div>
 
       <Carte
@@ -186,6 +192,8 @@ export default function RepertoirePanel({ filialeId, filiale }: Props) {
       {modal?.type === 'modifier' && <FournisseurFormModal filialeId={filialeId} fournisseur={modal.f} onClose={() => setModal(null)} />}
       {modal?.type === 'achat' && <AchatModal filialeId={filialeId} filiale={filiale} fournisseur={modal.f} onClose={() => setModal(null)} />}
       {modal?.type === 'reglement' && <ReglementFournisseurModal filialeId={filialeId} fournisseur={modal.f} onClose={() => setModal(null)} />}
+      {modal?.type === 'import' && <ImportFournisseursModal filialeId={filialeId} onClose={() => setModal(null)} />}
+
       {modal?.type === 'balance' && (
         <DocumentImprimable titre="Balance générale fournisseurs" filiale={filiale} onClose={() => setModal(null)}>
           <p>Arrêtée au {new Date().toLocaleDateString('fr-FR')} · {fournisseurs.length} fournisseur(s)</p>

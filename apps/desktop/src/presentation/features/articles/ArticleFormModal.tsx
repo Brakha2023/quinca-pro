@@ -36,6 +36,7 @@ const FORM_VIDE: ArticleFormInput = {
   stock_min: 0,
   stock_max: 0,
   unite: 'PIECE',
+  poids_tonnes: '',
 };
 
 export default function ArticleFormModal({ filialeId, familles, article, onClose }: Props) {
@@ -149,12 +150,23 @@ export default function ArticleFormModal({ filialeId, familles, article, onClose
           <span className={`font-semibold ${marge < 0 ? 'text-red-600' : marge < 20 ? 'text-orange-600' : 'text-green-700'}`}>{marge}%</span>
         </p>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <FormField label="Stock minimum (alerte)" erreur={errors.stock_min?.message}>
             <input type="number" step="1" min="0" {...register('stock_min')} className={`${cls('stock_min')} text-right font-mono`} />
           </FormField>
           <FormField label="Stock maximum" erreur={errors.stock_max?.message}>
             <input type="number" step="1" min="0" {...register('stock_max')} className={`${cls('stock_max')} text-right font-mono`} />
+          </FormField>
+          {/* Facultatif, et laissé vide par défaut : la plupart des articles
+              n'ont pas à être pesés. Renseigné, il fait apparaître de lui-même
+              la colonne « Poids » et le tonnage sur les bons d'entrée et de
+              commande — c'est le chiffre que demande le transporteur. */}
+          <FormField
+            label="Poids unitaire (tonne)"
+            aide="Facultatif. 0,05 pour un sac de 50 kg. Renseigné, le tonnage apparaît sur les bons d’entrée et de commande."
+            erreur={errors.poids_tonnes?.message}
+          >
+            <input type="number" step="0.001" min="0" {...register('poids_tonnes')} className={`${cls('poids_tonnes')} text-right font-mono`} placeholder="—" data-testid="poids-article" />
           </FormField>
         </div>
       </form>

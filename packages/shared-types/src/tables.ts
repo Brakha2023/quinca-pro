@@ -155,6 +155,7 @@ export const TABLES = {
     stock_min: 'real',
     stock_max: 'real',
     unite: 'text',
+    poids_tonnes: 'real',
     image_url: 'text',
     filiale_id: 'text',
     est_actif: 'integer',
@@ -447,6 +448,9 @@ export const TABLES = {
     notes: 'text',
     filiale_id: 'text',
     depot_id: 'text',
+    /** Remise accordée sur le bon entier, en francs (modèle actuel). */
+    remise_montant: 'real',
+    /** Remise globale en %, portée par les bons d'avant la remise en francs. */
     remise_percent: 'real',
     tva_percent: 'real',
     total_recu_ttc: 'real',
@@ -464,8 +468,11 @@ export const TABLES = {
     quantite: 'real',
     quantite_recue: 'real',
     prix_unitaire_ht: 'real',
-    /** Remise de ligne en %, appliquée avant la remise globale du bon. */
+    /** Part de la remise globale du bon portée par la ligne, en francs. */
+    remise_montant: 'real',
+    /** Remise de ligne en %, portée par les lignes d'avant la remise en francs. */
     remise_percent: 'real',
+    /** Montant de la ligne, net de la part de remise qu'elle porte. */
     total_ht: 'real',
     created_at: 'text',
   },

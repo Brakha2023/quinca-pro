@@ -1,9 +1,11 @@
 import type { Transaction } from '@powersync/web';
 import type { CaisseRow, ClientRow } from '@quinca/shared-types';
 import {
-  calculerSolde, motifNonSupprimableClient, TYPES_EN_CAISSE, usagesClient,
-  type Client, type ClientForm, type ReglementForm, type UsagesClient,
+  calculerSolde, motifNonSupprimableClient, preparerImportClients, TYPES_EN_CAISSE, usagesClient,
+  type Client, type ClientForm, type LigneImportClient, type ReglementForm, type ResultatImportClients, type UsagesClient,
 } from '../../../core/clients';
+import { cleTiers } from '../../../core/commun/importTiers';
+import { arrondirFcfa } from '../../../core/commun/prix';
 import { genererCodeTiers } from '../../../core/commun/numerotation';
 import { numeroPiece } from '../../desktop/identitePoste';
 import { usagesClientServeur } from '../../supabase/usagesTiers';
@@ -136,6 +138,56 @@ export class ClientsRepository extends BaseRepository {
         plafond_credit: form.plafond_credit,
         ...this.colonnesComplementaires(form),
       });
+    });
+  }
+
+  /**
+   * Reprise d'un fichier de clients, soldes d'ouverture compris.
+   *
+   * Tout le fichier passe dans **une seule transaction** : cent fiches
+   * à moitié reprises seraient pires que pas de reprise du tout — on ne
+   * saurait plus où l'on en est. Un client déjà au répertoire n'est jamais
+   * écrasé (voir `preparerImportClients`) : relancer le même fichier deux fois
+   * n'ajoute rien et ne double aucune créance.
+   *
+   * `solde_actuel` est posé égal au solde d'ouverture : la fiche naît sans
+   * facture ni règlement. Le serveur en fait autant de son côté — il recalcule
+   * `solde_initial + factures − règlements` à l'insertion (migration
+   * `cumuls_tiers`) —, et c'est sa valeur qui fera foi.
+   */
+  async importMany(filialeId: string, lignes: readonly LigneImportClient[]): Promise<ResultatImportClients> {
+    return this.db.writeTransaction(async (tx) => {
+      const existantes = await tx.getAll<{ code: string | null; raison_sociale: string | null }>(
+        'SELECT code, raison_sociale FROM clients WHERE filiale_id = ?',
+        [filialeId],
+      );
+      const { valides, ignores } = preparerImportClients(lignes, {
+        codes: new Set(existantes.map((c) => (c.code ?? '').toUpperCase())),
+        noms: new Set(existantes.map((c) => cleTiers(c.raison_sociale ?? ''))),
+      });
+      const now = this.maintenant();
+
+      for (const ligne of valides) {
+        await tx.execute(
+          `INSERT INTO clients (id, code, raison_sociale, mobile, email, adresse, contact, solde_initial, cumul_factures, cumul_reglements,
+                                solde_actuel, plafond_credit, telephone, ville, numero_rc, numero_cc, date_effet_solde, groupe,
+                                filiale_id, est_actif, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+          [
+            this.nouvelId(), ligne.code || genererCodeTiers('CLI'), ligne.raison_sociale,
+            ligne.mobile || null, ligne.email || null, ligne.adresse || null, ligne.contact || null,
+            ligne.solde_initial, ligne.solde_initial, ligne.plafond_credit,
+            ligne.telephone || null, ligne.ville || null, ligne.numero_rc || null, ligne.numero_cc || null,
+            ligne.date_effet_solde || null, ligne.groupe || null, filialeId, now, now,
+          ],
+        );
+      }
+
+      return {
+        importes: valides.length,
+        ignores,
+        soldeRepris: arrondirFcfa(valides.reduce((s, l) => s + l.solde_initial, 0)),
+      };
     });
   }
 

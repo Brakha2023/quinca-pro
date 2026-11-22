@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useQuery } from '@powersync/react';
 import type { CommandeFournisseurRow, FournisseurRow, LigneCommandeFournisseurRow, ReglementFournisseurRow } from '@quinca/shared-types';
-import { commandeFromRow, fournisseurFromRow, ligneCommandeFromRow, reglementFournisseurFromRow } from '../../../core/fournisseurs';
+import { commandeFromRow, fournisseurFromRow, ligneCommandeFromRow, reglementFournisseurFromRow, type LigneCommandeFournisseur } from '../../../core/fournisseurs';
 import {
-  ACHATS_FOURNISSEUR_QUERY, COMMANDE_QUERY, LIGNES_COMMANDE_QUERY, REGLEMENTS_FOURNISSEUR_QUERY, commandesQuery, fournisseursQuery, reglementsFournisseursQuery,
+  ACHATS_FOURNISSEUR_QUERY, COMMANDE_QUERY, LIGNES_COMMANDE_VUE_QUERY, REGLEMENTS_FOURNISSEUR_QUERY, commandesQuery, fournisseursQuery, reglementsFournisseursQuery,
   type FiltresCommandes, type FiltresFournisseurs, type FiltresReglementsFournisseurs,
 } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 
@@ -57,9 +57,19 @@ export function useCommande(id: string | null) {
   return data[0] ?? null;
 }
 
+/** Une ligne de commande telle que l'écran la lit : avec le poids de l'article. */
+export type LigneCommandeVue = LigneCommandeFournisseur & { article: { poids_tonnes: number | null } };
+
 export function useLignesCommande(commandeId: string | null) {
-  const { data } = useQuery<LigneCommandeFournisseurRow>(LIGNES_COMMANDE_QUERY, [commandeId ?? '']);
-  return useMemo(() => data.map(ligneCommandeFromRow), [data]);
+  const { data } = useQuery<LigneCommandeFournisseurRow & { article_poids_tonnes: number | null }>(
+    LIGNES_COMMANDE_VUE_QUERY, [commandeId ?? ''],
+  );
+  // La forme `{ article: { poids_tonnes } }` est celle que `poidsLigne` attend,
+  // pour que la saisie et le document pèsent avec la même fonction.
+  return useMemo<LigneCommandeVue[]>(
+    () => data.map((row) => ({ ...ligneCommandeFromRow(row), article: { poids_tonnes: row.article_poids_tonnes } })),
+    [data],
+  );
 }
 
 export interface ReglementFournisseurVueRow extends ReglementFournisseurRow {

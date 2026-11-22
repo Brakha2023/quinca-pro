@@ -3,14 +3,15 @@ import type { ArticleRow, CaisseRow, CommandeFournisseurRow, FournisseurRow, Lig
 import { TYPES_EN_CAISSE } from '../../../core/clients';
 import { genererCodeTiers } from '../../../core/commun/numerotation';
 import { numeroPiece } from '../../desktop/identitePoste';
-import { arrondirMontant } from '../../../core/commun/prix';
+import { cleTiers } from '../../../core/commun/importTiers';
+import { arrondirFcfa, arrondirMontant } from '../../../core/commun/prix';
 import {
-  calculerDette, ligneCommandeFromRow, motifNonSupprimableFournisseur, statutApresReception, totalLigneCommande,
-  totauxAchat, totauxCommande, usagesFournisseur, valoriserReception,
-  type Achat, type BonCommande, type Fournisseur, type FournisseurForm, type Reception,
-  type ReglementFournisseurForm, type UsagesFournisseur,
+  calculerDette, ligneCommandeFromRow, motifNonSupprimableFournisseur, preparerImportFournisseurs,
+  statutApresReception, totalLigneCommande, totauxAchat, totauxCommande, usagesFournisseur, valoriserReception,
+  type Achat, type BonCommande, type Fournisseur, type FournisseurForm, type LigneImportFournisseur,
+  type Reception, type ReglementFournisseurForm, type ResultatImportFournisseurs, type UsagesFournisseur,
 } from '../../../core/fournisseurs';
-import { fusionnerLignes } from '../../../core/stock';
+import { fusionnerLignes, repartirRemiseGlobale } from '../../../core/stock';
 import { usagesFournisseurServeur } from '../../supabase/usagesTiers';
 import { BaseRepository } from './BaseRepository';
 import { mouvementerDetteFournisseur } from './compteFournisseur';
@@ -37,6 +38,22 @@ export const REGLEMENTS_FOURNISSEUR_QUERY = `
   SELECT r.*, c.nom AS caisse_nom FROM reglements_fournisseurs r LEFT JOIN caisses c ON c.id = r.caisse_id
   WHERE r.fournisseur_id = ? ORDER BY r.date_reglement DESC`;
 export const LIGNES_COMMANDE_QUERY = 'SELECT * FROM lignes_commande_fournisseur WHERE commande_id = ? ORDER BY created_at';
+
+/**
+ * Les mêmes lignes, avec le poids unitaire de l'article d'aujourd'hui.
+ *
+ * La ligne de commande garde une photo de l'article au moment du bon (code,
+ * désignation, unité) : c'est ce qui permet de rééditer un bon de 2024 tel
+ * qu'il a été envoyé. Le poids, lui, est joint **en direct** — il sert au
+ * chargement, pas à l'archive, et c'est le poids réel du sac d'aujourd'hui
+ * qu'on veut annoncer au transporteur. `LEFT JOIN` : un article retiré du
+ * catalogue ne doit pas faire disparaître la ligne du bon.
+ */
+export const LIGNES_COMMANDE_VUE_QUERY = `
+  SELECT l.*, a.poids_tonnes AS article_poids_tonnes
+  FROM lignes_commande_fournisseur l
+  LEFT JOIN articles a ON a.id = l.article_id
+  WHERE l.commande_id = ? ORDER BY l.created_at`;
 
 /** Une pièce fournisseur avec ses noms joints : sert à rééditer sa facture. */
 export const COMMANDE_QUERY = `
@@ -133,6 +150,57 @@ export class FournisseursRepository extends BaseRepository {
     );
     await this.patch(this.db, 'fournisseurs', id, this.colonnesComplementaires(form));
     return id;
+  }
+
+  /**
+   * Reprise d'un fichier de fournisseurs, soldes d'ouverture compris.
+   *
+   * Tout passe dans **une seule transaction** : cent fiches à moitié reprises
+   * seraient pires que pas de reprise du tout. Un fournisseur déjà au
+   * répertoire n'est jamais écrasé (voir `preparerImportTiers`) : relancer le
+   * même fichier deux fois n'ajoute rien et ne double aucune dette.
+   *
+   * `solde_actuel` est posé égal au solde d'ouverture : la fiche naît sans
+   * facture ni règlement. Le serveur en fait autant de son côté — il recalcule
+   * `solde_initial + factures − règlements` à l'insertion (migration
+   * `cumuls_tiers`) —, et c'est sa valeur qui fera foi.
+   */
+  async importMany(filialeId: string, lignes: readonly LigneImportFournisseur[]): Promise<ResultatImportFournisseurs> {
+    return this.db.writeTransaction(async (tx) => {
+      const existantes = await tx.getAll<{ code: string | null; raison_sociale: string | null }>(
+        'SELECT code, raison_sociale FROM fournisseurs WHERE filiale_id = ?',
+        [filialeId],
+      );
+      const { valides, ignores } = preparerImportFournisseurs(lignes, {
+        codes: new Set(existantes.map((f) => (f.code ?? '').toUpperCase())),
+        noms: new Set(existantes.map((f) => cleTiers(f.raison_sociale ?? ''))),
+      });
+      const now = this.maintenant();
+
+      for (const ligne of valides) {
+        await tx.execute(
+          `INSERT INTO fournisseurs (id, code, raison_sociale, famille, telephone, mobile, email, adresse, solde_initial,
+                                     cumul_factures, cumul_reglements, solde_actuel, plafond_credit,
+                                     interlocuteur, mobile_interlocuteur, numero_rc, numero_cc, date_effet_solde,
+                                     banque, numero_compte_bancaire, filiale_id, est_actif, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+          [
+            this.nouvelId(), ligne.code || genererCodeTiers('FOU'), ligne.raison_sociale, ligne.famille || null,
+            ligne.telephone || null, ligne.mobile || null, ligne.email || null, ligne.adresse || null,
+            ligne.solde_initial, ligne.solde_initial,
+            ligne.interlocuteur || null, ligne.mobile_interlocuteur || null,
+            ligne.numero_rc || null, ligne.numero_cc || null, ligne.date_effet_solde || null,
+            ligne.banque || null, ligne.numero_compte_bancaire || null, filialeId, now, now,
+          ],
+        );
+      }
+
+      return {
+        importes: valides.length,
+        ignores,
+        soldeRepris: arrondirFcfa(valides.reduce((s, l) => s + l.solde_initial, 0)),
+      };
+    });
   }
 
   async update(id: string, form: FournisseurForm): Promise<void> {
@@ -237,17 +305,32 @@ export class FournisseursRepository extends BaseRepository {
       const numero = bon.numero || numeroPiece('BC');
       const now = this.maintenant();
       const lignes = fusionnerLignes(bon.lignes);
-      const t = totauxCommande({ remise_percent: bon.remise_percent, tva_percent: bon.tva_percent, lignes });
+      /*
+       * La remise se négocie en francs sur le bon entier : elle est répartie
+       * au prorata de la valeur des lignes, par la même règle que pour une
+       * entrée en stock et pour une vente (`repartirRemiseGlobale`, reste
+       * d'arrondi à la ligne la plus lourde). Chaque ligne porte sa part, et
+       * `total_ht` en est net : le net du bon est la somme de ses lignes.
+       */
+      const parts = repartirRemiseGlobale(
+        lignes.map((l) => ({ ...l, cout_unitaire: l.prix_unitaire_ht })),
+        bon.remise_montant,
+      );
+      const t = totauxCommande({
+        remise_montant: bon.remise_montant,
+        tva_percent: bon.tva_percent,
+        lignes: parts.map((p) => ({ quantite: p.ligne.quantite, prix_unitaire_ht: p.ligne.prix_unitaire_ht, remise_montant: p.remise })),
+      });
       await tx.execute(
         `INSERT INTO commandes_fournisseurs (id, numero, fournisseur_id, date_commande, type, statut, total_ht, total_tva, total_ttc, total_recu_ttc, montant_paye, reste_a_payer,
-                                             remise_percent, tva_percent, depot_id, date_livraison_prevue, notes, utilisateur_id, filiale_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 'BON_COMMANDE', 'ENVOYEE', ?, ?, ?, 0, 0, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, numero, bon.fournisseur_id, now, t.net_ht, t.tva, t.net_a_payer, bon.remise_percent, bon.tva_percent, bon.depot_id,
+                                             remise_montant, remise_percent, tva_percent, depot_id, date_livraison_prevue, notes, utilisateur_id, filiale_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'BON_COMMANDE', 'ENVOYEE', ?, ?, ?, 0, 0, 0, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, numero, bon.fournisseur_id, now, t.net_ht, t.tva, t.net_a_payer, t.remise_globale, bon.tva_percent, bon.depot_id,
          bon.date_livraison_prevue ? new Date(bon.date_livraison_prevue).toISOString() : null, bon.notes || null, ctx.utilisateurId, ctx.filialeId, now, now],
       );
-      for (const l of lignes) {
-        const a = await tx.get<ArticleRow>('SELECT code, designation, unite FROM articles WHERE id = ?', [l.article_id]);
-        await this.insererLigneCommande(tx, id, ctx.filialeId, a, l.article_id, l.quantite, 0, l.prix_unitaire_ht, now, l.remise_percent);
+      for (const p of parts) {
+        const a = await tx.get<ArticleRow>('SELECT code, designation, unite FROM articles WHERE id = ?', [p.ligne.article_id]);
+        await this.insererLigneCommande(tx, id, ctx.filialeId, a, p.ligne.article_id, p.ligne.quantite, 0, p.ligne.prix_unitaire_ht, now, p.remise);
       }
       return { id, numero };
     });
@@ -263,7 +346,10 @@ export class FournisseursRepository extends BaseRepository {
       const c = await tx.get<CommandeFournisseurRow>('SELECT * FROM commandes_fournisseurs WHERE id = ?', [commandeId]);
       if (c.statut !== 'ENVOYEE' && c.statut !== 'PARTIELLE') throw new Error('Cette commande ne peut plus être réceptionnée');
       const lignes = (await tx.getAll<LigneCommandeFournisseurRow>(LIGNES_COMMANDE_QUERY, [commandeId])).map(ligneCommandeFromRow);
-      const v = valoriserReception({ remise_percent: c.remise_percent ?? 0, tva_percent: c.tva_percent ?? 0 }, lignes, reception);
+      const v = valoriserReception(
+        { remise_montant: c.remise_montant ?? 0, remise_percent: c.remise_percent ?? 0, tva_percent: c.tva_percent ?? 0 },
+        lignes, reception,
+      );
       const now = this.maintenant();
       const reference = reception.reference || c.numero || '';
       const stock = new StockRepository(this.db);
@@ -292,12 +378,16 @@ export class FournisseursRepository extends BaseRepository {
     });
   }
 
-  private async insererLigneCommande(tx: Transaction, commandeId: string, filialeId: string, a: Pick<ArticleRow, 'code' | 'designation' | 'unite'>, articleId: string, quantite: number, quantiteRecue: number, prixHt: number, now: string, remisePercent = 0): Promise<void> {
+  /**
+   * Une ligne de pièce fournisseur. `remiseMontant` est la part de la remise
+   * du bon que la ligne porte, en francs ; `total_ht` en est net.
+   */
+  private async insererLigneCommande(tx: Transaction, commandeId: string, filialeId: string, a: Pick<ArticleRow, 'code' | 'designation' | 'unite'>, articleId: string, quantite: number, quantiteRecue: number, prixHt: number, now: string, remiseMontant = 0): Promise<void> {
     await tx.execute(
-      `INSERT INTO lignes_commande_fournisseur (id, commande_id, filiale_id, article_id, code_article, designation, unite, quantite, quantite_recue, prix_unitaire_ht, remise_percent, total_ht, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [this.nouvelId(), commandeId, filialeId, articleId, a.code ?? '', a.designation ?? '', a.unite ?? null, quantite, quantiteRecue, prixHt, remisePercent,
-       totalLigneCommande({ quantite, prix_unitaire_ht: prixHt, remise_percent: remisePercent }), now],
+      `INSERT INTO lignes_commande_fournisseur (id, commande_id, filiale_id, article_id, code_article, designation, unite, quantite, quantite_recue, prix_unitaire_ht, remise_montant, remise_percent, total_ht, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [this.nouvelId(), commandeId, filialeId, articleId, a.code ?? '', a.designation ?? '', a.unite ?? null, quantite, quantiteRecue, prixHt, remiseMontant,
+       totalLigneCommande({ quantite, prix_unitaire_ht: prixHt, remise_montant: remiseMontant }), now],
     );
   }
 

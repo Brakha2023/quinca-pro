@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { achatSchema, calculerDette, composerRelance, construireReleve, statutApresReception, totalLigneCommande, totauxAchat, totauxCommande, valoriserReception } from './fournisseur';
+import { achatSchema, calculerDette, composerRelance, construireReleve, partRemiseRecue, statutApresReception, totalLigneCommande, totauxAchat, totauxCommande, valoriserReception } from './fournisseur';
+import { repartirRemiseGlobale } from '../stock';
 
 describe('fournisseur', () => {
   it('calcule la dette', () => {
@@ -16,14 +17,78 @@ describe('fournisseur', () => {
 });
 
 describe('bons de commande et réceptions', () => {
-  const commande = { remise_percent: 10, tva_percent: 0 };
+  // Une pièce d'avant : remise globale en pourcentage, aucun franc.
+  const commande = { remise_montant: 0, remise_percent: 10, tva_percent: 0 };
   const lignes = [
-    { id: 'l1', commande_id: 'c', article_id: 'a', code_article: 'A', designation: 'Pied de lavabo', unite: 'PIECE', quantite: 20, quantite_recue: 0, prix_unitaire_ht: 5500, remise_percent: 0, total_ht: 110000 },
-    { id: 'l2', commande_id: 'c', article_id: 'b', code_article: 'B', designation: 'Robinet', unite: 'PIECE', quantite: 5, quantite_recue: 5, prix_unitaire_ht: 1000, remise_percent: 0, total_ht: 5000 },
+    { id: 'l1', commande_id: 'c', article_id: 'a', code_article: 'A', designation: 'Pied de lavabo', unite: 'PIECE', quantite: 20, quantite_recue: 0, prix_unitaire_ht: 5500, remise_montant: 0, remise_percent: 0, total_ht: 110000 },
+    { id: 'l2', commande_id: 'c', article_id: 'b', code_article: 'B', designation: 'Robinet', unite: 'PIECE', quantite: 5, quantite_recue: 5, prix_unitaire_ht: 1000, remise_montant: 0, remise_percent: 0, total_ht: 5000 },
   ];
 
-  it('calcule brut, remise, net, TVA, net à payer', () => {
+  /*
+   * La remise en pourcentage n'est plus saisie, mais les bons d'avant la
+   * portent : ils doivent se calculer exactement comme à leur création. Un
+   * relevé fournisseur qui changerait de total après une mise à jour ne serait
+   * plus un relevé.
+   */
+  it('calcule encore les bons d’avant, à la remise en pourcentage', () => {
     expect(totauxCommande({ remise_percent: 10, tva_percent: 18, lignes: [{ quantite: 20, prix_unitaire_ht: 5500 }] })).toEqual({ brut_ht: 110000, remise_lignes: 0, remise_globale: 11000, remise: 11000, net_ht: 99000, tva: 17820, net_a_payer: 116820 });
+  });
+
+  it('calcule brut, remise en francs, net, TVA, net à payer', () => {
+    // 110 000 − 15 000 = 95 000 ; TVA 18 % = 17 100.
+    expect(totauxCommande({ remise_montant: 15000, tva_percent: 18, lignes: [{ quantite: 20, prix_unitaire_ht: 5500, remise_montant: 15000 }] }))
+      .toEqual({ brut_ht: 110000, remise_lignes: 0, remise_globale: 15000, remise: 15000, net_ht: 95000, tva: 17100, net_a_payer: 112100 });
+  });
+
+  /*
+   * Le net du bon doit être la somme de ses lignes : c'est ce qui permet au
+   * document de s'équilibrer sans rien reconstituer, et à une réception
+   * partielle de se valoriser ligne par ligne.
+   */
+  it('répartit la remise du bon et retombe sur la somme des lignes', () => {
+    const lignesBon = [{ quantite: 10, prix_unitaire_ht: 5000 }, { quantite: 4, prix_unitaire_ht: 2500 }];
+    const parts = repartirRemiseGlobale(lignesBon.map((l) => ({ ...l, cout_unitaire: l.prix_unitaire_ht })), 6000);
+    const avecParts = parts.map((pt) => ({ quantite: pt.ligne.quantite, prix_unitaire_ht: pt.ligne.prix_unitaire_ht, remise_montant: pt.remise }));
+    const t = totauxCommande({ remise_montant: 6000, tva_percent: 0, lignes: avecParts });
+    expect(parts.reduce((s, pt) => s + pt.remise, 0)).toBe(6000);
+    expect(avecParts.reduce((s, l) => s + totalLigneCommande(l), 0)).toBe(t.net_ht);
+    expect(t.net_ht).toBe(54000);
+  });
+
+  // Un rabais saisi trop grand ramène le bon à zéro, il ne le rend pas négatif.
+  it('ne laisse pas la remise dépasser le bon', () => {
+    const t = totauxCommande({ remise_montant: 999999, tva_percent: 18, lignes: [{ quantite: 2, prix_unitaire_ht: 1000, remise_montant: 999999 }] });
+    expect(t.remise_globale).toBe(2000);
+    expect(t.net_ht).toBe(0);
+    expect(t.net_a_payer).toBe(0);
+  });
+
+  /*
+   * La part d'une ligne vaut pour la quantité **commandée** : n'en recevoir que
+   * la moitié ne doit faire entrer que la moitié du rabais, sinon la première
+   * réception valoriserait trop bas et la suivante trop haut.
+   */
+  it('proratise la remise d’une ligne à ce qui est reçu', () => {
+    const l = { quantite: 10, remise_montant: 1000 };
+    expect(partRemiseRecue(l, 10)).toBe(1000);
+    expect(partRemiseRecue(l, 4)).toBe(400);
+    expect(partRemiseRecue(l, 0)).toBe(0);
+    expect(partRemiseRecue({ quantite: 10 }, 4)).toBe(0);
+  });
+
+  it('entre en stock au coût net de la remise du bon, en francs', () => {
+    const ligneFrancs = {
+      id: 'lf', commande_id: 'c', article_id: 'a', code_article: 'A', designation: 'Ciment', unite: 'SAC',
+      quantite: 10, quantite_recue: 0, prix_unitaire_ht: 5000, remise_montant: 5000, remise_percent: 0, total_ht: 45000,
+    };
+    const r = valoriserReception(
+      { remise_montant: 5000, remise_percent: 0, tva_percent: 0 },
+      [ligneFrancs],
+      { depot_id: 'd', reference: '', lignes: [{ ligne_id: 'lf', quantite_recue: 4 }] },
+    );
+    // 5 000 − (5 000 / 10) = 4 500 le sac ; 4 sacs = 18 000.
+    expect(r.lignes[0]?.cout_unitaire).toBe(4500);
+    expect(r.total_ttc).toBe(18000);
   });
 
   it('valorise une réception partielle au prix remisé et refuse au-delà du commandé', () => {
@@ -104,12 +169,12 @@ describe('remise de ligne sur un bon de commande', () => {
 describe('valoriserReception avec remise de ligne', () => {
   const ligne = {
     id: 'l1', commande_id: 'c1', article_id: 'a1', code_article: 'CIM', designation: 'Ciment', unite: 'SAC',
-    quantite: 10, quantite_recue: 0, prix_unitaire_ht: 1000, remise_percent: 10, total_ht: 9000,
+    quantite: 10, quantite_recue: 0, prix_unitaire_ht: 1000, remise_montant: 0, remise_percent: 10, total_ht: 9000,
   };
 
   it('entre en stock au coût net des deux remises, TVA comprise', () => {
     const r = valoriserReception(
-      { remise_percent: 5, tva_percent: 18 },
+      { remise_montant: 0, remise_percent: 5, tva_percent: 18 },
       [ligne],
       { depot_id: 'd1', reference: '', lignes: [{ ligne_id: 'l1', quantite_recue: 10 }] },
     );
@@ -120,7 +185,7 @@ describe('valoriserReception avec remise de ligne', () => {
 
   it('ignore la remise de ligne quand elle est nulle', () => {
     const r = valoriserReception(
-      { remise_percent: 0, tva_percent: 0 },
+      { remise_montant: 0, remise_percent: 0, tva_percent: 0 },
       [{ ...ligne, remise_percent: 0 }],
       { depot_id: 'd1', reference: '', lignes: [{ ligne_id: 'l1', quantite_recue: 4 }] },
     );

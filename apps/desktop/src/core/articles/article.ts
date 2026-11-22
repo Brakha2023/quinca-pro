@@ -20,6 +20,8 @@ export interface Article {
   stock_min: number;
   stock_max: number;
   unite: string;
+  /** Poids unitaire en tonnes. `null` = non renseigné, ce qui n'est pas « pèse zéro ». */
+  poids_tonnes: number | null;
   image_url: string | null;
   filiale_id: string;
   est_actif: boolean;
@@ -40,6 +42,10 @@ export const articleFormSchema = z
     stock_min: montant('Stock minimum invalide').default(0),
     stock_max: montant('Stock maximum invalide').default(0),
     unite: z.enum(UNITES).default('PIECE'),
+    // Facultatif, et la chaîne vide vaut « non renseigné » — comme le prix
+    // VIP. Un article sans poids ne doit pas peser zéro : c'est ce qui décide
+    // si la colonne « Poids » apparaît sur un bon.
+    poids_tonnes: z.union([z.literal(''), z.coerce.number().min(0, 'Poids invalide')]).optional().default(''),
   })
   .refine((a) => a.stock_max === 0 || a.stock_max >= a.stock_min, {
     message: 'Le stock maximum doit être supérieur ou égal au minimum',
@@ -63,6 +69,7 @@ export function articleFromRow(row: ArticleRow): Article {
     stock_min: row.stock_min ?? 0,
     stock_max: row.stock_max ?? 0,
     unite: row.unite ?? 'PIECE',
+    poids_tonnes: row.poids_tonnes,
     image_url: row.image_url,
     filiale_id: row.filiale_id ?? '',
     est_actif: row.est_actif !== 0,
@@ -82,6 +89,7 @@ export function articleToFormInput(article: Article): ArticleFormInput {
     stock_min: article.stock_min,
     stock_max: article.stock_max,
     unite: UNITES.includes(article.unite as Unite) ? (article.unite as Unite) : 'PIECE',
+    poids_tonnes: article.poids_tonnes ?? '',
   };
 }
 

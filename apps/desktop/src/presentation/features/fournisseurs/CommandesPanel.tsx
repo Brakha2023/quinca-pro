@@ -6,7 +6,7 @@ import Bouton from '../../components/ui/Bouton';
 import Carte from '../../components/ui/Carte';
 import Pagination from '../../components/ui/Pagination';
 import { usePagination } from '../../hooks/usePagination';
-import type { Article } from '../../../core/articles';
+import { bonPorteUnPoids, formaterTonnage, poidsLigne, tonnageBon, tonnagePartiel, type Article } from '../../../core/articles';
 import { LIBELLES_STATUT_COMMANDE, bonCommandeSchema, documentsCommande, receptionSchema, totalLigneCommande, totauxCommande, type LigneCommandeFournisseur } from '../../../core/fournisseurs';
 import { FournisseursRepository } from '../../../infrastructure/powersync/repositories/FournisseursRepository';
 import FormField, { controleInlineClass, inputClass } from '../../components/ui/FormField';
@@ -18,7 +18,8 @@ import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
 import { useNotifier } from '../../notifications/useNotifier';
 import { useDepots } from '../articles/hooks';
 import { exporterExcel } from '../../../infrastructure/desktop/exporterExcel';
-import { remiseSaisie } from '../../../core/commun/prix';
+import ChampMontant from '../../components/ui/ChampMontant';
+import { repartirRemiseGlobale } from '../../../core/stock';
 import ArticlePicker from '../stock/ArticlePicker';
 import { formaterDateHeure } from '../ventes/VenteDetailsModal';
 import BonCommandeDocument from './BonCommandeDocument';
@@ -35,7 +36,7 @@ const STATUT_STYLE: Record<StatutCommandeFournisseur, string> = {
   BROUILLON: 'bg-neutral-100 text-neutral-700', ENVOYEE: 'bg-blue-100 text-blue-700', PARTIELLE: 'bg-orange-100 text-orange-700', LIVREE: 'bg-green-100 text-green-700', ANNULEE: 'bg-red-100 text-red-700',
 };
 
-interface LigneUI { article: Article; quantite: number; prix_unitaire_ht: number; remise_percent: number }
+interface LigneUI { article: Article; quantite: number; prix_unitaire_ht: number }
 
 function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: string; fournisseurId: string; onClose: () => void }) {
   const repository = useRepository(FournisseursRepository);
@@ -52,20 +53,45 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
   const [lignes, setLignes] = useState<LigneUI[]>([]);
   const [enCours, setEnCours] = useState(false);
   const depotEffectif = depotId || depots[0]?.id || '';
-  const totaux = totauxCommande({ remise_percent: remise, tva_percent: tva, lignes });
+  /*
+   * La remise est un montant sur le bon entier, réparti au prorata des lignes
+   * (`repartirRemiseGlobale`) — la même règle qu'une entrée en stock et qu'une
+   * vente. Les parts sont calculées ici pour que l'écran, l'export et la pièce
+   * enregistrée tombent sur les mêmes francs.
+   */
+  const parts = useMemo(
+    () => repartirRemiseGlobale(lignes.map((l) => ({ ...l, cout_unitaire: l.prix_unitaire_ht })), remise),
+    [lignes, remise],
+  );
+  /*
+   * La colonne « Poids » paraît d'elle-même dès qu'un article commandé porte
+   * un poids, et s'efface sinon : un bon de visserie n'a pas de colonne vide,
+   * un bon de ciment annonce son tonnage.
+   */
+  const pese = bonPorteUnPoids(lignes);
+  const totaux = totauxCommande({
+    remise_montant: remise,
+    tva_percent: tva,
+    lignes: parts.map((p) => ({ quantite: p.ligne.quantite, prix_unitaire_ht: p.ligne.prix_unitaire_ht, remise_montant: p.remise })),
+  });
 
   const exporter = async () => {
     try {
       const chemin = await exporterExcel(numero || 'bon-de-commande', [{
         nom: 'Bon de commande',
-        lignes: lignes.map((l) => ({
-          Code: l.article.code,
-          Désignation: l.article.designation,
-          Unité: l.article.unite,
-          Quantité: l.quantite,
-          'Prix U. HT': l.prix_unitaire_ht,
-          'Remise %': l.remise_percent,
-          'Total HT': totalLigneCommande(l),
+        // La part de remise portée par chaque ligne est celle qui sera
+        // enregistrée : le classeur doit tomber sur les mêmes francs.
+        lignes: parts.map(({ ligne, brut, remise: part }) => ({
+          Code: ligne.article.code,
+          Désignation: ligne.article.designation,
+          Unité: ligne.article.unite,
+          Quantité: ligne.quantite,
+          // Comme à l'écran : la colonne n'existe que si le bon est pesé.
+          ...(pese ? { 'Poids (t)': poidsLigne(ligne) } : {}),
+          'Prix U. HT': ligne.prix_unitaire_ht,
+          Montant: brut,
+          'Part de remise': part,
+          'Total HT': totalLigneCommande({ ...ligne, remise_montant: part }),
         })),
       }]);
       if (chemin) notifier('succes', `Export enregistré : ${chemin}`);
@@ -75,7 +101,7 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
   };
 
   const valider = async () => {
-    const parsed = bonCommandeSchema.safeParse({ fournisseur_id: fid, depot_id: depotEffectif, numero, date_livraison_prevue: dateLivraison, remise_percent: remise, tva_percent: tva, notes, lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht, remise_percent: l.remise_percent })) });
+    const parsed = bonCommandeSchema.safeParse({ fournisseur_id: fid, depot_id: depotEffectif, numero, date_livraison_prevue: dateLivraison, remise_montant: remise, tva_percent: tva, notes, lignes: lignes.map((l) => ({ article_id: l.article.id, quantite: l.quantite, prix_unitaire_ht: l.prix_unitaire_ht })) });
     if (!parsed.success) { notifier('erreur', parsed.error.issues[0].message); return; }
     setEnCours(true);
     try {
@@ -105,36 +131,49 @@ function NouveauBonModal({ filialeId, fournisseurId, onClose }: { filialeId: str
           <FormField label="N° commande"><input value={numero} onChange={(e) => setNumero(e.target.value)} className={`${inputClass} font-mono`} placeholder="Auto si vide" /></FormField>
           <FormField label="Livraison prévue"><input type="date" value={dateLivraison} onChange={(e) => setDateLivraison(e.target.value)} className={inputClass} /></FormField>
           <div className="grid grid-cols-2 gap-2">
-            <FormField label="Remise %"><input type="number" min="0" max="100" value={remise} onChange={(e) => setRemise(Number(e.target.value))} className={`${inputClass} text-right font-mono`} /></FormField>
+            {/* En francs sur le bon entier, comme elle se négocie — et comme
+                pour une entrée en stock et pour une vente. */}
+            <FormField label="Remise globale (F)" aide="Le rabais accordé sur le bon entier, réparti au prorata des lignes.">
+              <ChampMontant valeur={remise} onChange={setRemise} zeroVide className={`${inputClass} text-right font-mono`} data-testid="remise-globale" />
+            </FormField>
             <FormField label="TVA %"><input type="number" min="0" max="100" value={tva} onChange={(e) => setTva(Number(e.target.value))} className={`${inputClass} text-right font-mono`} /></FormField>
           </div>
         </div>
-        <ArticlePicker filialeId={filialeId} onSelect={(a) => { if (!lignes.some((l) => l.article.id === a.id)) setLignes([...lignes, { article: a, quantite: 1, prix_unitaire_ht: a.prix_achat, remise_percent: 0 }]); }} placeholder="Ajouter un article au bon (code ou désignation)…" />
+        <ArticlePicker filialeId={filialeId} onSelect={(a) => { if (!lignes.some((l) => l.article.id === a.id)) setLignes([...lignes, { article: a, quantite: 1, prix_unitaire_ht: a.prix_achat }]); }} placeholder="Ajouter un article au bon (code ou désignation)…" />
         <div className="border border-neutral-200 rounded-lg overflow-hidden" data-testid="bon-lignes">
           <table className="tableau">
-            <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Code / Réf.</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right w-28">Qté</th><th className="px-3 py-2 text-right w-36">Prix U. HT</th><th className="px-3 py-2 text-right w-24">Remise %</th><th className="px-3 py-2 text-right">Total HT</th><th className="w-10" /></tr></thead>
+            <thead className="bg-neutral-50 text-xs uppercase text-neutral-600"><tr><th className="px-3 py-2 text-left">Code / Réf.</th><th className="px-3 py-2 text-left">Désignation</th><th className="px-3 py-2 text-right w-28">Qté</th>{pese && <th className="px-3 py-2 text-right w-24">Poids</th>}<th className="px-3 py-2 text-right w-36">Prix U. HT</th><th className="px-3 py-2 text-right w-28">Part de remise</th><th className="px-3 py-2 text-right">Total HT</th><th className="w-10" /></tr></thead>
             <tbody className="divide-y divide-neutral-100">
               {lignes.map((l, i) => (
                 <tr key={l.article.id}>
                   <td className="px-3 py-2 text-sm font-mono text-primary-700">{l.article.code}</td>
                   <td className="px-3 py-2 text-sm">{l.article.designation}<span className="text-neutral-400 text-xs ml-2">{l.article.unite}</span></td>
                   <td className="px-3 py-2"><input type="number" min="0" step="any" value={l.quantite} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, quantite: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} /></td>
+                  {pese && <td className="px-3 py-2 text-right font-mono text-sm text-neutral-600" data-testid={`poids-${l.article.code}`}>{formaterTonnage(poidsLigne(l))}</td>}
                   <td className="px-3 py-2"><input type="number" min="0" step="1" value={l.prix_unitaire_ht} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, prix_unitaire_ht: Number(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} /></td>
-                  <td className="px-3 py-2"><input type="number" min="0" max="100" step="any" value={l.remise_percent} onFocus={(e) => e.target.select()} onChange={(e) => setLignes(lignes.map((x, j) => (j === i ? { ...x, remise_percent: remiseSaisie(e.target.value) } : x)))} className={`${inputClass} text-right font-mono`} data-testid={`remise-${l.article.code}`} /></td>
-                  <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(totalLigneCommande(l))}</td>
+                  {/* La part ne se saisit pas : elle tombe du rabais du bon,
+                      au prorata. On la montre pour qu'on voie où il va. */}
+                  <td className="px-3 py-2 text-sm text-right font-mono text-neutral-500" data-testid={`part-remise-${l.article.code}`}>{parts[i] && parts[i].remise > 0 ? formaterFcfa(parts[i].remise) : '—'}</td>
+                  <td className="px-3 py-2 text-sm text-right font-mono">{formaterFcfa(totalLigneCommande({ ...l, remise_montant: parts[i]?.remise ?? 0 }))}</td>
                   <td className="px-3 py-2 text-center"><button type="button" onClick={() => setLignes(lignes.filter((_, j) => j !== i))} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Retirer"><TrashIcon className="w-4 h-4" /></button></td>
                 </tr>
               ))}
-              {lignes.length === 0 && <tr><td colSpan={7} className="px-3 py-5 text-center text-sm text-neutral-400">Aucune ligne.</td></tr>}
+              {lignes.length === 0 && <tr><td colSpan={pese ? 8 : 7} className="px-3 py-5 text-center text-sm text-neutral-400">Aucune ligne.</td></tr>}
             </tbody>
           </table>
         </div>
         <div className="flex justify-between gap-4">
           <FormField label="Notes" className="flex-1"><input value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} maxLength={500} /></FormField>
           <dl className="text-sm w-64 space-y-1 self-end">
+            {/* Avant l'argent : c'est ce chiffre qui décide du camion. */}
+            {pese && (
+              <div className="flex justify-between">
+                <dt>Poids total{tonnagePartiel(lignes) && <span className="text-xs text-orange-600 ml-1">(articles pesés)</span>}</dt>
+                <dd className="font-mono" data-testid="tonnage-commande">{formaterTonnage(tonnageBon(lignes))}</dd>
+              </div>
+            )}
             <div className="flex justify-between"><dt>Montant brut HT</dt><dd className="font-mono">{formaterFcfa(totaux.brut_ht)}</dd></div>
-            {totaux.remise_lignes > 0 && <div className="flex justify-between text-neutral-500"><dt>dont remises de ligne</dt><dd className="font-mono">{formaterFcfa(totaux.remise_lignes)}</dd></div>}
-            <div className="flex justify-between"><dt>Remise totale</dt><dd className="font-mono" data-testid="remise-totale">{formaterFcfa(totaux.remise)}</dd></div>
+            <div className="flex justify-between"><dt>Remise globale</dt><dd className="font-mono" data-testid="remise-totale">{formaterFcfa(totaux.remise)}</dd></div>
             <div className="flex justify-between"><dt>Montant net HT</dt><dd className="font-mono">{formaterFcfa(totaux.net_ht)}</dd></div>
             <div className="flex justify-between"><dt>Total TVA</dt><dd className="font-mono">{formaterFcfa(totaux.tva)}</dd></div>
             <div className="flex justify-between font-semibold"><dt>Net à payer</dt><dd className="font-mono">{formaterFcfa(totaux.net_a_payer)}</dd></div>

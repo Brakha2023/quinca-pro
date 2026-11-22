@@ -7,6 +7,7 @@ const mvt = (over: Partial<MouvementDuBon> = {}): MouvementDuBon => ({
   article_code: 'CIM-50',
   article_designation: 'Ciment 50kg',
   article_unite: 'SAC',
+  article_poids_tonnes: null,
   depot_nom: 'Principal',
   quantite: 10,
   quantite_avant: 0,
@@ -113,5 +114,49 @@ describe('numéro court du bon', () => {
 
   it('reste nul quand la référence a été saisie à la main', () => {
     expect(construireBon('BL-FOURNISSEUR-77', [mvt({ reference_courte: null })])!.reference_courte).toBeNull();
+  });
+});
+
+/*
+ * Le tonnage du bon imprimé. C'est le chiffre que le transporteur réclame, et
+ * il ne s'imprime que si la marchandise est pesée : un bon de visserie n'a pas
+ * de colonne « Poids » vide.
+ */
+describe('poids du bon', () => {
+  it('pèse chaque ligne et totalise le bon', () => {
+    const bon = construireBon('ENT-P1', [
+      mvt({ article_poids_tonnes: 0.05, quantite: 400 }),
+      mvt({ id: 'm2', article_code: 'FER-12', article_poids_tonnes: 2.5, quantite: 4 }),
+    ])!;
+    expect(bon.pese).toBe(true);
+    expect(bon.lignes.map((l) => l.poids)).toEqual([20, 10]);
+    expect(bon.tonnage).toBe(30);
+    expect(bon.tonnage_partiel).toBe(false);
+  });
+
+  it('ne pèse rien quand aucun article n’est renseigné', () => {
+    const bon = construireBon('ENT-P2', [mvt()])!;
+    expect(bon.pese).toBe(false);
+    expect(bon.tonnage).toBe(0);
+    expect(bon.lignes[0].poids).toBeNull();
+  });
+
+  // Dire que le total est partiel, plutôt que d'annoncer un tonnage amputé.
+  it('prévient quand une partie des lignes seulement est pesée', () => {
+    const bon = construireBon('ENT-P3', [
+      mvt({ article_poids_tonnes: 0.05, quantite: 20 }),
+      mvt({ id: 'm2', article_code: 'VIS-50', article_poids_tonnes: null, quantite: 1000 }),
+    ])!;
+    expect(bon.tonnage).toBe(1);
+    expect(bon.tonnage_partiel).toBe(true);
+  });
+
+  /*
+   * Une contre-passation retire sa marchandise : son tonnage doit se retirer
+   * avec elle, sinon un bon corrigé pèserait deux fois.
+   */
+  it('suit le signe de la quantité', () => {
+    const bon = construireBon('ENT-P4', [mvt({ type: 'AJUSTEMENT', article_poids_tonnes: 0.05, quantite: -20 })])!;
+    expect(bon.tonnage).toBe(-1);
   });
 });

@@ -95,6 +95,12 @@ un PC Windows : `apps/desktop/scripts/windows/CHECKLIST-WINDOWS.md`.
 - Jamais `alert()` / `confirm()` / `prompt()` : la WebView de Tauri ne les affiche pas (`confirm` renvoie
   `false`). Utiliser `useNotifier()` et `useConfirmation()`.
 - Les montants TTC encaissés sont arrondis au franc (`arrondirFcfa`) ; seuls les HT/TVA gardent 2 décimales.
+- **Dans un `writeTransaction`, le lecteur se passe, il ne se suppose pas.** Une méthode appelée depuis
+  une transaction reçoit `tx` en paramètre et lit par lui. Repartir par `this.db` fige le poste — la
+  transaction tient le verrou d'écriture, la nouvelle lecture l'attend — et, si elle passait, elle lirait
+  l'état d'avant la transaction. Une méthode utile aux deux (l'écran la lit hors transaction, une
+  écriture la rappelle dedans) prend son lecteur en paramètre : voir `impactsDuBon` et sa façade publique
+  `impactCorrectionEntree` dans `StockRepository`.
 
 ### Fonctionnement hors ligne (postes partagés)
 
@@ -193,6 +199,21 @@ Onglets **Articles**, **Familles**, **Dépôts**.
 quel ordre. Les entêtes répétés en tête de page et les lignes de totaux sont écartés, les familles
 inconnues créées, les codes déjà présents **ignorés et non écrasés** (chaque rejet est motivé ligne par
 ligne). Sans ligne d'entêtes, l'import est refusé plutôt que décalé.
+
+**Poids unitaire, en tonnes** (champ facultatif de la fiche article) : `0,05` pour un sac de ciment de
+50 kg, `2,5` pour une tonne de fer. L'unité est la tonne et non le kilo, parce que c'est celle du camion
+et du devis de transport. Renseigné, il fait **apparaître de lui-même** une colonne *Poids* et un
+*Poids total* sur les bons d'entrée et les bons de commande — à l'écran, sur le document imprimé et dans
+l'export Excel — dès qu'un article pesé entre dans le bon, et les fait disparaître quand il en sort.
+Aucune case à cocher : la colonne suit les articles sélectionnés.
+
+Non renseigné, le poids reste `null` et **non zéro** : un article dont on ignore le poids ne pèse pas
+rien. C'est cette distinction qui permet d'annoncer « Poids total (articles pesés seulement) » sur un bon
+à moitié renseigné, plutôt qu'un tonnage amputé sur lequel on chargerait un camion. Le tonnage n'est
+jamais stocké : il se recalcule (quantité × poids) à chaque affichage, et ne peut donc pas divorcer des
+quantités du bon. Le document imprimé lit le poids **du jour** et non celui de la commande : c'est le
+poids réel du sac qu'on charge qui intéresse le transporteur, là où le code, la désignation et l'unité
+restent la photo d'origine du bon.
 
 **Fiche article** (bouton *Détail*, ou clic sur la désignation) : tarifs et marges (vente et VIP), stock
 dépôt par dépôt avec coût moyen et valorisation, état du stock face aux seuils (rupture / sous le
@@ -393,14 +414,26 @@ la caisse — mais le prochain jeton tranche, et referme en quelques secondes si
 fausse. Les autres écrans restent utilisables même au-delà du seuil : ils horodatent faux eux aussi,
 le bandeau le dit, mais bloquer tout le poste ferait plus de dégâts que la dérive.
 
-### Remises de ligne et export Excel
+### Remise globale et export Excel
 
-L'**entrée en stock** et le **bon de commande fournisseur** acceptent une remise article par article,
-saisie au moment de choisir les produits. Sur une entrée, le stock est valorisé au **coût net** (c'est
-lui qui alimente le coût moyen pondéré) et la remise accordée reste inscrite sur le mouvement pour
-pouvoir être justifiée ; le bon imprimé l'affiche. Sur un bon de commande, les remises de ligne
-s'appliquent **avant** la remise globale du bon — l'ordre inverse accorderait deux fois la même
-réduction — et la réception entre en stock au coût net des deux remises, TVA comprise.
+Une remise de fournisseur se négocie **sur le bon entier et en francs** (« je vous fais 15 000 sur le
+tout »), jamais article par article ni en pourcentage. L'**entrée en stock** et le **bon de commande**
+la saisissent donc ainsi, et la répartissent **au prorata de la valeur des lignes** — la même règle que
+pour une vente (`repartirRemiseGlobale`, le reste d'arrondi allant à la ligne la plus lourde, là où un
+franc se voit le moins). Les lignes n'ont pas de remise à elles : la part qui leur revient s'affiche,
+elle ne se saisit pas.
+
+Chaque ligne conserve sa part en francs (`remise_montant`), et son montant en est net : le net du bon
+est donc la somme de ses lignes, sans rien reconstituer. C'est aussi ce qui permet de **réceptionner
+partiellement** sans fausser le coût — la part se proratise à la quantité reçue, là où un pourcentage
+de pièce devait être rappliqué à chaque réception. Sur une entrée, le stock est valorisé à ce coût net
+(c'est lui qui alimente le coût moyen pondéré) ; à la réception d'un bon de commande, la marchandise
+entre au coût net de la remise, TVA comprise.
+
+Les bons enregistrés **avant** ce changement portaient des pourcentages — un sur la pièce, un par
+ligne. Ils continuent de se calculer et de s'imprimer comme à leur création : le code lit les deux
+modèles et n'écrit plus que les francs (`totauxCommande`). Un relevé fournisseur qui changerait de
+total après une mise à jour ne serait plus un relevé.
 
 Les deux écrans exportent les lignes saisies en **classeur Excel** (`.xlsx`). Sous Tauri, la boîte
 d'enregistrement du système choisit l'emplacement (plugins `dialog` et `fs`) : les téléchargements du
@@ -460,6 +493,16 @@ rien n'est reçu) et **Relance fournisseur** (e-mail composé à partir des comm
 l'avoir éventuel, ouvert dans la messagerie du poste via le plugin Tauri `opener`).
 Les documents A4 passent par `DocumentImprimable` (aperçu plein écran, seule la zone d'impression sort).
 
+**Reprise d'un répertoire existant** : *Répertoire → Importer des fournisseurs*, mêmes règles que pour
+les clients (voir plus haut) — consignes avant le choix du fichier, modèle téléchargeable, aucune fiche
+existante écrasée, tout en une seule transaction. Une différence, et c'est le piège de cet écran : le
+solde d'ouverture positif est ce que **la maison doit** au fournisseur, le négatif une avance déjà
+versée chez lui. Les entêtes du compte fournisseur sont reconnus en plus de ceux des clients
+(« DETTE », « À PAYER »), ainsi que l'interlocuteur, la banque et le compte bancaire.
+
+Le mécanisme est partagé par les deux répertoires (`core/commun/importTiers`) : chaque module ne
+déclare que ses noms de colonnes admis et la forme de sa fiche.
+
 ### Facture d'achat fournisseur
 
 Toute pièce fournisseur qui a reçu de la marchandise produit une **facture d'achat** A4 : n° de pièce
@@ -490,6 +533,24 @@ avec client et remise, la vente passe la proforma FACTUREE dans la même transac
 (*bon payé* = règlement d'une vente, *avance payée* = acompte ; lettrage FIFO apport / utilisé /
 disponibilité par client ; reçu et historique imprimables) et **Relance clients** (débiteurs, e-mail
 composé à partir des factures impayées et du retard selon la période de règlement).
+
+**Reprise d'un répertoire existant** : *Répertoire → Importer des clients* lit un classeur Excel ou CSV,
+**soldes d'ouverture compris** — c'est ce qu'on fait le jour où la maison passe à QuincaPro, plutôt que
+de ressaisir cent fiches et autant d'occasions de se tromper d'un chiffre sur une créance. Les consignes
+s'affichent **avant** le choix du fichier, et un modèle déjà rempli se télécharge d'ici.
+
+Une ligne d'entêtes, puis un client par ligne : seule la colonne **Nom** (ou *Raison sociale*, *Client*)
+est obligatoire, l'ordre des colonnes est libre, et les titres au-dessus comme les totaux en dessous sont
+écartés d'eux-mêmes. Le **solde** est positif quand le client doit, négatif quand il a versé une avance ;
+« 150 000 », « 150000 F » et « 150.000 » sont lus pareil, et la **date d'arrêté** se donne en jj/mm/aaaa
+ou en vraie date Excel — ce qui n'est pas lisible reste vide plutôt que deviné, une date fausse
+déplacerait une créance d'un exercice à l'autre.
+
+Un client **déjà au répertoire n'est jamais écrasé** : le rapprochement se fait sur le code quand le
+fichier en porte un, sur le nom sinon (casse et accents indifférents). Relancer le même fichier deux fois
+n'ajoute rien et ne double aucune créance. Les lignes écartées sont listées une à une avec leur raison,
+et tout passe dans une seule transaction — cent fiches à moitié reprises seraient pires que pas de
+reprise du tout.
 
 ### Employés
 

@@ -1,15 +1,13 @@
-import {
-  totauxCommande,
-  type Fournisseur,
-  type LigneCommandeFournisseur,
-} from '../../../core/fournisseurs';
+import { totauxCommande, type Fournisseur } from '../../../core/fournisseurs';
+import { bonPorteUnPoids, formaterTonnage, poidsLigne, tonnageBon, tonnagePartiel } from '../../../core/articles';
 import DocumentImprimable from '../../components/print/DocumentImprimable';
 import { formaterDate, formaterFcfa } from '../../hooks/useFormatage';
-import { useCommande, useFournisseur, useLignesCommande, type CommandeVueRow } from './hooks';
+import { useCommande, useFournisseur, useLignesCommande, type CommandeVueRow, type LigneCommandeVue } from './hooks';
 
 interface Props {
   commande: CommandeVueRow;
-  lignes: LigneCommandeFournisseur[];
+  /** Les lignes du bon, chacune avec le poids de son article : voir `useLignesCommande`. */
+  lignes: LigneCommandeVue[];
   fournisseur: Fournisseur | null;
   filiale: { nom: string; adresse?: string | null; telephone?: string | null };
   onClose: () => void;
@@ -21,7 +19,15 @@ interface Props {
  * le relais (voir `FactureAchatDocument`).
  */
 export default function BonCommandeDocument({ commande, lignes, fournisseur, filiale, onClose }: Props) {
-  const totaux = totauxCommande({ remise_percent: commande.remise_percent ?? 0, tva_percent: commande.tva_percent ?? 0, lignes });
+  // Les deux modèles de remise se lisent : les francs du bon d'aujourd'hui, le
+  // pourcentage des bons d'avant (voir `totauxCommande`).
+  const totaux = totauxCommande({
+    remise_montant: commande.remise_montant ?? 0,
+    remise_percent: commande.remise_percent ?? 0,
+    tva_percent: commande.tva_percent ?? 0,
+    lignes,
+  });
+  const pese = bonPorteUnPoids(lignes);
   const date = commande.date_commande ? new Date(commande.date_commande) : new Date();
   return (
     <DocumentImprimable titre="Bon de commande fournisseur" filiale={filiale} onClose={onClose}>
@@ -45,8 +51,10 @@ export default function BonCommandeDocument({ commande, lignes, fournisseur, fil
         </table>
       </div>
       <table>
-        <thead><tr><th>Code / Réf.</th><th>Désignation</th><th>Qté</th><th>Prix U. HT</th><th>Remise</th><th>Total HT</th></tr></thead>
-        <tbody>{lignes.map((l) => <tr key={l.id}><td>{l.code_article}</td><td>{l.designation}</td><td className="num">{l.quantite} {l.unite}</td><td className="num">{formaterFcfa(l.prix_unitaire_ht)}</td><td className="num">{l.remise_percent ? `${l.remise_percent} %` : '—'}</td><td className="num">{formaterFcfa(l.total_ht)}</td></tr>)}</tbody>
+        {/* Le poids ne s'imprime que si la marchandise est pesée : c'est le
+            chiffre que le transporteur réclame, inutile ailleurs. */}
+        <thead><tr><th>Code / Réf.</th><th>Désignation</th><th>Qté</th>{pese && <th>Poids</th>}<th>Prix U. HT</th><th>Remise</th><th>Total HT</th></tr></thead>
+        <tbody>{lignes.map((l) => <tr key={l.id}><td>{l.code_article}</td><td>{l.designation}</td><td className="num">{l.quantite} {l.unite}</td>{pese && <td className="num">{formaterTonnage(poidsLigne(l))}</td>}<td className="num">{formaterFcfa(l.prix_unitaire_ht)}</td><td className="num">{l.remise_montant ? formaterFcfa(l.remise_montant) : l.remise_percent ? `${l.remise_percent} %` : '—'}</td><td className="num">{formaterFcfa(l.total_ht)}</td></tr>)}</tbody>
       </table>
       <div className="document-cartouches">
         <div>
@@ -54,8 +62,14 @@ export default function BonCommandeDocument({ commande, lignes, fournisseur, fil
         </div>
         <table className="document-totaux" style={{ margin: 0 }}>
           <tbody>
+            {pese && (
+              <tr>
+                <td>Poids total{tonnagePartiel(lignes) ? ' (articles pesés)' : ''}</td>
+                <td className="num" data-testid="commande-tonnage">{formaterTonnage(tonnageBon(lignes))}</td>
+              </tr>
+            )}
             <tr><td>Montant brut HT</td><td className="num">{formaterFcfa(totaux.brut_ht)}</td></tr>
-            <tr><td>Remise{commande.remise_percent ? ` (${commande.remise_percent} %)` : ''}</td><td className="num">{formaterFcfa(totaux.remise)}</td></tr>
+            <tr><td>Remise{commande.remise_montant ? ' globale' : commande.remise_percent ? ` (${commande.remise_percent} %)` : ''}</td><td className="num">{formaterFcfa(totaux.remise)}</td></tr>
             <tr><td>Montant net HT</td><td className="num">{formaterFcfa(totaux.net_ht)}</td></tr>
             <tr><td>Total TVA{commande.tva_percent ? ` (${commande.tva_percent} %)` : ''}</td><td className="num">{formaterFcfa(totaux.tva)}</td></tr>
             <tr><td><strong>Net à payer</strong></td><td className="num">{formaterFcfa(totaux.net_a_payer)}</td></tr>

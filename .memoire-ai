@@ -286,6 +286,15 @@ dans les 43 fichiers d'écran.
   marchandise sortie. Taux = marge / CA, **jamais sur le coût**. Même
   définition au tableau de bord et au rapport des marges : les deux écrans
   doivent afficher le même total.
+- **Une remise de fournisseur se négocie en francs sur le bon entier**, jamais
+  en pourcentage ni article par article : entrée en stock (2026-11-02) et bon
+  de commande (2026-11-22) la répartissent au prorata des lignes par
+  `repartirRemiseGlobale`, chaque ligne gardant sa part (`remise_montant`) et
+  son montant net. Les pièces d'avant portent des pourcentages et doivent
+  continuer de se calculer comme à leur création — `totauxCommande` lit les
+  deux modèles et n'écrit que les francs. Ne pas déduire la part de la ligne
+  *et* la remise du bon : c'est deux fois le même rabais (défaut trouvé par un
+  test le 2026-11-22).
 - **La remise se négocie en francs sur la vente entière** et n'est pas
   redescendue dans `lignes_vente.total_ht`. Tout calcul par article doit la
   répartir au prorata (`margesQuery`), sinon la marge est surévaluée.

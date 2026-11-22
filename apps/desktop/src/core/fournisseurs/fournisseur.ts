@@ -166,6 +166,13 @@ export interface CommandeFournisseur {
   total_recu_ttc: number;
   montant_paye: number;
   reste_a_payer: number;
+  /** Remise accordée sur le bon entier, en francs. */
+  remise_montant: number;
+  /**
+   * Remise globale en %, portée par les bons d'avant la remise en francs.
+   * Lue pour que ces pièces se calculent et s'impriment comme à leur création ;
+   * jamais écrite (voir la migration `commande_remise_globale`).
+   */
   remise_percent: number;
   tva_percent: number;
   depot_id: string | null;
@@ -180,6 +187,7 @@ export function commandeFromRow(row: CommandeFournisseurRow): CommandeFournisseu
     type: (row.type ?? 'COMMANDE') as 'COMMANDE' | 'BON_COMMANDE',
     statut: (row.statut ?? 'LIVREE') as StatutCommandeFournisseur, total_ht: row.total_ht ?? 0, total_tva: row.total_tva ?? 0,
     total_ttc: row.total_ttc ?? 0, total_recu_ttc: row.total_recu_ttc ?? 0, montant_paye: row.montant_paye ?? 0, reste_a_payer: row.reste_a_payer ?? 0,
+    remise_montant: row.remise_montant ?? 0,
     remise_percent: row.remise_percent ?? 0, tva_percent: row.tva_percent ?? 0, depot_id: row.depot_id, date_livraison_prevue: row.date_livraison_prevue,
     date_reception: row.date_reception, notes: row.notes,
   };
@@ -195,9 +203,11 @@ export interface LigneCommandeFournisseur {
   quantite: number;
   quantite_recue: number;
   prix_unitaire_ht: number;
-  /** Remise de ligne en %, négociée article par article. */
+  /** Part de la remise globale du bon portée par cette ligne, en francs. */
+  remise_montant: number;
+  /** Remise de ligne en %, portée par les lignes d'avant la remise en francs. */
   remise_percent: number;
-  /** Montant HT de la ligne, net de sa remise. */
+  /** Montant HT de la ligne, net de la remise qu'elle porte. */
   total_ht: number;
 }
 
@@ -205,7 +215,7 @@ export function ligneCommandeFromRow(row: LigneCommandeFournisseurRow): LigneCom
   return {
     id: row.id, commande_id: row.commande_id ?? '', article_id: row.article_id ?? '', code_article: row.code_article ?? '', designation: row.designation ?? '',
     unite: row.unite ?? '', quantite: row.quantite ?? 0, quantite_recue: row.quantite_recue ?? 0, prix_unitaire_ht: row.prix_unitaire_ht ?? 0,
-    remise_percent: row.remise_percent ?? 0, total_ht: row.total_ht ?? 0,
+    remise_montant: row.remise_montant ?? 0, remise_percent: row.remise_percent ?? 0, total_ht: row.total_ht ?? 0,
   };
 }
 
@@ -215,7 +225,13 @@ export const bonCommandeSchema = z.object({
   depot_id: z.string().min(1, 'Dépôt de livraison obligatoire'),
   numero: z.string().trim().max(40).optional().default(''),
   date_livraison_prevue: z.string().optional().default(''),
-  remise_percent: z.coerce.number().min(0).max(100).default(0),
+  /**
+   * Remise accordée sur le bon entier, **en francs** : c'est ainsi qu'elle se
+   * négocie (« je vous fais 15 000 sur le tout »). Elle est répartie au
+   * prorata sur les lignes, qui n'ont plus de remise à elles — comme pour une
+   * entrée en stock et pour une vente.
+   */
+  remise_montant: z.coerce.number().min(0, 'Remise ≥ 0').default(0),
   tva_percent: z.coerce.number().min(0).max(100).default(0),
   notes: z.string().trim().max(500).optional().default(''),
   lignes: z
@@ -223,8 +239,6 @@ export const bonCommandeSchema = z.object({
       article_id: z.string().min(1, 'Article obligatoire'),
       quantite: z.coerce.number().positive('Quantité > 0'),
       prix_unitaire_ht: z.coerce.number().min(0, 'Prix ≥ 0'),
-      /** Remise de ligne en %, négociée article par article. */
-      remise_percent: z.coerce.number().min(0, 'Remise ≥ 0').max(100, 'Remise ≤ 100').default(0),
     }))
     .min(1, 'Au moins une ligne'),
 });
@@ -244,24 +258,72 @@ export interface TotauxCommande {
 }
 
 /** Montant HT d'une ligne, net de sa propre remise. */
-export const totalLigneCommande = (l: { quantite: number; prix_unitaire_ht: number; remise_percent?: number }): number =>
-  montantApresRemise(l.quantite * l.prix_unitaire_ht, l.remise_percent ?? 0);
+/**
+ * Montant d'une ligne de commande, net de la remise qu'elle porte : sa part de
+ * la remise du bon en francs (modèle actuel), ou sa remise de ligne en %
+ * (pièces d'avant).
+ */
+export const totalLigneCommande = (l: LigneTotalisableCommande): number =>
+  l.remise_montant && l.remise_montant > 0
+    ? arrondirMontant(Math.max(l.quantite * l.prix_unitaire_ht - l.remise_montant, 0))
+    : montantApresRemise(l.quantite * l.prix_unitaire_ht, l.remise_percent ?? 0);
 
 /**
  * Totaux d'un bon : les remises de ligne s'appliquent d'abord, la remise
  * globale ensuite sur ce qu'il reste — l'ordre inverse ferait payer deux fois
  * la même réduction au fournisseur.
  */
+/** Une ligne totalisable : du neuf en francs, ou de l'ancien en pourcentage. */
+export interface LigneTotalisableCommande {
+  quantite: number;
+  prix_unitaire_ht: number;
+  /** Part de la remise globale portée par la ligne, en francs (modèle actuel). */
+  remise_montant?: number;
+  /** Remise de ligne en %, portée par les lignes d'avant. */
+  remise_percent?: number;
+}
+
+/**
+ * Totaux d'un bon de commande.
+ *
+ * Deux modèles de remise se croisent ici, et c'est voulu : la remise est
+ * désormais **un montant en francs sur le bon entier**, réparti au prorata sur
+ * les lignes ; les bons d'avant portaient un pourcentage sur la pièce et un
+ * pourcentage par ligne. Un bon ancien doit continuer de se calculer comme à
+ * sa création — un relevé fournisseur qui changerait de total après une mise à
+ * jour ne serait plus un relevé.
+ *
+ * L'ordre reste le même : le brut, les remises de ligne (anciennes pièces),
+ * puis la remise du bon, et la TVA sur le net.
+ */
 export function totauxCommande(c: {
-  remise_percent: number;
+  /** Remise du bon en francs (modèle actuel). */
+  remise_montant?: number;
+  /** Remise du bon en %, pour les pièces d'avant. */
+  remise_percent?: number;
   tva_percent: number;
-  lignes: Array<{ quantite: number; prix_unitaire_ht: number; remise_percent?: number }>;
+  lignes: LigneTotalisableCommande[];
 }): TotauxCommande {
   const brut_ht = arrondirMontant(c.lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire_ht, 0));
-  const apres_lignes = arrondirMontant(c.lignes.reduce((s, l) => s + totalLigneCommande(l), 0));
+  /*
+   * Les remises de **ligne** ne sont que les anciens pourcentages. La part de
+   * la remise globale portée par une ligne n'en est pas une : la déduire ici
+   * *et* au titre du bon la retirerait deux fois. C'est le net du bon, plus
+   * bas, qui la retranche une seule fois — et la somme des `total_ht` des
+   * lignes (eux, nets de leur part) retombe dessus.
+   */
+  const apres_lignes = arrondirMontant(
+    c.lignes.reduce((s, l) => s + montantApresRemise(l.quantite * l.prix_unitaire_ht, l.remise_percent ?? 0), 0),
+  );
   const remise_lignes = arrondirMontant(brut_ht - apres_lignes);
-  const net_ht = montantApresRemise(apres_lignes, c.remise_percent);
-  const remise_globale = arrondirMontant(apres_lignes - net_ht);
+  // La remise du bon ne peut pas dépasser ce qu'il reste à remiser : un rabais
+  // saisi trop grand ramène le bon à zéro, il ne le rend pas négatif.
+  const remise_globale = arrondirMontant(
+    c.remise_montant && c.remise_montant > 0
+      ? Math.min(c.remise_montant, apres_lignes)
+      : apres_lignes - montantApresRemise(apres_lignes, c.remise_percent ?? 0),
+  );
+  const net_ht = arrondirMontant(apres_lignes - remise_globale);
   const tva = arrondirMontant(net_ht * (c.tva_percent / 100));
   return {
     brut_ht,
@@ -286,15 +348,52 @@ export type Reception = z.infer<typeof receptionSchema>;
  * Valeur TTC d'une réception : les quantités reçues au prix de commande,
  * avec la remise et la TVA du bon. Refuse de recevoir plus que commandé.
  */
-export function valoriserReception(commande: Pick<CommandeFournisseur, 'remise_percent' | 'tva_percent'>, lignes: LigneCommandeFournisseur[], reception: Reception): { total_ttc: number; lignes: Array<{ ligne: LigneCommandeFournisseur; quantite_recue: number; cout_unitaire: number }> } {
+/**
+ * La part de remise d'une ligne, ramenée à la quantité reçue.
+ *
+ * La ligne porte sa part pour la quantité **commandée** : réceptionner la
+ * moitié ne doit faire entrer que la moitié du rabais, sinon une réception
+ * partielle valoriserait la marchandise trop bas et la suivante trop haut.
+ */
+export function partRemiseRecue(
+  ligne: { quantite: number; remise_montant?: number },
+  quantiteRecue: number,
+): number {
+  if (!ligne.remise_montant || ligne.quantite <= 0) return 0;
+  return arrondirMontant((ligne.remise_montant * quantiteRecue) / ligne.quantite);
+}
+
+/**
+ * Le coût unitaire **net de remise** d'une ligne de commande.
+ *
+ * Modèle actuel : la ligne porte sa part de la remise du bon, en francs ; le
+ * net unitaire s'en déduit par simple division — ce qui proratise la remise à
+ * la quantité réellement reçue, là où un pourcentage de pièce devait être
+ * rappliqué à chaque réception partielle.
+ *
+ * Modèle d'avant : deux pourcentages, celui de la ligne puis celui du bon.
+ */
+export function coutUnitaireNetCommande(
+  commande: { remise_montant?: number; remise_percent?: number },
+  ligne: { quantite: number; prix_unitaire_ht: number; remise_montant?: number; remise_percent?: number },
+): number {
+  const ancien = (commande.remise_percent ?? 0) > 0 || (ligne.remise_percent ?? 0) > 0;
+  if (ancien) {
+    return montantApresRemise(montantApresRemise(ligne.prix_unitaire_ht, ligne.remise_percent ?? 0), commande.remise_percent ?? 0);
+  }
+  const part = ligne.quantite > 0 ? (ligne.remise_montant ?? 0) / ligne.quantite : 0;
+  return arrondirMontant(Math.max(ligne.prix_unitaire_ht - part, 0));
+}
+
+export function valoriserReception(commande: Pick<CommandeFournisseur, 'remise_montant' | 'remise_percent' | 'tva_percent'>, lignes: LigneCommandeFournisseur[], reception: Reception): { total_ttc: number; lignes: Array<{ ligne: LigneCommandeFournisseur; quantite_recue: number; cout_unitaire: number }> } {
   const detail = reception.lignes
     .filter((r) => r.quantite_recue > 0)
     .map((r) => {
       const ligne = lignes.find((l) => l.id === r.ligne_id);
       if (!ligne) throw new Error('Ligne de commande introuvable');
       if (ligne.quantite_recue + r.quantite_recue > ligne.quantite) throw new Error(`${ligne.designation} : reçu au-delà de la quantité commandée`);
-      // Le coût qui entre en stock est net des deux remises (ligne puis bon), TVA comprise.
-      const net = montantApresRemise(montantApresRemise(ligne.prix_unitaire_ht, ligne.remise_percent), commande.remise_percent);
+      // Le coût qui entre en stock est net de la remise du bon, TVA comprise.
+      const net = coutUnitaireNetCommande(commande, ligne);
       return { ligne, quantite_recue: r.quantite_recue, cout_unitaire: arrondirMontant(net * (1 + commande.tva_percent / 100)) };
     });
   const total_ttc = arrondirMontant(detail.reduce((s, d) => s + d.cout_unitaire * d.quantite_recue, 0));
