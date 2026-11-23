@@ -81,15 +81,22 @@ export interface LigneClassement {
  * Range, calcule les parts, et **replie la queue** : au-delà de `limite`, le
  * reste devient « Autres ». Inventer une couleur de plus pour un neuvième
  * poste ne le rendrait pas lisible.
+ *
+ * `replier: false` coupe simplement à `limite`. C'est ce qu'il faut quand les
+ * lignes se cliquent : « Autres » ne désigne personne, et une ligne qui ne
+ * mène nulle part au milieu de lignes qui ouvrent un compte est un piège. La
+ * part reste alors celle du **total entier**, queue comprise — sans quoi les
+ * cinq premiers afficheraient fièrement 100 % de la dette.
  */
 export function classement(
   lignes: Array<{ cle: string; libelle: string; valeur: number; detail?: string }>,
   limite = 6,
+  { replier = true }: { replier?: boolean } = {},
 ): { lignes: LigneClassement[]; total: number; maximum: number } {
   const total = arrondirFcfa(lignes.reduce((t, l) => t + l.valeur, 0));
   const triees = [...lignes].sort((a, b) => b.valeur - a.valeur);
   const tete = triees.slice(0, limite);
-  const queue = triees.slice(limite);
+  const queue = replier ? triees.slice(limite) : [];
 
   const retenues = [...tete];
   if (queue.length > 0) {

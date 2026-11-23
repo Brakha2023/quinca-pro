@@ -13,16 +13,38 @@ déployer les postes) · **Attention** (ce qui change pour les utilisateurs).
 
 ---
 
-## Non publié
+## 1.4.0 — 23 novembre 2026
 
-Pas encore d'installeur : cette section attend la prochaine version.
+Trois idées traversent cette version. **L'argent ne bouge qu'à un geste nommé** : il entre en
+caisse à la validation de journée, il en sort à l'approbation d'une dépense — jamais tout seul au
+passage d'un écran. **Rien ne s'efface** : une correction se contre-passe et se lit, qu'il s'agisse
+d'un ticket, d'un bon d'entrée ou d'une dépense déjà approuvée. **Un total appelle une liste** :
+chaque chiffre du tableau de bord porte le raccourci qui le détaille, et les deux plus lourds — ce
+qu'on nous doit, ce que nous devons — nomment enfin les comptes qui les font.
 
-L'habillage bleu nuit / orange, commencé au tableau de bord en 0.4.0, couvre maintenant
+L'habillage bleu nuit / orange, commencé au tableau de bord en 0.4.0, couvre par ailleurs
 **toute l'application**. Les écrans gardaient des cartes blanches qui se fondaient les unes dans
 les autres ; leurs blocs portent le même bandeau à icône, et leurs chiffres les mêmes tuiles
 teintées que le tableau de bord.
 
 ### Modifié
+
+- **La remise d'un fournisseur se donne sur le bon entier, en francs.** « Je vous fais 15 000 sur
+  le tout » : c'est ainsi qu'elle se négocie, jamais article par article ni en pourcentage. Le
+  **bon de commande** la saisit donc comme l'entrée en stock le faisait déjà, et la répartit **au
+  prorata de la valeur des lignes** (`repartirRemiseGlobale`, le reste d'arrondi allant à la ligne
+  la plus lourde, là où un franc se voit le moins). Les lignes n'ont plus de remise à elles : la
+  part qui leur revient s'affiche, elle ne se saisit pas.
+
+  Chaque ligne conserve sa part en francs et son montant en est net : le net du bon est la somme de
+  ses lignes, sans rien reconstituer. C'est aussi ce qui permet de **réceptionner partiellement**
+  sans fausser le coût — la part se proratise à la quantité reçue, là où un pourcentage de pièce
+  devait être réappliqué à chaque réception.
+
+  Les bons enregistrés **avant** ce changement portaient des pourcentages, un sur la pièce et un
+  par ligne. Ils continuent de se calculer et de s'imprimer comme à leur création : le code lit les
+  deux modèles et n'écrit plus que les francs. Un relevé fournisseur qui changerait de total après
+  une mise à jour ne serait plus un relevé.
 
 - **Les blocs ont un entête.** Une quarantaine de tableaux, listes et formulaires de saisie —
   l'état des caisses, le journal de caisse, les comptes clients et fournisseurs, les proformas,
@@ -56,6 +78,109 @@ teintées que le tableau de bord.
 
 ### Ajouté
 
+- **La dépense s'engage, puis s'approuve.** Nouveau menu **Dépense**, à côté de Trésorerie : une
+  dépense est d'abord *engagée* par qui la constate, puis *approuvée* par qui en a le droit — et
+  c'est l'approbation, elle seule, qui fait sortir l'argent de la caisse, par une ligne de journal
+  portant la pièce et sa catégorie, datée du jour de l'approbation. Tant qu'elle attend, la dépense
+  existe, se lit, se corrige et ne coûte rien.
+
+  Saisir et approuver sont **deux droits** (`tresorerie.mouvement` et `depenses.valider`), sans quoi
+  l'attente ne protégerait rien : le caissier engage, le gérant autorise. La pièce garde le nom des
+  deux — une autorisation sans nom n'en est pas une. Le bénéficiaire est obligatoire à la saisie, et
+  l'écran montre le solde de la caisse avant et après, découvert annoncé sans être interdit.
+
+  Une dépense en attente se **corrige** ou se **refuse** (motif obligatoire, conservé au dossier).
+  Une dépense approuvée se **remet en attente** : son montant rentre en caisse, et la reprise se lit
+  au journal sous *Réouverture de dépense*. Une dépense refusée n'a jamais rien sorti : il n'y a
+  rien à y reprendre.
+
+  À côté, **Trésorerie → Dépense** reste la dépense réglée sur-le-champ, débitée à
+  l'enregistrement. Les deux écrans se renvoient l'un à l'autre, partagent les mêmes catégories et
+  écrivent dans le même journal de caisse.
+
+- **L'argent d'une vente entre en caisse à la validation de journée**, et non plus à
+  l'encaissement. Le comptoir sort la marchandise, enregistre le règlement et fixe les montants du
+  ticket ; l'argent reste entre les mains du caissier jusqu'à ce que la journée soit arrêtée et
+  comptée. *Ventes → Valider* écrit alors une recette par ticket, datée du jour de la validation :
+  **ce qui est versé est ce qui a été compté**. La fenêtre de confirmation annonce la somme avant
+  de valider, et la tuile *En attente de validation* dit en permanence ce qui reste à verser.
+
+  C'est le symétrique exact de la dépense, dans l'autre sens : là, l'argent entre à un geste nommé ;
+  ici, il sort au sien.
+
+- **Un ticket validé se remet en attente.** L'erreur se voit parfois après coup : *Ventes → détail
+  d'un ticket → Remettre en attente* (droit `ventes.valider`) rend au ticket — et à lui seul, pas à
+  la journée — son droit d'être corrigé et annulé. Son versement ressort de la caisse, ce qui se lit
+  au journal sous *Réouverture de vente* ; le stock ne bouge pas, et l'opération est inscrite au
+  journal d'audit. Quand le ticket ne date pas du jour, la confirmation le dit avec sa date : la
+  correction remonterait sur une journée de caisse déjà close.
+
+- **Un bon d'entrée se reprend pour correction, ou s'annule.** Deux boutons par ligne dans
+  *Stock → Entrée → Historique*. La reprise rouvre le bon dans l'écran de saisie — lignes,
+  fournisseur, remise, date de livraison — avec sa **référence figée** : c'est le même papier, et la
+  rouvrir irait créer un second bon. Enregistrer la correction annule l'ancien bon et écrit le
+  nouveau ; les deux restent au journal.
+
+  L'annulation affiche **article par article ce qu'elle retirera du stock** avant de la demander,
+  et prévient quand le stock passerait sous zéro (la marchandise est déjà repartie : un inventaire
+  soldera l'écart) ou quand le **coût moyen** du dépôt gardera la trace de l'achat annulé. Elle
+  refuse en revanche un bon déjà annulé, et un bon dont la pièce fournisseur a reçu un règlement —
+  le message dit alors où aller l'annuler, sinon le paiement resterait sans facture.
+
+- **Le poids des articles, en tonnes.** Champ facultatif de la fiche article : `0,05` pour un sac de
+  ciment de 50 kg. La tonne et non le kilo, parce que c'est l'unité du camion et du devis de
+  transport. Renseigné, il fait **apparaître de lui-même** une colonne *Poids* et un *Poids total*
+  sur les bons d'entrée et les bons de commande — à l'écran, sur le document imprimé et dans
+  l'export Excel — dès qu'un article pesé entre dans le bon, et les fait disparaître quand il en
+  sort. Aucune case à cocher : la colonne suit les articles choisis.
+
+  Non renseigné, le poids vaut **inconnu et non zéro** : un bon à moitié renseigné annonce « Poids
+  total (articles pesés seulement) » plutôt qu'un tonnage amputé sur lequel on chargerait un camion.
+  Le tonnage n'est jamais stocké — il se recalcule à chaque affichage et ne peut donc pas divorcer
+  des quantités —, et le document réédité lit le poids **du jour** : c'est le sac qu'on charge qui
+  intéresse le transporteur, là où le code, la désignation et l'unité restent la photo d'origine.
+
+- **Les répertoires clients et fournisseurs s'importent depuis Excel**, soldes d'ouverture compris.
+  C'est ce qu'on fait le jour où la maison passe à QuincaPro, plutôt que de ressaisir cent fiches et
+  autant d'occasions de se tromper d'un chiffre sur une créance. Consignes affichées **avant** le
+  choix du fichier, modèle déjà rempli à télécharger, ordre des colonnes libre, titres et totaux
+  écartés d'eux-mêmes, et import **refusé** plutôt que décalé s'il manque la ligne d'entêtes.
+
+  Une fiche déjà au répertoire n'est **jamais écrasée** — rapprochement sur le code quand le fichier
+  en porte un, sur le nom sinon, casse et accents indifférents : relancer le même fichier n'ajoute
+  rien et ne double aucune créance. Les lignes écartées sont listées une à une avec leur raison, et
+  tout passe dans une seule transaction. Le mécanisme est partagé (`core/commun/importTiers`) ;
+  chaque module ne déclare que ses noms de colonnes admis.
+
+  **Attention au signe, il s'inverse d'un répertoire à l'autre** : chez un client, un solde positif
+  est ce qu'il nous doit ; chez un fournisseur, c'est ce que **nous lui devons**.
+
+- **Un raccourci par carte au tableau de bord.** Un tableau de bord répond à « combien » et s'arrête
+  là : pour savoir *lesquels*, il fallait rouvrir le menu, trouver le module puis l'onglet. Chaque
+  tuile et chaque carte porte désormais un lien **orange** — la couleur d'action de la maison — vers
+  l'écran qui détaille son chiffre : les créances vers la relance clients, les dettes vers la
+  relance fournisseurs, le stock vers le suivi, le résultat vers les dépenses.
+
+  Ces raccourcis **ne s'affichent que s'ils mènent quelque part** : en vue groupe, les écrans de
+  module n'ont pas de filiale sur laquelle travailler, et un raccourci qui ouvre une page vide fait
+  perdre le clic qu'il promettait de gagner.
+
+- **Qui nous doit le plus, à qui nous devons le plus.** Deux cartes jumelles nomment les comptes qui
+  font les deux totaux, soldes ouverts par ordre décroissant. Elles lisent la même colonne et les
+  mêmes filtres que les tuiles correspondantes, pour que la somme des lignes retombe sur le total
+  affiché au-dessus ; la queue de liste n'est pas repliée en « Autres », qui ne désignerait personne
+  parmi des lignes qui se cliquent.
+
+  **Cliquer une ligne déplie ses douze derniers mois** — ce qui lui a été facturé contre ce qui a
+  été réglé. C'est la question que pose tout gros solde : *depuis quand, et est-ce qu'il paie ?* Un
+  client qui doit deux millions parce qu'il achète deux millions par mois et règle chaque mois n'est
+  pas le dossier de celui qui doit autant sans avoir rien versé depuis six mois ; une phrase sous le
+  dessin le dit en clair. Les deux séries sont **côte à côte et jamais empilées** — additionner le
+  facturé et le réglé n'aurait aucun sens, c'est leur écart qui se lit —, et les mois sans mouvement
+  gardent leur place : un trou de six mois est précisément ce qu'on vient voir. Côté fournisseur, le
+  facturé est le **reçu**, daté de la réception : une dette naît quand la marchandise arrive, pas
+  quand on la commande.
+
 - **Un numéro court sur les pièces.** Le numéro d'une vente était
   `C01-6WR-20261020-RMTPJS` : vingt-six caractères tirés au hasard, que
   personne ne dicte au téléphone et que personne ne recopie sur un cahier. Les
@@ -85,12 +210,44 @@ teintées que le tableau de bord.
 
 ### Base de données
 
-À appliquer **avant** de déployer les postes : `20261107000000_numero_court_pieces.sql`
-(colonnes `ventes.numero_court`, `livraisons.numero_court`,
-`mouvements_stock.reference_courte`, plus deux index de recherche). Tant que la
-migration n'est pas passée, le poste signalera le serveur comme non conforme au
-démarrage, et toute vente créée partira en échec d'envoi — le serveur refusant
-une colonne qu'il ne connaît pas.
+Quatre migrations, à appliquer **avant** de déployer les postes, dans l'ordre de leur nom :
+
+| Migration | Ce qu'elle fait |
+| --- | --- |
+| `20261107000000_numero_court_pieces.sql` | `ventes.numero_court`, `livraisons.numero_court`, `mouvements_stock.reference_courte`, plus deux index de recherche. |
+| `20261115000000_depenses.sql` | La table `depenses` et son cycle (engagée / approuvée / refusée), ses index, son déclencheur d'audit, ses politiques RLS, et une mise à jour de `rafraichir_fenetre_historique` : une dépense **en attente reste dans la fenêtre quel que soit son âge**, sinon la pièce à approuver disparaîtrait de l'écran du gérant. |
+| `20261122000000_commande_remise_globale.sql` | `commandes_fournisseurs.remise_montant` et `lignes_commande_fournisseur.remise_montant` : la remise en francs et la part de chaque ligne. |
+| `20261122100000_article_poids.sql` | `articles.poids_tonnes` : le poids unitaire, facultatif, en tonnes. |
+
+**Puis redéployer les règles de synchronisation** (`supabase/sync-streams.yaml`) : la table
+`depenses` y est ajoutée. Sans ce redéploiement, les dépenses saisies restent sur le poste et
+n'arrivent chez personne — ni chez le gérant qui doit les approuver.
+
+Tant que `numero_court_pieces` n'est pas passée, le poste signale le serveur comme non conforme au
+démarrage et toute vente créée part en échec d'envoi : le serveur refuse une colonne qu'il ne
+connaît pas. Les trois autres **ne déclenchent pas la sonde**, et c'est plus sournois : PowerSync
+révoque au point de contrôle suivant toute colonne que le serveur ignore. Un poids saisi, une
+remise de commande, une dépense engagée vivraient quelques heures sur le poste, puis
+disparaîtraient sans un mot — c'est exactement ce qui était arrivé aux brouillons le mois dernier.
+
+### Attention
+
+- **La caisse ne monte plus à l'encaissement.** C'est le changement qui se verra le premier au
+  comptoir : l'argent entre en caisse à la **validation de journée**, pas à la vente. Tant que la
+  journée n'est pas validée, le chiffre *Encaissé* et le solde de la caisse divergent — et l'écart
+  est exactement ce qui est encore au comptoir. Les postes qui ne validaient pas tous les jours
+  devront prendre l'habitude : c'est ce geste qui permet de rapprocher le tiroir de l'application.
+- **Les ventes en attente d'avant la mise à jour ne sont pas versées deux fois.** Elles ont déjà
+  leur argent en caisse ; la validation le constate et ne réécrit rien.
+- **Le droit d'approuver une dépense n'est donné à aucun rôle livré.** `depenses.valider` est né
+  après le jeu de permissions par défaut (`20260927000000_roles_permissions.sql`) : ni le gérant ni
+  même le directeur général ne l'ont. Seul le **superadministrateur** peut approuver, parce qu'il a
+  tout par nature. À cocher dans *Paramètres → Rôles & permissions* juste après la mise à jour, sur
+  le rôle du gérant — sans quoi les dépenses engagées s'empileront sans que personne puisse les
+  autoriser.
+- **Le signe du solde d'ouverture s'inverse entre les deux imports.** Positif chez un client, c'est
+  ce qu'il nous doit ; positif chez un fournisseur, c'est ce que nous lui devons. Une reprise faite
+  à l'envers se corrige fiche par fiche.
 
 ### Modifié — ce qui sort de l'imprimante
 
@@ -126,6 +283,27 @@ vingt-sept documents de l'application partagent cette feuille de style : ils cha
 
 ### Corrigé
 
+- **La correction d'un bon d'entrée figeait le poste.** Le défaut le plus grave de cette version,
+  et il rendait la fonction **inutilisable** : le poste se bloquait au clic, sans message. La
+  méthode qui calcule l'impact d'une annulation repartait lire par `this.db` alors qu'elle était
+  appelée depuis l'intérieur d'une transaction d'écriture : la transaction tenait le verrou, la
+  nouvelle lecture l'attendait, et plus rien n'avançait. Et même si elle était passée, elle aurait
+  lu l'état d'**avant** la transaction — la correction aurait écrit ses mouvements sur un stock
+  périmé.
+
+  La lecture prend désormais son lecteur en paramètre (`impactsDuBon(lecteur, …)`), la façade
+  publique `impactCorrectionEntree` servant l'écran. La règle est inscrite au README : **dans un
+  `writeTransaction`, le lecteur se passe, il ne se suppose pas.** TypeScript ne protège pas de
+  cette faute — `this.db` satisfait le type attendu —, c'est donc une règle de maison, pas un
+  garde-fou du compilateur.
+
+- **La sonde de schéma était aveugle à ce qu'elle cherchait.** Elle interrogeait PostgREST en
+  `head: true`, donc sans corps de réponse — alors que le refus de PostgREST *est* un corps JSON
+  (`{"code":"42703","message":"column … does not exist"}`). Le poste recevait un 400 nu : ni code,
+  ni message, donc ni « colonne absente » ni nom de colonne, et le bandeau se contentait d'un
+  « n'a pas pu être vérifiée () » qui ne disait rien. Elle demande maintenant `limit(0)` : deux
+  octets de corps, et le diagnostic revient.
+
 - **Les signatures de bas de page n'avaient pas de ligne où se poser.** Le filet était tracé
   *au-dessus* des deux intitulés (« Le caissier », « Le gérant ») : il séparait le pied du corps
   au lieu d'offrir une ligne, et il ne restait aucune place pour écrire. Sept pièces étaient
@@ -153,6 +331,30 @@ vingt-sept documents de l'application partagent cette feuille de style : ils cha
 
 ### Tests
 
+- **La chaîne complète passe à 849 assertions, aucun échec.** Chaque nouveauté est éprouvée dans le
+  navigateur, pas seulement en test unitaire : `depenses.e2e.cjs` (nouveau scénario : engager,
+  approuver, refuser, remettre en attente, et la caisse qui suit), `stock.e2e.cjs` (reprise et
+  annulation d'un bon, poids qui apparaît et disparaît), `articles.e2e.cjs` (le poids saisi, et le
+  `null` d'un article non pesé), `fournisseurs.e2e.cjs` (import, poids sur le bon de commande, la
+  colonne dans l'export Excel), `clients.e2e.cjs` (import, lignes écartées, second passage sans
+  doublon), `pos.e2e.cjs` (validation de journée, réouverture d'un ticket) et `pilotage.e2e.cjs`
+  (raccourcis, cartes de tiers, graphe d'activité).
+- **La règle du raccourci est gardée par un test.** Trois assertions vérifient qu'en vue groupe
+  aucune tuile ne propose de raccourci, qu'un compte s'y déplie quand même, et qu'« Ouvrir son
+  compte » y reste proposé — il bascule le périmètre en chemin.
+- **Le poids est éprouvé là où il peut déraper** (`poids.test.ts`) : `0,1 × 3` vaut bien `0,3` et
+  non `0,30000000000000004`, un poids de zéro reste un article *pesé*, et un tonnage signé suit une
+  quantité négative (un ajustement de −20 sacs à 50 kg pèse −1 t).
+- **Les douze mois d'un compte** (`activiteTiers.test.ts`) : mois silencieux comblés, fenêtre
+  calculée en UTC — sinon la liste sautait un mois entre minuit et une heure à Abidjan —, et
+  « rien de réglé depuis N mois » qui vaut `null` plutôt qu'un chiffre inventé quand la période
+  entière est muette.
+- **La correction d'un bon** (`correction.test.ts`) : le coût brut reconstitué depuis une ligne qui
+  porte un coût *net* de remise — rouvrir un bon avec son net *et* sa remise retrancherait le rabais
+  une seconde fois —, le passage sous zéro, et les deux refus motivés.
+- **Les imports** (`importTiers`, `importFournisseurs.test.ts`) : entêtes reconnus, montants écrits
+  de trois façons, dates illisibles laissées vides, et rapprochement insensible à la casse et aux
+  accents.
 - **Le numéro court est éprouvé de bout en bout** : format et série par nature
   (`numerotation.test.ts`, `identitePoste.test.ts`), reprise d'un poste d'avant
   la série courte, compteur mémorisé aussitôt, recherche d'un bon par l'un ou

@@ -5,7 +5,12 @@ import { formaterFcfa, formaterPourcentage } from '../../../core/commun/prix';
 import {
   classement, dormantsLesPlusLourds, evolution, fenetrePrecedente, pointsDeVigilance, type Fenetre,
 } from '../../../core/pilotage';
+import { cheminClients } from '../../pages/Clients/onglets';
+import { cheminFournisseurs } from '../../pages/Fournisseurs/onglets';
+import { cheminOngletStock } from '../../pages/Stock/onglets';
 import AncienneteCreances from './AncienneteCreances';
+import CarteTiersEngages from './CarteTiersEngages';
+import LienVoirPlus from './LienVoirPlus';
 import BarresClassement from './BarresClassement';
 import EtatStock from './EtatStock';
 import HistogrammeCaMarge from './HistogrammeCaMarge';
@@ -36,7 +41,10 @@ interface Props {
 }
 
 export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFiliales = false }: Props) {
-  const { total, filiales, serie, repartition, lignesStock, anciennete, familles, clients, articles } = lecture;
+  const {
+    total, filiales, serie, repartition, lignesStock, anciennete, familles, clients, articles,
+    creances_clients, dettes_fournisseurs,
+  } = lecture;
   // La période d'avant ne sert qu'aux évolutions : elle reste ici.
   const precedente = useMemo(() => fenetrePrecedente(fenetre), [fenetre]);
   const { total: avant } = usePerimetre(precedente, filialeId);
@@ -45,6 +53,17 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
   // endroits : on ne l'annonce qu'une fois, du côté de la caisse qui s'est vidée.
   const vueGroupe = filialeId === null;
   const vigilance = pointsDeVigilance(total, repartition.ruptures, vueGroupe);
+
+  /*
+   * Les raccourcis des cartes ne s'affichent que s'ils mènent quelque part.
+   *
+   * Les modules travaillent sur **une** filiale : en vue groupe, `/ventes`
+   * répond « Sélectionnez une filiale » et le raccourci aurait fait perdre un
+   * clic au lieu d'en gagner un. Les lignes de comptes, elles, connaissent
+   * leur filiale et l'ouvrent en chemin : elles restent cliquables partout
+   * (voir `CarteTiersEngages`).
+   */
+  const vers = (chemin: string): string | null => (vueGroupe ? null : chemin);
   const dormants = useMemo(() => dormantsLesPlusLourds(lignesStock, 5), [lignesStock]);
 
   const parFiliale = useMemo(
@@ -89,6 +108,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           ton="text-primary-700"
           sous={`${total.ventes} vente(s) · panier moyen ${formaterFcfa(total.panier_moyen)}`}
           couleur="bleu" icone={BanknotesIcon}
+          lien={<LienVoirPlus to={vers('/ventes')} data-testid="voir-kpi-ca">Les ventes</LienVoirPlus>}
           testId="kpi-ca"
         />
         <Indicateur
@@ -100,6 +120,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           ton={total.marge < 0 ? 'text-red-600' : 'text-neutral-900'}
           sous={`${formaterPourcentage(total.taux_marge)} du CA HT · coût d'achat ${formaterFcfa(total.cout_ventes)}`}
           couleur="orange" icone={ArrowTrendingUpIcon}
+          lien={<LienVoirPlus to={vers('/rapports')} data-testid="voir-kpi-marge">Le rapport des marges</LienVoirPlus>}
           testId="kpi-marge"
         />
         <Indicateur
@@ -109,6 +130,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           ton={total.resultat < 0 ? 'text-red-600' : 'text-green-700'}
           sous={`marge moins ${formaterFcfa(total.charges)} de dépenses passées en caisse`}
           couleur="ambre" icone={ScaleIcon}
+          lien={<LienVoirPlus to={vers('/depenses')} data-testid="voir-kpi-resultat">Les dépenses</LienVoirPlus>}
           testId="kpi-resultat"
         />
         <Indicateur
@@ -121,6 +143,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
               : `encaissé sur la période ${formaterFcfa(total.encaisse)}`
           }
           couleur="vert" icone={BuildingLibraryIcon}
+          lien={<LienVoirPlus to={vers('/tresorerie')} data-testid="voir-kpi-tresorerie">Les caisses</LienVoirPlus>}
           testId="kpi-tresorerie"
         />
       </div>
@@ -134,6 +157,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           ton={total.creances > 0 ? 'text-red-600' : 'text-neutral-900'}
           sous={anciennete.au_dela_de_90 > 0 ? `dont ${formaterFcfa(anciennete.au_dela_de_90)} à plus de 90 jours` : `${total.clients_servis} client(s) servi(s)`}
           couleur="rouge" icone={UserIcon}
+          lien={<LienVoirPlus to={vers(cheminClients('relance'))} data-testid="voir-kpi-creances">Relancer</LienVoirPlus>}
           testId="kpi-creances"
         />
         <Indicateur
@@ -143,6 +167,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           ton={total.dettes > 0 ? 'text-orange-700' : 'text-neutral-900'}
           sous={`${total.commandes_ouvertes} commande(s) encore ouverte(s)`}
           couleur="orange" icone={TruckIcon}
+          lien={<LienVoirPlus to={vers(cheminFournisseurs('relance'))} data-testid="voir-kpi-dettes">À payer</LienVoirPlus>}
           testId="kpi-dettes"
         />
         <Indicateur
@@ -156,6 +181,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
                 : `${repartition.articles} article(s)`
           }
           couleur="bleu" icone={CubeIcon}
+          lien={<LienVoirPlus to={vers(cheminOngletStock('suivi'))} data-testid="voir-kpi-stock">Le stock</LienVoirPlus>}
           testId="kpi-stock"
         />
         <Indicateur
@@ -164,6 +190,7 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           ton={total.livraisons_retard > 0 ? 'text-red-600' : 'text-neutral-900'}
           sous={total.livraisons_retard > 0 ? `${total.livraisons_retard} en retard sur la date prévue` : 'aucun retard'}
           couleur="violet" icone={ClipboardDocumentCheckIcon}
+          lien={<LienVoirPlus to={vers('/livraisons')} data-testid="voir-kpi-livraisons">Les livraisons</LienVoirPlus>}
           testId="kpi-livraisons"
         />
       </div>
@@ -194,12 +221,51 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
         </p>
       )}
 
+      {/*
+        * Qui doit quoi, des deux côtés du grand livre. Les tuiles au-dessus
+        * donnent les deux totaux ; ici on nomme les comptes qui les font, et
+        * une ligne cliquée déplie ses douze derniers mois.
+        */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <CarteTiersEngages
+          type="CLIENT"
+          titre="Qui nous doit le plus"
+          sous="Soldes clients ouverts"
+          icone={UserIcon}
+          classement={creances_clients}
+          lienListe={vers(cheminClients('relance'))}
+          cheminCompte={(id) => cheminClients('compte', id)}
+          testId="creances"
+        />
+        <CarteTiersEngages
+          type="FOURNISSEUR"
+          titre="À qui nous devons le plus"
+          sous="Dettes fournisseurs ouvertes"
+          icone={TruckIcon}
+          classement={dettes_fournisseurs}
+          lienListe={vers(cheminFournisseurs('relance'))}
+          cheminCompte={(id) => cheminFournisseurs('compte', id)}
+          testId="dettes"
+        />
+      </div>
+
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
-        <Carte titre="Chiffre d'affaires et marge" icone={ChartBarIcon} sous={<>La hauteur donne l'activité, la part orange ce qu'elle a rapporté — {fenetre.libelle}.</>} className="xl:col-span-2">
+        <Carte
+          titre="Chiffre d'affaires et marge"
+          icone={ChartBarIcon}
+          sous={<>La hauteur donne l'activité, la part orange ce qu'elle a rapporté — {fenetre.libelle}.</>}
+          action={<LienVoirPlus to={vers('/rapports')} surFonce data-testid="voir-rapports">Les rapports</LienVoirPlus>}
+          className="xl:col-span-2"
+        >
           <HistogrammeCaMarge serie={serie} />
         </Carte>
 
-        <Carte titre="Où dort l'argent du stock" icone={CubeIcon} sous={<>{formaterFcfa(repartition.valeur)} en magasin, {repartition.articles} article(s).</>}>
+        <Carte
+          titre="Où dort l'argent du stock"
+          icone={CubeIcon}
+          sous={<>{formaterFcfa(repartition.valeur)} en magasin, {repartition.articles} article(s).</>}
+          action={<LienVoirPlus to={vers(cheminOngletStock('suivi'))} surFonce data-testid="voir-stock-dormant">Le stock</LienVoirPlus>}
+        >
           <EtatStock repartition={repartition} />
           {dormants.length > 0 && (
             <div className="mt-4 border-t border-neutral-100 pt-3">
@@ -218,11 +284,21 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
       </div>
 
       <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <Carte titre="Chiffre d'affaires par famille" icone={Squares2X2Icon} sous={<>Hors taxes · {fenetre.libelle}</>}>
+        <Carte
+          titre="Chiffre d'affaires par famille"
+          icone={Squares2X2Icon}
+          sous={<>Hors taxes · {fenetre.libelle}</>}
+          action={<LienVoirPlus to={vers('/articles')} surFonce data-testid="voir-familles">Le catalogue</LienVoirPlus>}
+        >
           <BarresClassement lignes={familles.lignes} maximum={familles.maximum} mesure="du CA HT" vide="Aucune vente sur la période." />
         </Carte>
 
-        <Carte titre="Articles les plus vendus" icone={StarIcon} sous={<>Toutes taxes · {fenetre.libelle}</>}>
+        <Carte
+          titre="Articles les plus vendus"
+          icone={StarIcon}
+          sous={<>Toutes taxes · {fenetre.libelle}</>}
+          action={<LienVoirPlus to={vers('/rapports')} surFonce data-testid="voir-articles-vendus">Les rapports</LienVoirPlus>}
+        >
           {articles.length === 0 ? (
             <p className="py-8 text-center text-sm text-neutral-400">Aucune vente sur la période.</p>
           ) : (
@@ -239,11 +315,21 @@ export default function TableauDeBord({ fenetre, filialeId, lecture, comparerFil
           )}
         </Carte>
 
-        <Carte titre="Qui achète" icone={ShoppingCartIcon} sous={<>Les plus gros clients de la période, TTC</>}>
+        <Carte
+          titre="Qui achète"
+          icone={ShoppingCartIcon}
+          sous={<>Les plus gros clients de la période, TTC</>}
+          action={<LienVoirPlus to={vers(cheminClients('repertoire'))} surFonce data-testid="voir-clients">Le répertoire</LienVoirPlus>}
+        >
           <BarresClassement lignes={clients.lignes} maximum={clients.maximum} mesure="du CA TTC" vide="Aucune vente sur la période." />
         </Carte>
 
-        <Carte titre="Ancienneté des impayés" icone={ClockIcon} sous={<>{formaterFcfa(anciennete.total)} sur {anciennete.factures} facture(s) non soldée(s)</>}>
+        <Carte
+          titre="Ancienneté des impayés"
+          icone={ClockIcon}
+          sous={<>{formaterFcfa(anciennete.total)} sur {anciennete.factures} facture(s) non soldée(s)</>}
+          action={<LienVoirPlus to={vers(cheminClients('relance'))} surFonce data-testid="voir-impayes">Relancer</LienVoirPlus>}
+        >
           <AncienneteCreances repartition={anciennete} />
           {ecartCreances > 1 && (
             <p className="mt-3 text-xs text-neutral-400">

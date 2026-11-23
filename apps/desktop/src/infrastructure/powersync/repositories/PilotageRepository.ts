@@ -214,3 +214,90 @@ export const TOP_CLIENTS_QUERY = `
   LEFT JOIN clients c ON c.id = v.client_id
   WHERE v.statut != 'ANNULEE' AND v.date_vente BETWEEN ? AND ? AND (? = '' OR v.filiale_id = ?)
   GROUP BY cle, libelle`;
+
+/**
+ * Les comptes les plus engagés : ceux à qui on doit le plus, ceux qui nous
+ * doivent le plus.
+ *
+ * Le solde vient de `solde_actuel`, colonne **calculée par le serveur** à
+ * partir des pièces et des règlements : il comprend le report d'ouverture
+ * repris à la main lors de la bascule, que les ventes et les commandes du
+ * poste ignorent. C'est le bon chiffre, c'est celui du relevé qu'on envoie au
+ * client.
+ *
+ * Seuls les soldes **positifs** entrent, et seuls les comptes **actifs** : ce
+ * sont exactement les deux filtres des tuiles « Créances clients » et « Dettes
+ * fournisseurs » ci-dessus (voir `INDICATEURS_QUERY`). Il le faut — la somme
+ * des lignes de la carte doit retomber sur le total de la tuile, sinon le
+ * tableau de bord se contredit d'une ligne à l'autre. Un client en avance ne
+ * nous doit rien, et une fiche désactivée n'est plus un dossier ouvert.
+ *
+ * Les deux requêtes sont jumelles, et c'est voulu : la dette et la créance se
+ * lisent du même œil, et seul le sens de la phrase change.
+ *
+ * La filiale du tiers est rendue avec lui. En vue groupe, c'est elle qui
+ * permet d'ouvrir son compte : le module Clients travaille sur une filiale, et
+ * sans ce renseignement un clic depuis la consolidation ne mènerait nulle part.
+ */
+export const TOP_CREANCES_CLIENTS_QUERY = `
+  SELECT id AS cle, raison_sociale AS libelle, code, filiale_id,
+         COALESCE(solde_actuel, 0) AS valeur, date_effet_solde
+  FROM clients
+  WHERE COALESCE(solde_actuel, 0) > 0 AND est_actif = 1 AND (? = '' OR filiale_id = ?)
+  ORDER BY valeur DESC
+  LIMIT ?`;
+
+export const TOP_DETTES_FOURNISSEURS_QUERY = `
+  SELECT id AS cle, raison_sociale AS libelle, code, filiale_id,
+         COALESCE(solde_actuel, 0) AS valeur, date_effet_solde
+  FROM fournisseurs
+  WHERE COALESCE(solde_actuel, 0) > 0 AND est_actif = 1 AND (? = '' OR filiale_id = ?)
+  ORDER BY valeur DESC
+  LIMIT ?`;
+
+/**
+ * L'activité d'un compte, mois par mois : facturé d'un côté, réglé de l'autre.
+ *
+ * Les deux moitiés sont cousues par un `UNION ALL` puis regroupées : un mois
+ * où il a seulement payé, et un mois où il a seulement acheté, doivent tous
+ * deux produire une barre. Une jointure les aurait fait disparaître.
+ *
+ * Côté client, le facturé est le **ticket toutes taxes** : c'est ce qui est
+ * porté à son compte, donc ce que le réglé doit rattraper. Une vente annulée
+ * n'a jamais existé pour son compte, elle est écartée.
+ */
+export const ACTIVITE_CLIENT_QUERY = `
+  SELECT cle, SUM(facture) AS facture, SUM(regle) AS regle FROM (
+    SELECT substr(v.date_vente, 1, 7) AS cle, COALESCE(v.total_ttc, 0) AS facture, 0 AS regle
+      FROM ventes v
+     WHERE v.client_id = ? AND v.statut != 'ANNULEE' AND v.date_vente >= ?
+    UNION ALL
+    SELECT substr(r.date_reglement, 1, 7) AS cle, 0 AS facture, COALESCE(r.montant, 0) AS regle
+      FROM reglements_clients r
+     WHERE r.client_id = ? AND r.date_reglement >= ?
+  )
+  GROUP BY cle`;
+
+/**
+ * La même chose pour un fournisseur, à deux différences près.
+ *
+ * Le facturé est le **reçu** (`total_recu_ttc`), et il est daté de la
+ * réception et non de la commande : une dette naît quand la marchandise
+ * arrive, pas quand on la commande — un bon envoyé il y a trois mois et jamais
+ * livré ne doit pas peser sur le mois de son envoi. Les pièces annulées,
+ * celles d'un bon corrigé notamment, sont écartées.
+ */
+export const ACTIVITE_FOURNISSEUR_QUERY = `
+  SELECT cle, SUM(facture) AS facture, SUM(regle) AS regle FROM (
+    SELECT substr(COALESCE(c.date_reception, c.date_commande), 1, 7) AS cle,
+           COALESCE(c.total_recu_ttc, 0) AS facture, 0 AS regle
+      FROM commandes_fournisseurs c
+     WHERE c.fournisseur_id = ? AND c.statut != 'ANNULEE'
+       AND COALESCE(c.total_recu_ttc, 0) > 0
+       AND COALESCE(c.date_reception, c.date_commande) >= ?
+    UNION ALL
+    SELECT substr(r.date_reglement, 1, 7) AS cle, 0 AS facture, COALESCE(r.montant, 0) AS regle
+      FROM reglements_fournisseurs r
+     WHERE r.fournisseur_id = ? AND r.date_reglement >= ?
+  )
+  GROUP BY cle`;

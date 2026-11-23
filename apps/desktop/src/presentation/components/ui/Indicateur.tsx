@@ -60,6 +60,12 @@ interface Props {
   couleur?: TeinteIndicateur;
   /** Icône de la pastille. Sans elle, pas de pastille. */
   icone?: ComponentType<{ className?: string }>;
+  /**
+   * Le raccourci vers l'écran qui détaille ce chiffre, posé en bas de la
+   * tuile. Un `<LienVoirPlus>` : il disparaît de lui-même quand il ne mène
+   * nulle part, et la tuile reprend alors son allure d'avant.
+   */
+  lien?: ReactNode;
   testId?: string;
 }
 
@@ -69,7 +75,7 @@ function couleurEvolution(variation: number, sens: Sens): string {
   return bon ? 'text-green-700' : 'text-red-600';
 }
 
-export default function Indicateur({ label, valeur, evolution, reference, sens = 'NEUTRE', sous, ton, couleur, icone: Icone, testId }: Props) {
+export default function Indicateur({ label, valeur, evolution, reference, sens = 'NEUTRE', sous, ton, couleur, icone: Icone, lien, testId }: Props) {
   const Fleche = evolution == null || evolution === 0 ? ArrowRightIcon : evolution > 0 ? ArrowUpRightIcon : ArrowDownRightIcon;
   const teinte = couleur ? TEINTES[couleur] : null;
 
@@ -99,6 +105,7 @@ export default function Indicateur({ label, valeur, evolution, reference, sens =
         </p>
       )}
       {sous && <p className="mt-1 text-xs text-neutral-500">{sous}</p>}
+      {lien && <div className="mt-2">{lien}</div>}
       </div>
     </div>
   );

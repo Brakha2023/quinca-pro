@@ -638,6 +638,36 @@ coût d'achat, part dormante du stock, livraisons en retard. Un bandeau rassembl
 qui réclame une décision aujourd'hui (ruptures, retards, impayés anciens, trésorerie
 négative, dépenses qui dépassent la marge).
 
+**Un raccourci par carte.** Un tableau de bord répond à « combien » et s'arrête là : pour savoir
+*lesquels*, il fallait rouvrir le menu, trouver le module puis l'onglet. Chaque tuile et chaque carte
+porte désormais un lien **orange** — la couleur d'action de la maison — vers l'écran qui détaille son
+chiffre : les créances vers la relance clients, les dettes vers la relance fournisseurs, le stock vers
+le suivi de stock, le chiffre d'affaires vers les ventes.
+
+Ces raccourcis **ne s'affichent que s'ils mènent quelque part** : en vue groupe, les modules n'ont pas
+de filiale sur laquelle travailler (`/clients` y répond « Sélectionnez une filiale »), et un raccourci
+qui ouvre une page vide fait perdre le clic qu'il promettait de gagner. Un e2e garde cette règle.
+
+**Qui doit quoi** : deux cartes jumelles nomment les comptes qui font les deux totaux — *Qui nous doit
+le plus* et *À qui nous devons le plus*, soldes ouverts par ordre décroissant. Elles lisent la même
+colonne et les mêmes filtres que les tuiles correspondantes (`solde_actuel > 0` et fiche active), pour
+que la somme des lignes retombe sur le total affiché au-dessus. La queue de liste n'est pas repliée en
+« Autres » : ces lignes se cliquent, et « Autres » ne désigne personne.
+
+**Le graphe d'activité d'un compte** : cliquer une ligne déplie ses douze derniers mois — ce qui lui a
+été facturé contre ce qui a été réglé. C'est la question que pose tout gros solde : *depuis quand, et
+est-ce qu'il paie ?* Un client qui doit deux millions parce qu'il achète deux millions par mois et
+règle chaque mois n'est pas le dossier de celui qui doit autant sans avoir rien versé depuis six mois ;
+une phrase sous le dessin le dit en clair (« Rien de réglé depuis 4 mois »).
+
+Les deux séries sont **côte à côte et jamais empilées** : l'histogramme du chiffre d'affaires empile le
+coût et la marge parce que leur somme *est* le chiffre d'affaires, alors qu'additionner le facturé et le
+réglé n'aurait aucun sens. C'est l'écart entre les deux barres qui se lit. Les mois sans mouvement
+gardent leur place — un trou de six mois dans les règlements est précisément ce qu'on vient voir.
+Côté fournisseur, le facturé est le **reçu** daté de la réception : une dette naît quand la marchandise
+arrive, pas quand on la commande. Depuis la consolidation, « Ouvrir son compte » bascule d'abord le
+périmètre sur la filiale du compte.
+
 | Grandeur | Comment elle se calcule |
 | --- | --- |
 | **Marge commerciale** | CA hors taxes − coût d'achat de la marchandise sortie. Le coût vient du **journal des mouvements** : chaque `SORTIE_VENTE` garde le coût moyen que portait le dépôt **au moment de la vente** (voir « Entrées en stock »). Les pièces antérieures à cette règle retombent sur le coût moyen actuel. Un retour client se retranche. |

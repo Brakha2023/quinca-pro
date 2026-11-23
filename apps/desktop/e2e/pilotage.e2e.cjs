@@ -136,6 +136,32 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
     // Une commande fournisseur encore ouverte.
     await db.execute("INSERT OR REPLACE INTO commandes_fournisseurs (id, numero, type, statut, filiale_id, total_ttc, created_at, updated_at) VALUES ('cmd-e2e','BC-01','BON_COMMANDE','ENVOYEE',?,500000,?,?)", [F, now, now]);
 
+    /*
+     * Un fournisseur qu'on doit, avec de quoi dessiner son activité : une
+     * livraison reçue le mois dernier et un acompte versé ce mois-ci. C'est le
+     * couple facturé / réglé que la carte déplie.
+     */
+    const { FournisseursRepository } = await import('/src/infrastructure/powersync/repositories/FournisseursRepository.ts');
+    const { fournisseurFormSchema } = await import('/src/core/fournisseurs/index.ts');
+    const fou = await new FournisseursRepository(db).create(F, fournisseurFormSchema.parse({ raison_sociale: 'SOCIMAT CI' }));
+    const moisDernier = new Date(); moisDernier.setMonth(moisDernier.getMonth() - 1);
+    await db.execute(
+      "INSERT OR REPLACE INTO commandes_fournisseurs (id, numero, fournisseur_id, type, statut, filiale_id, total_ttc, total_recu_ttc, date_reception, montant_paye, created_at, updated_at) VALUES ('cmd-recue','BC-02',?,'BON_COMMANDE','RECUE',?,300000,300000,?,80000,?,?)",
+      [fou, F, moisDernier.toISOString(), now, now],
+    );
+    await db.execute(
+      "INSERT OR REPLACE INTO reglements_fournisseurs (id, numero, fournisseur_id, commande_id, date_reglement, montant, type_reglement, filiale_id, created_at) VALUES ('rgf-e2e','RGF-01',?,'cmd-recue',?,80000,'ESPECES',?,?)",
+      [fou, now, F, now],
+    );
+    // Le solde du compte est tenu par le serveur : sur ce poste, on le pose.
+    await db.execute('UPDATE fournisseurs SET cumul_factures = 300000, cumul_reglements = 80000, solde_actuel = 220000 WHERE id = ?', [fou]);
+
+    // Une fiche désactivée ne doit paraître sur aucun des deux classements.
+    await db.execute(
+      "INSERT OR REPLACE INTO clients (id, code, raison_sociale, solde_actuel, filiale_id, est_actif, created_at, updated_at) VALUES ('cli-ferme','CLI-X','COMPTE FERME',900000,?,0,?,?)",
+      [F, now, now],
+    );
+
     // L'article C n'a plus bougé depuis deux cents jours : il dort.
     const vieux = new Date(Date.now() - 200 * 86_400_000).toISOString();
     await db.execute('UPDATE stocks SET date_dernier_mouvement = ? WHERE article_id IN (?, ?)', [vieux, m.c, m2.c]);
@@ -208,6 +234,61 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
   verifier(classements.includes('quincaillerie') && classements.includes('30000f'), 'la famille Quincaillerie porte tout le chiffre');
   verifier(classements.includes('etskouame') && classements.includes('ventescomptoir'), 'le client à crédit et le comptoir sont classés');
 
+  console.log('Qui doit quoi, et depuis quand');
+  // La requête est vivante : attendre la ligne elle-même, pas « une ligne ».
+  await page.locator('[data-testid=carte-creances]').getByText('ETS KOUAME').waitFor();
+  const carteCreances = await texteDe(page, '[data-testid=carte-creances]');
+  verifier(carteCreances.includes('ETS KOUAME') && montant(carteCreances).toLowerCase().includes('45000f'),
+    'les clients qui nous doivent le plus : ETS KOUAME et ses 45 000 F');
+  verifier(!carteCreances.includes('COMPTE FERME'),
+    'un compte désactivé ne paraît pas : la carte et la tuile comptent les mêmes fiches');
+  const carteDettes = await texteDe(page, '[data-testid=carte-dettes]');
+  verifier(carteDettes.includes('SOCIMAT CI') && montant(carteDettes).toLowerCase().includes('220000f'),
+    'les fournisseurs à qui on doit le plus : SOCIMAT CI et ses 220 000 F');
+
+  // Rien n'est déplié tant qu'on n'a pas choisi un compte.
+  verifier((await page.locator('[data-testid=activite-tiers]').count()) === 0,
+    'aucun graphe avant qu’un compte soit choisi');
+
+  await page.locator('[data-testid=carte-dettes] button', { hasText: 'SOCIMAT CI' }).click();
+  await page.locator('[data-testid=activite-dettes] [data-testid=activite-tiers]').waitFor();
+  const activite = await texteDe(page, '[data-testid=activite-dettes]');
+  verifier(activite.includes('Reçu') && activite.includes('Payé'),
+    'le graphe d’un fournisseur parle sa langue : reçu d’un côté, payé de l’autre');
+  verifier(montant(await texteDe(page, '[data-testid=activite-totaux]')).toLowerCase() === '300000f·80000f',
+    `douze mois d’activité : 300 000 reçus, 80 000 payés (${await texteDe(page, '[data-testid=activite-totaux]')})`);
+  verifier((await texteDe(page, '[data-testid=activite-resume]')).includes('creusé'),
+    'le résumé dit que le compte s’est creusé sur la période');
+
+  // Deux barres par mois, côte à côte : la somme du facturé et du réglé ne
+  // veut rien dire, elles ne s’empilent donc jamais.
+  const moisDessines = await page.locator('[data-testid=activite-dettes] [data-testid^=activite-20]').count();
+  verifier(moisDessines === 12, `douze mois dessinés (${moisDessines})`);
+
+  await page.locator('[data-testid=carte-dettes] button', { hasText: 'SOCIMAT CI' }).click();
+  await page.locator('[data-testid=activite-dettes]').waitFor({ state: 'detached' });
+  verifier(true, 'recliquer la ligne referme le graphe');
+
+  console.log('Les raccourcis des cartes');
+  verifier(await page.getByTestId('voir-kpi-creances').getAttribute('href') === '#/clients/relance',
+    'la tuile des créances mène à la relance clients');
+  verifier(await page.getByTestId('voir-kpi-dettes').getAttribute('href') === '#/fournisseurs/relance',
+    'la tuile des dettes mène à la relance fournisseurs');
+  verifier(await page.getByTestId('voir-kpi-stock').getAttribute('href') === '#/stock/suivi',
+    'la tuile du stock mène au suivi de stock');
+  verifier(await page.getByTestId('voir-kpi-ca').getAttribute('href') === '#/ventes',
+    'la tuile du chiffre d’affaires mène aux ventes');
+  await page.locator('[data-testid=carte-creances]').getByText('ETS KOUAME').click();
+  const ouvrir = page.locator('[data-testid^=ouvrir-compte-]');
+  verifier(/#\/clients\/compte\?id=/.test(await ouvrir.getAttribute('href')),
+    'le compte choisi s’ouvre sur sa fiche, identifiant compris');
+  await page.getByTestId('voir-kpi-creances').click();
+  await page.locator('main', { hasText: 'Relance' }).first().waitFor();
+  verifier(true, 'le raccourci emmène vraiment sur l’écran');
+  await page.goto(`${BASE_URL}/#/`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('[data-testid=kpi-ca-valeur]').waitFor();
+
   console.log('Changer de période');
   await page.getByTestId('periode-ANNEE').click();
   await page.waitForFunction(() => /60/.test(document.querySelector('[data-testid=kpi-ca-valeur]').textContent));
@@ -246,6 +327,25 @@ const montant = (t) => t.replace(/[\s  ]/g, '');
   verifier(totalGroupe.includes('36000F') && totalGroupe.includes('12000F'), 'la ligne de total reprend les mêmes chiffres');
   verifier((await texteDe(page, '[data-testid=filiale-BKE]')).includes('Filiale Bouaké'), 'chaque filiale a sa ligne');
   verifier((await page.locator('[data-testid=classement-' + faits.filiale2 + ']').count()) === 1, 'les filiales sont comparées entre elles');
+
+  /*
+   * L'assertion qui garde la règle : en vue groupe, aucun module n'a de
+   * filiale sur laquelle travailler — `/clients` y répondrait « Sélectionnez
+   * une filiale ». Un raccourci qui ouvre une page vide fait perdre le clic
+   * qu'il promettait de gagner, il ne s'affiche donc pas.
+   */
+  verifier((await page.locator('[data-testid^=voir-kpi-]').count()) === 0,
+    'vue groupe : aucun raccourci de tuile, ils ne mèneraient nulle part');
+
+  // Les comptes, eux, connaissent leur filiale : le classement reste ouvert,
+  // et toutes les filiales s'y mêlent — c'est ce qu'un directeur vient voir.
+  await page.locator('[data-testid=carte-dettes]').getByText('SOCIMAT CI').waitFor();
+  await page.locator('[data-testid=carte-dettes] button', { hasText: 'SOCIMAT CI' }).click();
+  await page.locator('[data-testid=activite-dettes] [data-testid=activite-tiers]').waitFor();
+  verifier(true, 'vue groupe : un compte se déplie quand même, il porte sa filiale');
+  const ouvrirGroupe = page.locator('[data-testid^=ouvrir-compte-]');
+  verifier(/#\/fournisseurs\/compte\?id=/.test(await ouvrirGroupe.getAttribute('href')),
+    'vue groupe : « Ouvrir son compte » reste proposé — il bascule le périmètre en chemin');
 
   const telechargement = page.waitForEvent('download');
   await page.getByTestId('exporter-tableau-de-bord').click();

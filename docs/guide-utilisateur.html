@@ -174,7 +174,7 @@
     Gestion commerciale multi-filiales
   </div>
   <div class="pied">
-    Version 0.4.0 — 28 octobre 2026<br />
+    Version 1.4.0 — 23 novembre 2026<br />
     Ce guide suit l'application écran par écran. Gardez-le à portée du poste.
   </div>
 </section>
@@ -188,19 +188,32 @@
   <li><div><span class="titre-chap">Se repérer</span><br /><span class="desc">Le menu, le périmètre, les boutons que l'on retrouve partout, et la lecture des longues listes.</span></div></li>
   <li><div><span class="titre-chap">Paramètres — rôles et utilisateurs</span><br /><span class="desc">Créer un rôle, cocher ses droits, l'affecter à quelqu'un.</span></div></li>
   <li><div><span class="titre-chap">Le point de vente</span><br /><span class="desc">Encaisser, la remise en francs, les brouillons, le ticket et la facture.</span></div></li>
-  <li><div><span class="titre-chap">Ventes et catalogue</span><br /><span class="desc">Relire une vente, l'annuler, tenir les articles et les prix.</span></div></li>
+  <li><div><span class="titre-chap">Ventes et catalogue</span><br /><span class="desc">Relire une vente, la corriger, rouvrir un ticket validé, tenir les articles, les prix et le poids.</span></div></li>
   <li><div><span class="titre-chap">Le stock</span><br /><span class="desc">Alertes, stock dormant, entrées, sorties, transferts, inventaire, production, et l'historique de chacun.</span></div></li>
-  <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire, proforma, compte client, versements, relances.</span></div></li>
-  <li><div><span class="titre-chap">Fournisseurs</span><br /><span class="desc">Commandes, réceptions, factures d'achat, règlements.</span></div></li>
-  <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, dépenses et leurs catégories, transferts entre filiales et leur bordereau.</span></div></li>
+  <li><div><span class="titre-chap">Clients</span><br /><span class="desc">Répertoire et sa reprise depuis Excel, proforma, compte client, versements, relances.</span></div></li>
+  <li><div><span class="titre-chap">Fournisseurs</span><br /><span class="desc">Commandes, réceptions, factures d'achat, règlements, reprise du répertoire.</span></div></li>
+  <li><div><span class="titre-chap">Trésorerie</span><br /><span class="desc">Caisses, versements, catégories, la dépense qui s'approuve, transferts entre filiales et leur bordereau.</span></div></li>
   <li><div><span class="titre-chap">Livraisons et personnel</span><br /><span class="desc">Bons de livraison, effectif, pointage, paie.</span></div></li>
-  <li><div><span class="titre-chap">Tableau de bord</span><br /><span class="desc">Les huit chiffres, les quatre graphiques, la consolidation.</span></div></li>
+  <li><div><span class="titre-chap">Tableau de bord</span><br /><span class="desc">Les huit chiffres, les graphiques, les raccourcis, qui doit quoi, la consolidation.</span></div></li>
   <li><div><span class="titre-chap">Rapport des marges</span><br /><span class="desc">Ce que chaque catégorie d'articles rapporte, ce qui se vend à perte, la feuille à signer.</span></div></li>
   <li><div><span class="titre-chap">Historiques et audit</span><br /><span class="desc">Retrouver une pièce, la rééditer, savoir qui a fait quoi.</span></div></li>
   <li><div><span class="titre-chap">Imprimer et exporter</span><br /><span class="desc">Ticket 80 mm, documents A4, PDF, classeurs Excel.</span></div></li>
   <li><div><span class="titre-chap">Que faire si…</span><br /><span class="desc">Les situations courantes et leur réponse.</span></div></li>
   <li><div><span class="titre-chap">Annexes</span><br /><span class="desc">Les cinq rôles livrés, la liste des permissions, les raccourcis.</span></div></li>
 </ol>
+</div>
+
+<div class="alerte">
+  <span class="titre">Ce qui est nouveau depuis l'installeur 0.4.0</span>
+  <p>Si vous connaissez déjà l'application, voici ce qui a changé — et où c'est expliqué :</p>
+  <ul>
+    <li><strong>L'argent d'une vente entre en caisse à la validation de journée</strong>, pas à l'encaissement (§ 6.1.4). Un ticket déjà validé se <strong>remet en attente</strong> pour être corrigé (§ 6.1.5).</li>
+    <li>Une <strong>dépense s'engage puis s'approuve</strong>, dans la nouvelle entrée de menu <span class="chemin-ui">Dépense</span> : c'est l'approbation qui sort l'argent (§ 10.7).</li>
+    <li>Un <strong>bon d'entrée</strong> se <strong>reprend pour correction</strong> ou s'annule depuis son historique (§ 7.8).</li>
+    <li>La fiche article porte un <strong>poids en tonnes</strong>, facultatif, qui fait apparaître le tonnage sur les bons d'entrée et de commande (§ 6.2).</li>
+    <li>Les répertoires <strong>clients et fournisseurs s'importent depuis Excel</strong>, soldes d'ouverture compris (§ 8.4 et 9.2).</li>
+    <li>Le tableau de bord porte un <strong>raccourci par carte</strong>, les deux cartes <strong>qui doit quoi</strong> et le <strong>graphe d'activité</strong> d'un compte (§ 12.5 et 12.6).</li>
+  </ul>
 </div>
 
 <!-- ============ 1. INSTALLER ============ -->
@@ -321,7 +334,7 @@ un caissier n'a ni Employés ni Paramètres, et c'est normal.</p>
   <tr><th>Famille</th><th>Entrées</th></tr>
   <tr><td class="chemin">Pilotage</td><td>Consolidation (le tableau de bord) · Rapports (la marge par catégorie)</td></tr>
   <tr><td class="chemin">Exploitation</td><td>Point de Vente · Ventes · Catalogue · Stock</td></tr>
-  <tr><td class="chemin">Tiers &amp; Finances</td><td>Clients · Fournisseurs · Trésorerie · Livraisons</td></tr>
+  <tr><td class="chemin">Tiers &amp; Finances</td><td>Clients · Fournisseurs · Trésorerie · Dépense · Livraisons</td></tr>
   <tr><td class="chemin">Ressources humaines</td><td>Employés</td></tr>
   <tr><td class="chemin">Rapports &amp; Sécurité</td><td>Historiques · Audit</td></tr>
   <tr><td class="chemin">Administration</td><td>Paramètres</td></tr>
@@ -592,12 +605,14 @@ tirent jamais le même numéro. Collez-le sur l'unité centrale : il sert au dé
 <h3>6.1 — Ventes</h3>
 <p><span class="chemin-ui">Ventes</span> liste les tickets de la période, avec le récapitulatif de
 caisse en bas : chiffre d'affaires, encaissé ventilé par mode de paiement, vendu à crédit, ventes
-en attente de validation, et ventes annulées — hors totaux.</p>
+en attente de validation, et ventes annulées — hors totaux. Sous son montant, la tuile
+<em>En attente de validation</em> dit ce qui reste à <strong>verser en caisse</strong> (voir 6.1.4).</p>
 <ul>
   <li><strong>Ouvrir un ticket</strong> montre son détail et permet de le rééditer.</li>
-  <li><strong>Valider</strong> une vente en attente, si votre rôle l'autorise.</li>
+  <li><strong>Valider</strong> les ventes en attente, si votre rôle l'autorise : c'est ce geste, et lui seul, qui verse l'argent en caisse (voir 6.1.4).</li>
   <li><strong>Corriger</strong> un ticket <em>en attente</em> : quantités, articles, remise, client, règlement (voir 6.1.2).</li>
-  <li><strong>Annuler</strong> une vente en attente : la marchandise revient en stock, la créance se défait et l'argent ressort de la caisse. Le <strong>code du gérant</strong> est demandé (voir 6.1.3).</li>
+  <li><strong>Annuler</strong> une vente en attente : la marchandise revient en stock et la créance se défait. La caisse, elle, ne bouge pas — le ticket n'y avait encore rien versé (voir 6.1.4). Le <strong>code du gérant</strong> est demandé (voir 6.1.3).</li>
+  <li><strong>Remettre en attente</strong> un ticket déjà validé, quand l'erreur se voit après coup (voir 6.1.5).</li>
   <li><em>Imprimer / PDF</em> sort le journal des ventes A4, avec emplacement de visa.</li>
 </ul>
 
@@ -623,8 +638,8 @@ règlement.</p>
   </ol>
 </div>
 <p>Les mêmes règles qu'au comptoir s'appliquent : montant remis insuffisant, plafond de crédit,
-stock disponible. Une vente <strong>validée</strong> ne se corrige plus — elle est entrée dans la
-journée de caisse. À ce stade, il ne reste que l'annulation.</p>
+stock disponible. Une vente <strong>validée</strong> ne se corrige pas directement : son argent est
+entré dans la journée de caisse. Il faut d'abord la <em>remettre en attente</em> — voir 6.1.5.</p>
 
 <h4>6.1.3 — Le code du gérant, pour annuler</h4>
 <p>Annuler une vente est le geste le plus lourd du comptoir. L'application demande donc un
@@ -642,17 +657,83 @@ code, rien ne part.</p>
 <p>Le code se vérifie sur le poste, <strong>même sans réseau</strong> : une coupure n'empêche pas de
 rattraper une erreur de caisse.</p>
 
+<h4>6.1.4 — La validation de journée met l'argent en caisse</h4>
+<p>Encaisser au comptoir ne remplit pas la caisse. L'encaissement sort la marchandise du stock,
+enregistre le règlement du client et fixe les montants du ticket — mais l'argent reste
+<strong>entre les mains du caissier</strong>, et le ticket demeure <em>en attente</em>. Il entre
+dans la caisse à la <strong>validation de journée</strong> : <span class="chemin-ui">Ventes</span>,
+cochez les tickets, puis <em>Valider</em> — après avoir compté le tiroir.</p>
+<ul>
+  <li>La fenêtre de confirmation <strong>annonce la somme qui va être versée</strong> avant de valider : c'est le moment de la comparer aux billets qu'on a en main.</li>
+  <li>Une recette est écrite au journal de caisse <strong>par ticket</strong>, datée du <strong>jour de la validation</strong>. Ce qui est versé est donc ce qui a été arrêté et compté.</li>
+  <li>Tant que la journée n'est pas validée, <em>Encaissé</em> (lu sur les ventes) et le solde de la caisse <strong>divergent</strong>. C'est voulu : l'écart, c'est exactement ce qui est encore au comptoir.</li>
+  <li>Une vente validée ne se corrige plus et ne s'annule plus — il faut la rouvrir d'abord (6.1.5).</li>
+</ul>
+<div class="note">
+  <span class="titre">Valider chaque jour, après avoir compté</span>
+  <p>La validation n'est pas une formalité : c'est elle qui rapproche le tiroir-caisse de
+  l'application. Une journée laissée non validée garde son argent nulle part dans les comptes, et
+  le lendemain plus personne ne sait quel billet appartient à quelle journée.</p>
+  <p>Le mode de règlement ne change rien à cette règle : chèque, carte et virement entrent en
+  caisse comme les espèces, puisqu'ils sont rattachés à une caisse. Seul le <strong>crédit</strong>
+  ne verse rien — il n'y a pas d'argent à verser, il y a une créance.</p>
+</div>
+
+<h4>6.1.5 — Remettre un ticket validé en attente</h4>
+<p>L'erreur se voit parfois après la validation : un article facturé deux fois, le mauvais client
+mis en compte. Le ticket se rouvre — <strong>lui seul, pas la journée</strong>. Ouvrez-le depuis la
+liste des ventes, puis <em>Remettre en attente</em> : il redevient corrigible et annulable,
+exactement comme avant la validation.</p>
+<ul>
+  <li>Le <strong>versement ressort de la caisse</strong>, et la reprise se lit au journal sous <em>Réouverture de vente</em> : l'argent revient entre les mains du caissier jusqu'à la prochaine validation.</li>
+  <li>Le <strong>stock ne bouge pas</strong> : la marchandise est sortie à l'encaissement, et c'est la correction qui s'en occupera.</li>
+  <li>L'opération est inscrite au <strong>journal d'audit</strong>, avec le nom de qui l'a faite.</li>
+  <li>Il faut le droit de <strong>valider une vente</strong> : qui ferme la journée est aussi qui peut la rouvrir.</li>
+</ul>
+<div class="note">
+  <span class="titre">Un ticket d'hier remonte sur une journée déjà close</span>
+  <p>Quand le ticket ne date pas d'aujourd'hui, la fenêtre de confirmation le dit, avec sa date : la
+  correction retombera sur une journée de caisse déjà arrêtée, dont l'état imprimé ne
+  correspondra plus. Pour une vieille pièce, l'annulation puis un ticket neuf laissent une piste
+  plus claire.</p>
+  <p>Une vente <strong>annulée</strong>, elle, ne revient par aucun chemin : sa marchandise est
+  rentrée et son encaissement contre-passé. On refait le ticket.</p>
+</div>
+
 <h3>6.2 — Catalogue</h3>
 <p><span class="chemin-ui">Catalogue</span> tient les articles de la filiale : code, désignation,
 famille, prix de vente, seuils de stock.</p>
 <ul>
   <li><strong>Détail</strong> d'un article : stock par dépôt, activité commerciale, et <em>Imprimer la fiche</em>.</li>
   <li><strong>Modifier les prix</strong> est un droit à part : les prix peuvent s'afficher sans pouvoir se changer.</li>
+  <li><strong>Poids unitaire (tonne)</strong> : un champ facultatif de la fiche, qui fait apparaître le tonnage sur les bons d'entrée et de commande — voir l'encadré ci-dessous.</li>
   <li><strong>Importer Excel</strong> charge un export de l'ancien logiciel. Le nombre d'articles importés est annoncé, et chaque ligne rejetée est expliquée.</li>
   <li><strong>Désactiver</strong> retire l'article du comptoir et des écrans de saisie sans rien effacer de ce qu'il a vendu. C'est le geste courant, celui d'un article qu'on ne vend plus.</li>
   <li><strong>Supprimer</strong> (la corbeille) efface pour de bon un article <em>qui n'a jamais servi</em> : faute de frappe, doublon, ligne d'import malheureuse. Dès qu'il a une ligne de vente, un mouvement de stock, une commande, un devis ou du stock dans un dépôt, l'application refuse et dit ce qui le retient.</li>
   <li><em>Imprimer / PDF</em> sort le catalogue complet, qui se poursuit de page en page.</li>
 </ul>
+
+<div class="note">
+  <span class="titre">Le poids se donne en tonnes, et il est facultatif</span>
+  <p>La fiche article porte un champ <strong>Poids unitaire (tonne)</strong>, à côté des seuils de
+  stock : <code>0,05</code> pour un sac de ciment de 50 kg, <code>2,5</code> pour deux tonnes et
+  demie de fer à béton. La tonne et non le kilo, parce que c'est l'unité du camion et du devis de
+  transport — celle dans laquelle on négocie.</p>
+  <p>Renseigné, il fait <strong>apparaître de lui-même</strong> une colonne <em>Poids</em> et une
+  ligne <em>Poids total</em> sur les bons d'entrée et les bons de commande — à l'écran, sur le
+  document imprimé et dans l'export Excel — dès qu'un article pesé entre dans le bon, et les fait
+  disparaître quand il en sort. Il n'y a <strong>aucune case à cocher</strong> : la colonne suit les
+  articles choisis.</p>
+  <p>Laissé vide, le poids est <strong>inconnu</strong> — ce n'est pas « pèse zéro ». Un bon où
+  seuls certains articles sont renseignés annonce donc « <strong>Poids total (articles pesés
+  seulement)</strong> », plutôt qu'un tonnage amputé sur lequel on chargerait un camion. Renseignez
+  d'abord ce qui se charge en vrac : ciment, fer, tôles, carrelage.</p>
+  <p>Le tonnage n'est jamais figé sur le bon : il se recalcule (quantité × poids) à chaque
+  affichage, et ne peut donc pas divorcer des quantités. Un bon réédité porte le poids
+  <strong>d'aujourd'hui</strong> — c'est le poids réel du sac qu'on charge qui intéresse le
+  transporteur — là où son code, sa désignation et son unité restent la photo du jour de la
+  saisie.</p>
+</div>
 
 <div class="note">
   <span class="titre">Supprimer demande la connexion</span>
@@ -702,6 +783,7 @@ seuls — on y cherche son bon d'entrée sans traverser la journée de la caisse
   <li>Un transfert écrit deux mouvements par article (la sortie puis l'entrée). Il n'est compté <strong>qu'une fois</strong>, du dépôt de départ vers celui d'arrivée.</li>
   <li>L'inventaire n'affiche pas une quantité mais un <strong>écart net</strong> signé : seuls les articles mal comptés ont produit un mouvement.</li>
   <li>L'historique des <strong>entrées</strong> porte deux colonnes de plus : <em>Livré le</em>, l'arrivée réelle de la marchandise quand elle a été saisie, et <em>Remise</em>, le rabais obtenu sur le bon. Le bandeau totalise les remises de la période.</li>
+  <li>Lui seul porte aussi, en bout de ligne, les deux boutons <em>Reprendre pour corriger</em> et <em>Annuler le bon</em> — voir 7.8.</li>
 </ul>
 <div class="note">
   <span class="titre">Douze mois</span>
@@ -718,11 +800,14 @@ seuls — on y cherche son bon d'entrée sans traverser la journée de la caisse
     <li>Saisissez la <strong>date et l'heure de livraison</strong> si la marchandise est arrivée avant la saisie — la veille au soir, par exemple. Vide, c'est l'heure de la saisie qui fait foi.</li>
     <li>Ajoutez les articles reçus, avec la quantité et le prix d'achat.</li>
     <li>Portez la <strong>remise globale en francs</strong> si le fournisseur en a accordé une : elle se donne sur le bon entier, jamais article par article.</li>
-    <li>Relisez le pied du tableau : <em>Total brut</em>, <em>Remise globale</em>, <em>Net à payer</em>.</li>
+    <li>Relisez le pied du tableau : <em>Total brut</em>, <em>Remise globale</em>, <em>Net à payer</em> — et <em>Poids total</em> si la marchandise est pesée (voir 6.2).</li>
     <li>Validez. Le stock monte, le coût moyen du dépôt est recalculé <strong>sur le coût net de remise</strong>, et le message confirme le montant porté au compte du fournisseur.</li>
     <li><em>Imprimer le bon</em> sort le <strong>bon d'entrée</strong> : lignes numérotées, stock avant / après, remise, brut et net, date de livraison, code-barres, le total <strong>en toutes lettres</strong> et deux cadres de signature — le magasinier et le responsable.</li>
   </ol>
 </div>
+<p>Un bon mal saisi n'est pas perdu : il se <strong>reprend pour correction</strong> ou s'annule
+depuis son historique — voir 7.8.</p>
+
 <div class="note">
   <span class="titre">La remise est répartie, pas oubliée</span>
   <p>Une remise de 5 500 F sur un bon de 55 000 F est redescendue sur les lignes
@@ -826,6 +911,47 @@ veillez à ce qu'il soit le même d'une filiale à l'autre.</p>
 régularisation. L'inventaire se retrouve ensuite dans <span class="chemin-ui">Historiques →
 Inventaires</span>.</p>
 
+<h3>7.8 — Reprendre ou annuler un bon d'entrée</h3>
+<p>Une quantité fausse, un prix d'achat saisi de travers, un bon enregistré deux fois : l'erreur se
+rattrape depuis <span class="chemin-ui">Stock → Entrée → Historique</span>. Chaque ligne porte
+deux boutons à droite.</p>
+<table>
+  <tr><th>Bouton</th><th>Ce qu'il fait</th></tr>
+  <tr><td class="chemin">Reprendre pour corriger</td><td>Rouvre le bon dans l'écran de saisie, avec ses lignes, son fournisseur, sa remise et sa date de livraison. Vous corrigez, puis <em>Enregistrer la correction</em>.</td></tr>
+  <tr><td class="chemin">Annuler le bon</td><td>Défait le bon entier : la marchandise ressort du stock, et la pièce portée au compte du fournisseur est annulée avec lui.</td></tr>
+</table>
+<div class="pasapas">
+  <div class="etiquette">Ce que la correction fait vraiment</div>
+  <ol>
+    <li>La <strong>référence ne change pas</strong> : c'est le même papier qu'on reprend. Le champ est grisé exprès — le rouvrir irait créer un second bon.</li>
+    <li>L'ancien bon est <strong>annulé</strong> et le nouveau enregistré : les deux restent au journal des mouvements. Une correction se lit, elle ne s'efface pas.</li>
+    <li>Le stock redescend comme il était, puis remonte sur les nouvelles quantités.</li>
+    <li>La pièce du fournisseur est annulée, et la nouvelle prend sa place pour le nouveau net.</li>
+    <li>L'entête du bon dit « Correction du bon … » tant que vous y êtes. <em>Abandonner la correction</em> ressort sans rien toucher, aussi longtemps que vous n'avez pas enregistré.</li>
+  </ol>
+</div>
+<p>Avant d'annuler, l'application affiche <strong>article par article ce que l'annulation retirera</strong>
+du stock — « CIM-50 : 120 − 20 = 100 » — pour qu'on décide en connaissance de cause. Deux
+avertissements s'ajoutent quand il y a lieu :</p>
+<ul>
+  <li><strong>Le stock passe sous zéro</strong> : la marchandise de ce bon est déjà repartie. L'annulation est tout de même possible — c'est un inventaire qui soldera l'écart.</li>
+  <li><strong>Le coût moyen n'est pas recalculé en arrière</strong> : il garde la trace de cet achat tant qu'il reste de l'article en stock dans le dépôt. Si la correction ramène l'article à zéro, c'est sans conséquence — la prochaine entrée repart de son propre coût.</li>
+</ul>
+<div class="note">
+  <span class="titre">Deux refus, et ce qu'il faut faire</span>
+  <p><strong>« Ce bon a déjà été annulé »</strong> : sa marchandise n'est plus en stock à son titre.
+  Le journal en garde les deux lignes ; saisissez un bon neuf.</p>
+  <p><strong>« Un règlement a déjà été passé sur la pièce »</strong> : annulez d'abord ce règlement
+  dans <span class="chemin-ui">Fournisseurs → Règlements</span>, sinon le paiement resterait sans
+  facture à laquelle se rattacher.</p>
+  <p>Un bon qui n'est pas sur ce poste ne se reprend pas non plus : au-delà de douze mois, les bons
+  restent sur le serveur (voir 2.5).</p>
+</div>
+<p class="note"><strong>Les entrées seulement.</strong> Les sorties, les transferts, l'inventaire et
+la production ne portent pas ces deux boutons : chacun se défait autrement — une sortie par une
+entrée, un comptage par un nouveau comptage — et l'entrée est la seule pièce qui engage en plus le
+compte d'un fournisseur.</p>
+
 <!-- ============ 8. CLIENTS ============ -->
 <h2><span class="num">8.</span>Clients</h2>
 <p class="chapeau">Six sous-écrans, du répertoire à la relance.</p>
@@ -876,6 +1002,44 @@ Inventaires</span>.</p>
 Si aucun logiciel de messagerie n'est configuré sur le poste, le bouton <em>Copier</em> met le texte
 dans le presse-papiers.</p>
 
+<h3>8.4 — Reprendre un répertoire existant depuis Excel</h3>
+<p>C'est ce qu'on fait le jour où la maison passe à QuincaPro : plutôt que de ressaisir cent fiches
+— et autant d'occasions de se tromper d'un chiffre sur une créance —,
+<span class="chemin-ui">Clients → Répertoire → Importer des clients</span> lit un classeur Excel ou
+un CSV, <strong>soldes d'ouverture compris</strong>.</p>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li>Ouvrez <em>Importer des clients</em>. Les consignes s'affichent <strong>avant</strong> le choix du fichier : lisez-les, elles tiennent en un écran.</li>
+    <li><em>Télécharger le modèle</em> donne un classeur déjà rempli de deux exemples — dont un solde négatif. Le plus sûr est de coller vos données dedans.</li>
+    <li>Choisissez le fichier. L'application annonce le nombre de fiches créées, et liste <strong>une à une</strong> les lignes écartées avec leur raison.</li>
+  </ol>
+</div>
+<table>
+  <caption>Les colonnes reconnues — l'ordre est libre</caption>
+  <tr><th>Colonne</th><th>Autres noms acceptés</th><th>Si elle manque</th></tr>
+  <tr><td><strong>Nom</strong></td><td>Raison sociale, Client, Désignation</td><td>le fichier est refusé</td></tr>
+  <tr><td>Code</td><td>Code client, Référence, N° compte</td><td>un code <code>CLI-</code> est attribué</td></tr>
+  <tr><td>Solde initial</td><td>Solde, Créance, Ancien solde, Dû</td><td>zéro</td></tr>
+  <tr><td>Date solde</td><td>Date d'effet, Arrêté au</td><td>vide</td></tr>
+  <tr><td>Mobile, Téléphone, Adresse, Ville, Contact, Email, RC, CC, Plafond, Groupe</td><td>—</td><td>vide</td></tr>
+</table>
+<ul>
+  <li>Une <strong>ligne d'entêtes</strong>, puis un client par ligne. Les titres au-dessus et les totaux en dessous sont écartés d'eux-mêmes ; sans ligne d'entêtes, l'import est <strong>refusé</strong> plutôt que décalé.</li>
+  <li>Le <strong>solde</strong> est <strong>positif</strong> quand le client doit, <strong>négatif</strong> quand il a versé une avance. « 150 000 », « 150000 F » et « 150.000 » sont lus pareil — des nombres, pas des formules.</li>
+  <li>La <strong>date d'arrêté</strong> se donne en jj/mm/aaaa ou en vraie date Excel. Ce qui n'est pas lisible reste <strong>vide</strong> plutôt que deviné : une date fausse déplacerait une créance d'un exercice à l'autre.</li>
+  <li>L'import ne crée <strong>ni facture ni règlement</strong> : le solde repris est un point de départ, pas une pièce.</li>
+</ul>
+<div class="note">
+  <span class="titre">Relancer le même fichier ne double rien</span>
+  <p>Un client <strong>déjà au répertoire n'est jamais écrasé</strong>. Le rapprochement se fait sur
+  le <strong>code</strong> quand le fichier en porte un, sur le <strong>nom</strong> sinon — majuscules
+  et accents indifférents. Passer deux fois le même fichier n'ajoute rien et ne double aucune
+  créance.</p>
+  <p>Et tout passe en <strong>une seule fois</strong> : si une ligne fait échouer l'écriture, rien
+  n'est repris — cent fiches à moitié importées seraient pires que pas d'import du tout.</p>
+</div>
+
 <!-- ============ 9. FOURNISSEURS ============ -->
 <h2><span class="num">9.</span>Fournisseurs</h2>
 
@@ -898,12 +1062,43 @@ servi ne s'efface pas, et un compte qui porte de l'argent non plus (voir 8.1).</
   <div class="etiquette">Pas à pas</div>
   <ol>
     <li><span class="chemin-ui">Fournisseurs → Bons de commande</span>, puis <em>Nouveau bon</em>.</li>
-    <li>Choisissez le fournisseur, ajoutez les articles et les quantités. Validez : le bon s'imprime en A4.</li>
+    <li>Choisissez le fournisseur, ajoutez les articles et les quantités. Si des articles portent un <strong>poids</strong>, la colonne <em>Poids</em> et le <em>Poids total</em> apparaissent d'eux-mêmes — à l'écran, sur le bon imprimé et dans l'export (voir 6.2).</li>
+    <li>Portez la <strong>remise globale en francs</strong> si elle a été négociée, et la TVA s'il y a lieu. Validez : le bon s'imprime en A4.</li>
     <li>À l'arrivée de la marchandise, revenez sur le bon et <strong>réceptionnez</strong> — totalement ou partiellement.</li>
     <li>La réception fait entrer le stock et produit la <strong>facture d'achat</strong>, rééditable depuis la fiche du fournisseur ou depuis le bon.</li>
     <li>Le règlement se saisit dans <span class="chemin-ui">Compte fournisseur</span> et sort la caisse.</li>
   </ol>
 </div>
+
+<div class="note">
+  <span class="titre">La remise se négocie sur le bon entier, en francs</span>
+  <p>« Je vous fais 15 000 sur le tout » : c'est ainsi qu'une remise fournisseur se donne, et c'est
+  ainsi qu'elle se saisit — jamais article par article, jamais en pourcentage. L'application la
+  <strong>redescend sur les lignes au prorata de leur valeur</strong>, comme sur une entrée en stock
+  (voir 7.2) : la part de chaque ligne s'affiche, elle ne se saisit pas.</p>
+  <p>C'est ce qui permet de <strong>réceptionner partiellement</strong> sans fausser le coût : la part
+  de remise suit la quantité reçue. La marchandise entre en stock au coût <strong>net</strong> de la
+  remise, TVA comprise.</p>
+  <p>Les bons enregistrés <strong>avant</strong> ce changement portaient des pourcentages. Ils
+  continuent de se calculer et de s'imprimer comme au jour de leur création : un relevé fournisseur
+  qui changerait de total après une mise à jour ne serait plus un relevé.</p>
+</div>
+
+<h3>9.2 — Reprendre un répertoire de fournisseurs</h3>
+<p><span class="chemin-ui">Fournisseurs → Répertoire → Importer des fournisseurs</span> fonctionne
+exactement comme l'import des clients — consignes avant le choix du fichier, modèle
+téléchargeable, aucune fiche existante écrasée, tout en une seule fois. Reportez-vous au § 8.4
+pour le détail.</p>
+<div class="alerte">
+  <span class="titre">Le solde se lit à l'envers de celui des clients</span>
+  <p>C'est le piège de cet écran. Un solde d'ouverture <strong>positif</strong> est ce que
+  <strong>la maison doit</strong> au fournisseur ; un solde <strong>négatif</strong> est une avance
+  déjà versée chez lui. Chez les clients, le positif est ce qu'ils nous doivent — le signe ne veut
+  pas dire la même chose des deux côtés du grand livre.</p>
+</div>
+<p>Les entêtes du compte fournisseur sont reconnus en plus de ceux des clients
+(« Dette », « À payer »), ainsi que l'<strong>interlocuteur</strong>, la <strong>banque</strong> et
+le <strong>compte bancaire</strong>.</p>
 
 <!-- ============ 10. TRÉSORERIE ============ -->
 <h2><span class="num">10.</span>Trésorerie</h2>
@@ -917,8 +1112,11 @@ servi ne s'efface pas, et un compte qui porte de l'argent non plus (voir 8.1).</
   <tr><td class="chemin">Entrée en caisse</td><td>Une recette qui n'est pas une vente.</td></tr>
   <tr><td class="chemin">Transfert inter caisse</td><td>Déplacer des fonds d'une caisse à l'autre, dans la filiale.</td></tr>
   <tr><td class="chemin">Transfert inter filiale</td><td>Envoyer des fonds à une autre filiale.</td></tr>
-  <tr><td class="chemin">Dépense</td><td>Une sortie d'argent justifiée (carburant, transport, fourniture).</td></tr>
+  <tr><td class="chemin">Dépense</td><td>Une sortie d'argent justifiée (carburant, transport, fourniture), <strong>réglée sur-le-champ</strong> : la caisse est débitée à l'enregistrement.</td></tr>
 </table>
+<p>À côté de Trésorerie, le menu porte une entrée <span class="chemin-ui">Dépense</span> à part : la
+dépense qu'on <strong>engage d'abord et qu'un responsable approuve ensuite</strong> — voir 10.7. Les
+deux écrans se renvoient l'un à l'autre, pour qu'on sache lequel ouvrir.</p>
 
 <h3>10.1 — L'état des caisses</h3>
 <p>Une ligne par caisse, le total en bas. Les filtres : recherche, caisses actives / fermées /
@@ -1030,6 +1228,51 @@ trace de ce que devient l'argent.</p>
 <strong>« ANNULÉ — ce bordereau ne vaut pas remise de fonds »</strong> et <strong>plus aucune case
 à signer</strong> : une signature y ferait croire à une remise qui n'a pas eu lieu.</p>
 
+<h3>10.7 — La dépense qui s'approuve</h3>
+<p><span class="chemin-ui">Dépense</span>, dans le menu, à côté de Trésorerie.
+Une dépense s'<strong>engage</strong> d'abord, puis s'<strong>approuve</strong> — et c'est
+l'approbation qui fait sortir l'argent de la caisse.</p>
+<p>C'est le symétrique de la vente, dans l'autre sens : là, l'argent entre à la validation de
+journée (6.1.4) ; ici, il sort à l'approbation. Tant qu'elle attend, la dépense existe, se lit, se
+corrige — et ne coûte rien.</p>
+<div class="pasapas">
+  <div class="etiquette">Pas à pas</div>
+  <ol>
+    <li><em>Engager une dépense</em>. Montant, date, <strong>caisse qui paiera</strong>, catégorie, <strong>bénéficiaire</strong> (obligatoire), pièce justificative et motif.</li>
+    <li>Sous la caisse choisie, l'écran montre son <strong>solde actuel et celui qu'elle aurait après approbation</strong> — et dit, sans l'interdire, qu'elle passerait à découvert.</li>
+    <li>La pièce prend un numéro <code>DEP-…</code> et attend. Rien n'est sorti de la caisse.</li>
+    <li>Un responsable la <strong>coche dans la liste</strong> et <em>Approuve</em> : la fenêtre annonce le montant total avant de valider. L'argent sort alors, par une ligne de journal portant la pièce et sa catégorie, datée du <strong>jour de l'approbation</strong>.</li>
+  </ol>
+</div>
+<div class="alerte">
+  <span class="titre">Saisir et approuver sont deux droits</span>
+  <p>Engager une dépense demande <em>Saisir une recette ou une dépense</em> ; l'approuver demande
+  <em>Approuver une dépense engagée</em>. Les deux ne doivent pas être sur le même compte, sans quoi
+  l'attente ne protège rien : <strong>le caissier engage, le gérant autorise</strong>. La pièce garde
+  le nom de qui l'a engagée et de qui l'a approuvée — une autorisation sans nom n'en est pas une.</p>
+</div>
+<table>
+  <caption>Ce qu'on peut faire d'une dépense, selon son état</caption>
+  <tr><th>État</th><th>Ce qui est possible</th></tr>
+  <tr><td class="chemin">En attente</td><td><strong>Corriger</strong>, <strong>refuser</strong> (avec un motif, conservé au dossier) ou <strong>approuver</strong>. La caisse n'a pas bougé.</td></tr>
+  <tr><td class="chemin">Approuvée</td><td><strong>Remettre en attente</strong> : le montant rentre en caisse, et la reprise se lit au journal sous <em>Réouverture de dépense</em>. Une sortie d'argent ne s'efface pas, elle se contre-passe.</td></tr>
+  <tr><td class="chemin">Refusée</td><td>Rien à reprendre : elle n'a jamais rien sorti de la caisse. Qui change d'avis l'engage de nouveau.</td></tr>
+</table>
+<p>Les filtres de l'écran : la période (avec <em>Aujourd'hui</em>), la caisse, le statut, et une
+recherche sur le numéro de pièce ou le bénéficiaire. Les quatre tuiles du haut distinguent ce qui
+est <strong>sorti de caisse</strong> de ce qui est <strong>engagé sans être payé</strong> — encore en
+caisse, mais déjà promis.</p>
+<div class="note">
+  <span class="titre">Quel écran pour quelle dépense</span>
+  <p><span class="chemin-ui">Dépense</span> : ce qui doit être autorisé avant d'être payé — une
+  commande de pièces, une réparation, un dédouanement. L'argent sort à l'approbation.</p>
+  <p><span class="chemin-ui">Trésorerie → Dépense</span> : ce qui est réglé sur-le-champ au guichet —
+  le carburant, un transport, un repas. La caisse est débitée aussitôt, sans approbation à
+  demander.</p>
+  <p>Les deux partagent les <strong>mêmes catégories</strong> (voir 10.2) et écrivent dans le
+  <strong>même journal de caisse</strong> : un état de dépenses du mois les voit toutes les deux.</p>
+</div>
+
 <!-- ============ 11. LIVRAISONS & PERSONNEL ============ -->
 <h2><span class="num">11.</span>Livraisons et personnel</h2>
 
@@ -1126,6 +1369,59 @@ décision aujourd'hui. L'écran entier s'imprime en A4, et la vue groupe s'expor
 filiale, ou <strong>Groupe (consolidé)</strong> : les chiffres s'additionnent, les taux se
 recalculent sur les totaux — ils ne sont jamais une moyenne de moyennes —, et une ligne par filiale
 permet de comparer.</p>
+
+<h3>12.5 — Un raccourci par carte</h3>
+<p>Un tableau de bord répond à « combien » et s'arrête là. Pour savoir
+<strong>lesquels</strong>, chaque tuile et chaque carte porte un lien <strong>orange</strong> — la
+couleur d'action de la maison — vers l'écran qui détaille son chiffre.</p>
+<table>
+  <caption>Où mène le raccourci de chaque tuile</caption>
+  <tr><th>Tuile</th><th>Lien</th><th>Ce qu'il ouvre</th></tr>
+  <tr><td class="chemin">Chiffre d'affaires</td><td><em>Les ventes</em></td><td>Le journal des tickets de la période</td></tr>
+  <tr><td class="chemin">Marge commerciale</td><td><em>Le rapport des marges</em></td><td>La marge par catégorie, puis par article (chapitre 13)</td></tr>
+  <tr><td class="chemin">Résultat estimé</td><td><em>Les dépenses</em></td><td>L'écran des dépenses à approuver (10.7)</td></tr>
+  <tr><td class="chemin">Trésorerie</td><td><em>Les caisses</em></td><td>L'état des caisses</td></tr>
+  <tr><td class="chemin">Créances clients</td><td><em>Relancer</em></td><td>La relance clients, par ancienneté</td></tr>
+  <tr><td class="chemin">Dettes fournisseurs</td><td><em>À payer</em></td><td>La relance fournisseurs</td></tr>
+  <tr><td class="chemin">Valeur du stock</td><td><em>Le stock</em></td><td>Le suivi de stock, dépôt par dépôt</td></tr>
+  <tr><td class="chemin">Bons de livraison</td><td><em>Les livraisons</em></td><td>Les bons à préparer</td></tr>
+</table>
+<p>Les cartes de graphiques en portent un aussi, dans leur bandeau : <em>Les rapports</em>,
+<em>Le stock</em>, <em>Le catalogue</em>, <em>Le répertoire</em>, <em>Relancer</em>. Le bandeau
+lui-même n'est pas cliquable — seul le lien orange l'est.</p>
+<div class="note">
+  <span class="titre">En vue Groupe, les raccourcis de tuile disparaissent</span>
+  <p>Ce n'est pas une panne. Les écrans de module travaillent sur <strong>une</strong> filiale : en
+  vue consolidée, ils répondraient « Sélectionnez une filiale dans le menu latéral ». Un raccourci
+  qui ouvre une page vide fait perdre le clic qu'il promettait de gagner, donc il ne s'affiche
+  <strong>que s'il mène quelque part</strong>. Choisissez une filiale dans le sélecteur de
+  périmètre, et les liens reviennent.</p>
+</div>
+
+<h3>12.6 — Qui nous doit le plus, à qui nous devons le plus</h3>
+<p>Les tuiles <em>Créances clients</em> et <em>Dettes fournisseurs</em> donnent deux totaux ; deux
+cartes jumelles <strong>nomment les comptes qui les font</strong> — <strong>Qui nous doit le
+plus</strong> et <strong>À qui nous devons le plus</strong>, cinq lignes par ordre de solde
+décroissant, avec le code du compte, une barre et sa part du total.</p>
+<ul>
+  <li>Elles lisent la <strong>même colonne et les mêmes filtres</strong> que les tuiles au-dessus — soldes ouverts, fiches actives : la somme des lignes retombe sur le total affiché.</li>
+  <li>La queue de la liste n'est <strong>pas</strong> repliée en « Autres » : ces lignes se cliquent, et « Autres » ne désigne personne. <em>Tout voir</em>, dans le bandeau, ouvre la liste complète.</li>
+  <li>Une fiche <strong>en sommeil</strong> ou désactivée n'y figure pas, même si elle porte un solde — comme dans les tuiles.</li>
+</ul>
+<p><strong>Cliquez une ligne</strong> : elle déplie les <strong>douze derniers mois</strong> du compte
+— ce qui lui a été facturé contre ce qui a été réglé, mois par mois. Recliquer la referme.</p>
+<p>C'est la question que pose tout gros solde : <em>depuis quand, et est-ce qu'il paie ?</em> Un
+client qui doit deux millions parce qu'il achète deux millions par mois et règle chaque mois n'est
+pas le dossier de celui qui doit autant sans avoir rien versé depuis six mois. Une phrase sous le
+dessin le dit en clair — « Rien de réglé depuis 4 mois », « Le compte s'est creusé de 320 000 F
+sur la période » — et <em>Ouvrir son compte</em> mène au relevé complet.</p>
+<ul>
+  <li>Les deux barres sont <strong>côte à côte, jamais empilées</strong> : additionner le facturé et le réglé n'aurait aucun sens. C'est l'<strong>écart entre les deux</strong> qui se lit.</li>
+  <li>Les mois <strong>sans mouvement gardent leur place</strong> : un trou de six mois dans les règlements est précisément ce qu'on vient voir.</li>
+  <li>Un compte sans aucun mouvement sur douze mois le dit : son solde est un <strong>report</strong>, ou il dort.</li>
+  <li>Côté fournisseur, le « facturé » est le <strong>reçu</strong>, daté de la réception : une dette naît quand la marchandise arrive, pas quand on la commande.</li>
+  <li>Depuis la vue <strong>Groupe</strong>, les lignes restent cliquables, et <em>Ouvrir son compte</em> <strong>bascule le périmètre</strong> sur la filiale du compte en chemin.</li>
+</ul>
 
 <!-- ============ 13. RAPPORT DES MARGES ============ -->
 <h2><span class="num">13.</span>Rapport des marges</h2>
@@ -1326,6 +1622,34 @@ compris. Windows demande où enregistrer le fichier — ce n'est pas un téléch
     <td><strong>Le stock est négatif</strong></td>
     <td>Une vente est passée malgré un stock insuffisant. Régularisez par un inventaire ou une entrée.</td>
   </tr>
+  <tr>
+    <td><strong>La caisse ne monte pas après un encaissement</strong></td>
+    <td>C'est normal : l'argent entre en caisse à la <strong>validation de journée</strong>, pas au comptoir. La tuile <em>En attente de validation</em> dit ce qui reste à verser — voir 6.1.4.</td>
+  </tr>
+  <tr>
+    <td><strong>Un ticket déjà validé doit être corrigé</strong></td>
+    <td>Ouvrez-le et <em>Remettre en attente</em> : il redevient corrigible, et son versement ressort de la caisse — voir 6.1.5.</td>
+  </tr>
+  <tr>
+    <td><strong>Une dépense a été approuvée par erreur</strong></td>
+    <td>Ouvrez son détail et <em>Remettre en attente</em> : le montant rentre en caisse et la pièce redevient corrigible ou refusable — voir 10.7.</td>
+  </tr>
+  <tr>
+    <td><strong>Un bon d'entrée refuse de se corriger</strong></td>
+    <td>Soit il a déjà été annulé, soit un règlement a été passé sur sa pièce fournisseur — annulez d'abord ce règlement. Le message le dit ; voir 7.8.</td>
+  </tr>
+  <tr>
+    <td><strong>La colonne Poids n'apparaît pas sur un bon</strong></td>
+    <td>Aucun article du bon ne porte de poids. Renseignez-le sur la fiche article, en tonnes — voir 6.2.</td>
+  </tr>
+  <tr>
+    <td><strong>Les raccourcis du tableau de bord ont disparu</strong></td>
+    <td>Vous êtes en vue <strong>Groupe</strong> : les écrans de module demandent une filiale. Choisissez-en une dans le sélecteur de périmètre — voir 12.5.</td>
+  </tr>
+  <tr>
+    <td><strong>L'import n'a rien repris du tout</strong></td>
+    <td>Tout passe en une seule écriture : une ligne qui échoue annule l'ensemble. Le message liste les lignes écartées avec leur raison — corrigez le fichier et relancez, rien ne sera doublé (§ 8.4).</td>
+  </tr>
 </table>
 
 <!-- ============ 17. ANNEXES ============ -->
@@ -1350,7 +1674,7 @@ compris. Windows demande où enregistrer le fichier — ce n'est pas un téléch
   <tr><td class="chemin">Stock</td><td>Consulter les stocks · Enregistrer une entrée · Enregistrer une sortie · Saisir un inventaire · Transférer entre dépôts · Transférer entre filiales · Enregistrer une production · Gérer les dépôts</td></tr>
   <tr><td class="chemin">Clients</td><td>Consulter · Créer et modifier · Encaisser un règlement · Établir une facture proforma</td></tr>
   <tr><td class="chemin">Fournisseurs</td><td>Consulter · Créer et modifier · Passer et réceptionner une commande · Payer un fournisseur</td></tr>
-  <tr><td class="chemin">Trésorerie</td><td>Consulter les caisses et les journaux · Saisir une recette ou une dépense · Gérer les caisses · Transférer des fonds entre filiales</td></tr>
+  <tr><td class="chemin">Trésorerie</td><td>Consulter les caisses et les journaux · Saisir une recette ou une dépense · <strong>Approuver une dépense engagée</strong> · Gérer les caisses · Transférer des fonds entre filiales</td></tr>
   <tr><td class="chemin">Livraisons</td><td>Consulter · Préparer et suivre</td></tr>
   <tr><td class="chemin">Personnel</td><td>Consulter · Créer et modifier les fiches · Pointer les présences · Établir et payer les salaires</td></tr>
   <tr><td class="chemin">Rapports et surveillance</td><td>Consulter les historiques · Consulter le journal d'audit · Décider du sort d'une écriture refusée</td></tr>
@@ -1381,9 +1705,11 @@ le serveur.</p>
 
 <div class="note" style="margin-top:8mm">
   <span class="titre">Ce guide</span>
-  <p>Il décrit la version <strong>0.4.0</strong> du 28 octobre 2026. Les écrans évoluent : en cas de
-  différence entre ce guide et l'application, c'est l'application qui a raison — signalez l'écart
-  pour que le guide soit repris.</p>
+  <p>Il décrit la version <strong>1.4.0</strong> du 23 novembre 2026 — le numéro qui s'affiche sur
+  la page de connexion. Un poste resté en 0.4.0 n'a pas les écrans décrits ici : faites-le mettre
+  à jour.</p>
+  <p>Les écrans évoluent : en cas de différence entre ce guide et l'application, c'est
+  l'application qui a raison — signalez l'écart pour que le guide soit repris.</p>
 </div>
 
 </body>
